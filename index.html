@@ -44,8 +44,8 @@ canvas{display:block;width:100%;height:100%}
 /* SIDEBAR */
 .ss{padding:8px 10px 6px;border-bottom:1px solid #d4d4e0}
 .st{font-size:10px;font-weight:700;color:#9898b0;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
-.si{display:flex;align-items:center;gap:5px;padding:5px 7px;border:1px solid #d4d4e0;border-radius:5px;font-size:12px;margin-bottom:3px;color:#5a5a7a;background:#fff;transition:all .1s}
-.si:hover{border-color:#b0b0c0;color:#1a1a2e;background:#f4f4f7}
+.si{display:flex;align-items:center;gap:5px;padding:5px 7px;border:1px solid transparent;border-radius:5px;font-size:12px;margin-bottom:2px;color:#5a5a7a;background:transparent;transition:all .1s}
+.si:hover{border-color:#d0d0da;color:#1a1a2e;background:#fff}
 .si.sel{border-color:#534AB7;background:#eeedfe;color:#534AB7}
 .sic{cursor:pointer;flex:1;display:flex;align-items:center;gap:5px;overflow:hidden}
 .sdl{font-size:13px;color:#c0c0d0;padding:0 2px;cursor:pointer;line-height:1;border:none;background:none;flex-shrink:0}
@@ -72,20 +72,20 @@ textarea.fi{resize:vertical;min-height:50px}
 .bsav:hover{opacity:.85}
 .bdel{padding:7px 10px;font-size:12px;border:1px solid #f7c1c1;border-radius:5px;color:#c0392b;background:transparent;cursor:pointer;font-family:inherit}
 .bdel:hover{background:#fdecea}
-.tgrd{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px}
-.ftb{padding:7px 5px;font-size:11px;border:2px solid #e0e0e8;border-radius:6px;cursor:pointer;background:#f8f8fc;color:#7a7a9a;text-align:center;font-family:inherit;transition:all .12s;font-weight:500}
+.tgrd{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.ftb{padding:8px 10px;font-size:12px;border:1.5px solid #d8d8e4;border-radius:8px;cursor:pointer;background:#fff;color:#5a5a7a;text-align:left;font-family:inherit;transition:all .12s;font-weight:500;display:flex;align-items:center;gap:7px}
 .ftb:hover{border-color:#b0b0c0;color:#1a1a2e}
-.ftb.sr{border-color:#c0392b;background:#fff0ee;color:#7a1a10}
-.ftb.sg{border-color:#0f6e56;background:#e8f8f0;color:#074030}
-.ftb.sh{border-color:#6a6a88;background:#f4f4f8;color:#3a3a55}
-.ftb.st2{border-color:#9090b8;background:#f8f8fc;color:#3a3a60}
-.cgrd{display:flex;gap:4px;margin-bottom:8px}
-.cb{padding:5px 0;font-size:11px;font-weight:600;border:2px solid #e0e0e8;border-radius:5px;cursor:pointer;background:#f8f8fc;color:#9898b0;font-family:inherit;transition:all .12s;flex:1;text-align:center}
+.ftb.sr{border-color:#c0392b;color:#1a1a2e;background:#fff;font-weight:600}
+.ftb.sg{border-color:#0f6e56;color:#1a1a2e;background:#fff;font-weight:600}
+.ftb.sh{border-color:#6a6a88;color:#1a1a2e;background:#fff;font-weight:600}
+.ftb.st2{border-color:#534AB7;color:#1a1a2e;background:#fff;font-weight:600}
+.cgrd{display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap}
+.cb{padding:6px 12px;font-size:12px;font-weight:500;border:1.5px solid #d8d8e4;border-radius:8px;cursor:pointer;background:#fff;color:#5a5a7a;font-family:inherit;transition:all .12s;white-space:nowrap}
 .cb:hover{border-color:#b0b0c0;color:#1a1a2e}
-.cb.c1{border-color:#0f6e56;background:#e8f8f0;color:#074030}
-.cb.c2{border-color:#854f0b;background:#faeeda;color:#4a2c06}
-.cb.c3{border-color:#c0392b;background:#fdecea;color:#7a1a10}
-.cb.c4{border-color:#7c0000;background:#f5dddd;color:#4a0000}
+.cb.c1{border-color:#0f6e56;color:#1a1a2e;font-weight:600}
+.cb.c2{border-color:#854f0b;color:#1a1a2e;font-weight:600}
+.cb.c3{border-color:#c0392b;color:#1a1a2e;font-weight:600}
+.cb.c4{border-color:#7c0000;color:#1a1a2e;font-weight:600}
 .dv{height:1px;background:#eee;margin:9px 0}
 
 /* LEGEND */
@@ -181,7 +181,6 @@ textarea.fi{resize:vertical;min-height:50px}
   <button class="tbtn" id="bera" onclick="setMode('erase')">✕ Apagar</button>
   <span class="sp"></span>
   <button class="tbtn" onclick="addFn()">＋ Função</button>
-  <button class="tbtn" onclick="addVar()">⚡ Variabilidade</button>
   <button class="tbtn" onclick="addRes()">∿ Ressonância</button>
   <span class="sp"></span>
   <button class="tbtn" onclick="expJSON()">⬇ JSON</button>
@@ -192,7 +191,7 @@ textarea.fi{resize:vertical;min-height:50px}
   <span class="sp"></span>
   <button class="tbtn r" onclick="clearAll()">⊘ Limpar</button>
   <span class="sp"></span>
-  <span class="pill" id="mpill">Selecionar</span>
+  <span id="mpill" style="font-size:11px;color:#5a5a7a;padding:3px 0"></span>
 </div>
 
 <!-- TABS -->
@@ -205,7 +204,12 @@ textarea.fi{resize:vertical;min-height:50px}
   <div id="sb">
     <div class="ss"><div class="st">Funções</div><div id="sbf"></div><button class="sadd" onclick="addFn()">＋ Nova função</button></div>
     <div class="ss"><div class="st">Acoplamentos</div><div id="sbc"></div></div>
-    <div class="ss"><div class="st">Variabilidades</div><div id="sbv"></div></div>
+    <div class="ss"><div class="st">Variabilidades</div><div id="sbv"></div>
+      <div style="display:flex;gap:4px;margin-top:4px">
+        <button class="sadd" style="flex:1;border-color:#854f0b;color:#854f0b" onclick="showVarForm('endo')">＋ Endógena</button>
+        <button class="sadd" style="flex:1;border-color:#c0392b;color:#c0392b" onclick="showVarForm('exo')">＋ Exógena</button>
+      </div>
+    </div>
     <div class="ss"><div class="st">Eventos de Ressonância</div><div id="sbr"></div></div>
   </div>
 
@@ -239,7 +243,7 @@ textarea.fi{resize:vertical;min-height:50px}
 </div>
 
 <!-- MODAL coupling -->
-<div id="ov">
+<div id="ov" onclick="if(event.target===this)cancelConn()">
   <div class="modal">
     <h3>Definir acoplamento</h3>
     <div class="msub" id="cinfo"></div>
@@ -377,17 +381,23 @@ function animLoop(){if(!animOn)return;animT++;draw();requestAnimationFrame(animL
 
 function drawFn(fn,hasRes){
   const[cx,cy]=w2s(fn.x,fn.y),r=HR*scale;
-  const col=fnCol(fn);
+  const isConnSrc=connSrc&&fn.id===connSrc.id;
   const isSel=selFn&&fn.id===selFn.id,isHov=hovFn&&fn.id===hovFn.id,isEra=mode==='erase';
+  // connSrc gets green override color
+  const col=isConnSrc?{fill:'#e1f5ee',stroke:'#0f6e56',text:'#074030',badge:(FC[fn.style||'red']||FC.red).badge}:fnCol(fn);
   const verts=hexV(cx,cy,r);
   ctx.save();
   ctx.beginPath();ctx.moveTo(verts[0][0],verts[0][1]);
   for(let i=1;i<6;i++) ctx.lineTo(verts[i][0],verts[i][1]);
   ctx.closePath();
   ctx.fillStyle=col.fill;ctx.fill();
-  ctx.strokeStyle=isEra&&isHov?'#c0392b':col.stroke;
-  ctx.lineWidth=isSel||isHov?2.5:1.5;
-  if(isEra&&isHov)ctx.setLineDash([4,3]);
+  if(isConnSrc){
+    ctx.strokeStyle='#0f6e56';ctx.lineWidth=3;
+  } else {
+    ctx.strokeStyle=isEra&&isHov?'#c0392b':col.stroke;
+    ctx.lineWidth=isSel||isHov?2.5:1.5;
+    if(isEra&&isHov)ctx.setLineDash([4,3]);
+  }
   ctx.stroke();ctx.setLineDash([]);
   // Sinusoid clipped inside hex
   if(hasRes){
@@ -412,10 +422,11 @@ function drawFn(fn,hasRes){
   ctx.font=`600 ${Math.max(8,9*Math.min(scale,1))}px "Segoe UI",system-ui`;
   ctx.fillStyle=col.stroke;ctx.fillText(col.badge,cx,cy+r*0.56);
   ctx.restore();
-  // Aspect dots
+  // Aspect dots: show all 6 in connect mode; show all on hover/select; show only used otherwise
   const used=new Set();
   coups.forEach(c=>{if(c.source_function_id===fn.id)used.add(c.source_aspect||'O');if(c.target_function_id===fn.id)used.add(c.target_aspect||'I');});
-  if(isSel||isHov){
+  const showAll=isSel||isHov||isConnSrc||mode==='connect';
+  if(showAll){
     ['I','O','P','R','C','T'].forEach(asp=>{
       const[ax,ay]=aspS(fn.x,fn.y,asp),rs=Math.max(5,6*scale);
       ctx.save();ctx.beginPath();ctx.arc(ax,ay,rs,0,Math.PI*2);ctx.fillStyle=AC[asp];ctx.fill();
@@ -493,6 +504,8 @@ C.addEventListener('wheel',e=>{e.preventDefault();const d=e.deltaY>0?.88:1.14;pa
 C.addEventListener('dblclick',e=>{const[wx,wy]=s2w(e.offsetX,e.offsetY);const fn=fns.find(f=>inHex(wx,wy,f.x,f.y));if(fn)openFnPn(fn);});
 
 function onDown(e){
+  // Ignore if modal is open
+  if(document.getElementById('ov').style.display==='flex') return;
   const[wx,wy]=s2w(e.offsetX,e.offsetY);
   const fn=fns.find(f=>inHex(wx,wy,f.x,f.y));
   if(mode==='erase'){
@@ -503,8 +516,21 @@ function onDown(e){
     if(fn){dragFn=fn;dragOX=wx-fn.x;dragOY=wy-fn.y;dragging=false;selFn=fn;openFnPn(fn);renderSB();draw();}
     else{dragFn=null;selFn=null;closePn();isPan=true;pSX=e.offsetX-panX;pSY=e.offsetY-panY;renderSB();draw();}
   } else if(mode==='connect'){
-    if(fn){if(!connSrc){connSrc=fn;draw();}else if(fn.id!==connSrc.id){openConnModal(connSrc,fn);}else{connSrc=null;draw();}}
-    else{connSrc=null;draw();}
+    if(fn){
+      if(!connSrc){
+        // First click: set source, close panel to avoid confusion
+        connSrc=fn; connPend=null; closePn(); draw();
+      } else if(fn.id!==connSrc.id){
+        // Second click: open modal
+        openConnModal(connSrc,fn);
+      } else {
+        // Clicked same fn again: cancel
+        connSrc=null; connPend=null; draw();
+      }
+    } else {
+      // Clicked empty space: cancel
+      connSrc=null; connPend=null; draw();
+    }
   }
 }
 function onMove(e){
@@ -533,12 +559,15 @@ function onMove(e){
 // MODE
 // ════════════════════════════════════════════════════
 function setMode(m){
-  mode=m;connSrc=null;connPend=null;hovCoup=null;
+  mode=m; connSrc=null; connPend=null; hovCoup=null; dragFn=null; isPan=false;
+  if(m==='connect') closePn();
   ['bsel','bcon','bera'].forEach(id=>document.getElementById(id).classList.remove('on'));
   document.getElementById({select:'bsel',connect:'bcon',erase:'bera'}[m]).classList.add('on');
+  // Show brief status only in connect/erase modes
   const p=document.getElementById('mpill');
-  p.textContent={select:'Selecionar',connect:'Conectar — clique na origem e no destino',erase:'Apagar — clique em função ou acoplamento'}[m];
-  p.className='pill'+(m==='connect'?' con':m==='erase'?' era':'');
+  if(m==='connect') p.textContent='1º clique: origem · 2º clique: destino';
+  else if(m==='erase') p.textContent='Clique em função ou acoplamento para apagar';
+  else p.textContent='';
   draw();
 }
 
@@ -563,10 +592,10 @@ function openFnPn(fn){
 <label class="fl">Descrição</label><textarea class="fi" id="fpd">${esc(fn.description||'')}</textarea>
 <label class="fl">Tipo</label>
 <div class="tgrd">
-  <button class="ftb${fn.style==='red'?' sr':''}" onclick="setStl('${fn.id}','red',this)">🔴 Organizacional</button>
-  <button class="ftb${fn.style==='green'?' sg':''}" onclick="setStl('${fn.id}','green',this)">🟢 Background</button>
-  <button class="ftb${fn.style==='grey'?' sh':''}" onclick="setStl('${fn.id}','grey',this)">⬜ Humana</button>
-  <button class="ftb${fn.style==='white'?' st2':''}" onclick="setStl('${fn.id}','white',this)">🔷 Tecnológica</button>
+  <button class="ftb${fn.style==='red'?' sr':''}" onclick="setStl('${fn.id}','red',this)"><span style="width:10px;height:10px;border-radius:50%;background:#c0392b;display:inline-block;flex-shrink:0"></span>Organizacional</button>
+  <button class="ftb${fn.style==='green'?' sg':''}" onclick="setStl('${fn.id}','green',this)"><span style="width:10px;height:10px;border-radius:50%;background:#0f6e56;display:inline-block;flex-shrink:0"></span>Background</button>
+  <button class="ftb${fn.style==='grey'?' sh':''}" onclick="setStl('${fn.id}','grey',this)"><span style="width:10px;height:10px;border-radius:3px;background:#6a6a88;display:inline-block;flex-shrink:0"></span>Humana</button>
+  <button class="ftb${fn.style==='white'?' st2':''}" onclick="setStl('${fn.id}','white',this)"><span style="width:10px;height:10px;transform:rotate(45deg);background:#534AB7;display:inline-block;flex-shrink:0"></span>Tecnológica</button>
 </div>
 <div class="dv"></div>
 ${asps.map(a=>`<label class="fl" style="color:${a.c}">${a.l}</label><input class="fi" id="fp${a.k}" value="${esc(fn[a.k]||'')}">`).join('')}
@@ -625,44 +654,195 @@ function delFn(id){
 // ════════════════════════════════════════════════════
 // COUPLINGS
 // ════════════════════════════════════════════════════
-function openConnModal(src,tgt){connSrcFn=src;connTgtFn=tgt;document.getElementById('cinfo').textContent=src.name+' → '+tgt.name;document.getElementById('clbl').value='';document.getElementById('ov').style.display='flex';}
-function confirmConn(){if(!connSrcFn||!connTgtFn)return;coups.push({id:uid(),source_function_id:connSrcFn.id,target_function_id:connTgtFn.id,source_aspect:document.getElementById('csrc').value,target_aspect:document.getElementById('ctgt').value,label:document.getElementById('clbl').value,line_type:document.getElementById('ctype').value,created_date:new Date().toISOString()});document.getElementById('ov').style.display='none';connSrcFn=null;connTgtFn=null;connSrc=null;connPend=null;renderSB();draw();}
-function cancelConn(){document.getElementById('ov').style.display='none';connSrcFn=null;connTgtFn=null;connSrc=null;connPend=null;draw();}
+function openConnModal(src,tgt){
+  connSrcFn=src; connTgtFn=tgt;
+  document.getElementById('cinfo').textContent='De: '+src.name+' → Para: '+tgt.name;
+  document.getElementById('clbl').value='';
+  document.getElementById('csrc').value='O';
+  document.getElementById('ctgt').value='I';
+  document.getElementById('ctype').value='normal';
+  const ov=document.getElementById('ov');
+  ov.style.display='flex';
+}
+function confirmConn(){
+  if(!connSrcFn||!connTgtFn)return;
+  coups.push({id:uid(),source_function_id:connSrcFn.id,target_function_id:connTgtFn.id,
+    source_aspect:document.getElementById('csrc').value,
+    target_aspect:document.getElementById('ctgt').value,
+    label:document.getElementById('clbl').value,
+    line_type:document.getElementById('ctype').value,
+    created_date:new Date().toISOString()});
+  document.getElementById('ov').style.display='none';
+  connSrcFn=null; connTgtFn=null; connSrc=null; connPend=null;
+  renderSB(); draw();
+}
+function cancelConn(){
+  document.getElementById('ov').style.display='none';
+  connSrcFn=null; connTgtFn=null; connSrc=null; connPend=null;
+  draw();
+}
 
 // ════════════════════════════════════════════════════
-// VARIABILITY & RESONANCE
+// VARIABILITY — dois formatos: Endógena e Exógena
 // ════════════════════════════════════════════════════
+// Tipos por categoria
+const TIPOS_ENDO=[
+  'Indisponibilidade de Informação','Inconsistência de Dados','Sobrecarga Operacional',
+  'Falha de Comunicação Interna','Erro de Configuração','Obsolescência Tecnológica',
+  'Desvio Procedimental','Saturação Cognitiva','Metadados Obsoletos',
+  'Fadiga de Alertas','Silos Informacionais','Latência de Visibilidade',
+  'Rigidez Semântica','Data Locking','Replicação Defasada','Outro'
+];
+const CATS_ENDO=['Informacional','Tecnológica','Humana','Processual','Infraestrutura'];
+const TIPOS_EXO=[
+  'Pico de Demanda Externa','Mudança Regulatória Súbita','Contaminação de Dados na Origem',
+  'Quebra de Interface/API','Conflito Interpretativo Multi-Ator','Falha em Cascata de Fornecedor',
+  'Força Maior / Desastre','Pressão Política/Institucional','Outro'
+];
+
 function addVar(){
-  if(!selFn){alert('Selecione uma função primeiro.');return;}
-  const fn=selFn;
-  document.getElementById('pn').style.display='block';document.getElementById('ptitle').textContent='⚡ Variabilidade';
-  document.getElementById('pbody').innerHTML=`
-<label class="fl">Nome</label><input class="fi" id="vn" placeholder="Nome">
-<label class="fl">Código DGR-FRAM</label>
-<select class="fi" id="vc">
-  <optgroup label="RE — Endógenas">
-    <option value="RE-A.1">RE-A.1 Desvio procedimental</option><option value="RE-A.2">RE-A.2 Saturação cognitiva</option><option value="RE-A.3">RE-A.3 Metadados obsoletos</option>
-    <option value="RE-B.1">RE-B.1 Fadiga de alertas</option><option value="RE-B.2">RE-B.2 Silos informacionais</option><option value="RE-B.3">RE-B.3 Latência de visibilidade</option>
-    <option value="RE-C.1">RE-C.1 Rigidez semântica</option><option value="RE-C.2">RE-C.2 Data Locking</option><option value="RE-C.3">RE-C.3 Replicação defasada</option>
-  </optgroup>
-  <optgroup label="RX — Exógenas">
-    <option value="RX-A.1">RX-A.1 Pico de demanda</option><option value="RX-A.2">RX-A.2 Instabilidade regulatória</option><option value="RX-A.3">RX-A.3 Contaminação de entrada</option>
-    <option value="RX-B.1">RX-B.1 Quebra de interface</option><option value="RX-B.2">RX-B.2 Conflito interpretativo</option><option value="RX-B.3">RX-B.3 Falha em cascata</option>
-    <option value="RX-B.5">RX-B.5 Força maior</option>
-  </optgroup>
-  <optgroup label="MR — Mecanismos de Resiliência">
-    <option value="MR-A.1">MR-A.1 Barreiras Fail-Safe</option><option value="MR-A.2">MR-A.2 Consciência situacional</option><option value="MR-A.3">MR-A.3 Orquestração ágil</option>
-    <option value="MR-B.1">MR-B.1 Autonomia interequipes</option><option value="MR-B.2">MR-B.2 Degradação graciosa</option><option value="MR-B.3">MR-B.3 Coping estruturado</option>
-    <option value="MR-C.1">MR-C.1 Institucionalização tácita</option><option value="MR-C.2">MR-C.2 Retroalimentação pós-incidente</option><option value="MR-C.3">MR-C.3 Memória organizacional</option>
-  </optgroup>
-</select>
-<label class="fl">Descrição</label><textarea class="fi" id="vd"></textarea>
-<div class="brow"><button class="bsav" onclick="saveVar('${fn.id}')">Salvar</button></div>`;
+  if(!fns.length){alert('Adicione funções ao modelo primeiro.');return;}
+  showVarForm('endo');
 }
-function saveVar(fnId){
-  const code=document.getElementById('vc').value;
-  vars.push({id:uid(),affected_function_id:fnId,name:document.getElementById('vn').value||code,variability_type:code,category:code.startsWith('RE')?'endogena':code.startsWith('RX')?'exogena':'mecanismo',description:document.getElementById('vd').value,created_date:new Date().toISOString()});
-  renderSB();draw();if(selFn)openFnPn(selFn);
+
+function showVarForm(tipo){
+  document.getElementById('pn').style.display='block';
+  const fnOpts=fns.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
+  if(tipo==='endo'){
+    document.getElementById('ptitle').textContent='Nova Variabilidade Endógena';
+    document.getElementById('pbody').innerHTML=`
+<div style="display:flex;gap:6px;margin-bottom:12px">
+  <button class="bsav" style="background:#854f0b" onclick="showVarForm('endo')">⚡ Endógena</button>
+  <button class="bdel" onclick="showVarForm('exo')">↗ Exógena</button>
+</div>
+<div class="fir">
+  <div>
+    <label class="fl">Categoria <span style="color:#c0392b">*</span></label>
+    <select class="fi" id="ve-cat">
+      ${CATS_ENDO.map(c=>`<option>${c}</option>`).join('')}
+    </select>
+  </div>
+  <div>
+    <label class="fl">Tipo de Variabilidade Endógena</label>
+    <select class="fi" id="ve-tipo">
+      <option value="">Selecionar tipo</option>
+      ${TIPOS_ENDO.map(t=>`<option>${t}</option>`).join('')}
+    </select>
+  </div>
+</div>
+<label class="fl">Nome do Fator <span style="color:#c0392b">*</span></label>
+<input class="fi" id="ve-nome" placeholder="Ex: Indisponibilidade de Informação">
+<label class="fl">Função Afetada <span style="color:#c0392b">*</span></label>
+<select class="fi" id="ve-fn">
+  <option value="">Selecionar função</option>
+  ${fnOpts}
+</select>
+<label class="fl">Descrição</label>
+<textarea class="fi" id="ve-desc" placeholder="Descreva a variabilidade endógena..." style="min-height:72px"></textarea>
+<div class="brow">
+  <button class="bsav" onclick="saveVarEndo()">Salvar</button>
+  <button class="bdel" onclick="closePn()">Cancelar</button>
+</div>`;
+  } else {
+    document.getElementById('ptitle').textContent='Nova Variabilidade Exógena';
+    document.getElementById('pbody').innerHTML=`
+<div style="display:flex;gap:6px;margin-bottom:12px">
+  <button class="bdel" onclick="showVarForm('endo')">⚡ Endógena</button>
+  <button class="bsav" style="background:#c0392b" onclick="showVarForm('exo')">↗ Exógena</button>
+</div>
+<label class="fl">Tipo de Variabilidade Exógena</label>
+<select class="fi" id="vx-tipo">
+  <option value="">Selecionar tipo</option>
+  ${TIPOS_EXO.map(t=>`<option>${t}</option>`).join('')}
+</select>
+<label class="fl">Nome do Fator <span style="color:#c0392b">*</span></label>
+<input class="fi" id="vx-nome" placeholder="Ex: Pico de Demanda Coletiva">
+<label class="fl">Função Origem da Variabilidade Exógena <span style="color:#c0392b">*</span></label>
+<select class="fi" id="vx-src">
+  <option value="">Selecionar função de origem</option>
+  <option value="_ext">[ Fonte Externa / Ambiente ]</option>
+  ${fnOpts}
+</select>
+<label class="fl">Função Receptora <span style="color:#c0392b">*</span></label>
+<select class="fi" id="vx-tgt">
+  <option value="">Selecionar função</option>
+  ${fnOpts}
+</select>
+<label class="fl">Funções Adicionalmente Afetadas</label>
+<div id="vx-extra-list" style="min-height:28px;background:#f8f8fc;border:1px solid #d0d0da;border-radius:5px;padding:5px 8px;margin-bottom:6px;font-size:11px;color:#9898b0">Nenhuma função selecionada</div>
+<select class="fi" id="vx-extra-sel" onchange="addVxExtra(this)" style="margin-bottom:8px">
+  <option value="">Adicionar função afetada…</option>
+  ${fnOpts}
+</select>
+<label class="fl">Descrição</label>
+<textarea class="fi" id="vx-desc" placeholder="Descreva a variabilidade exógena..." style="min-height:60px"></textarea>
+<label class="fl">Efeito Propagado</label>
+<input class="fi" id="vx-ef" placeholder="Ex: Sobrecarga sistêmica, cascata de falhas">
+<div class="brow">
+  <button class="bsav" style="background:#c0392b" onclick="saveVarExo()">Salvar</button>
+  <button class="bdel" onclick="closePn()">Cancelar</button>
+</div>`;
+    window._vxExtra=[];
+  }
+}
+
+function addVxExtra(sel){
+  if(!sel.value) return;
+  if(!window._vxExtra) window._vxExtra=[];
+  const fn=fns.find(f=>f.id===sel.value);
+  if(fn&&!window._vxExtra.includes(sel.value)){
+    window._vxExtra.push(sel.value);
+    const el=document.getElementById('vx-extra-list');
+    el.style.color='#1a1a2e';
+    el.innerHTML=window._vxExtra.map(id=>{
+      const f=fns.find(x=>x.id===id);
+      return`<span style="display:inline-flex;align-items:center;gap:4px;background:#eeedfe;border-radius:4px;padding:2px 7px;margin:2px;font-size:11px">${esc(f?.name||'?')}<span onclick="removeVxExtra('${id}')" style="cursor:pointer;color:#534AB7;font-weight:700">×</span></span>`;
+    }).join('');
+  }
+  sel.value='';
+}
+function removeVxExtra(id){
+  window._vxExtra=(window._vxExtra||[]).filter(x=>x!==id);
+  const el=document.getElementById('vx-extra-list');
+  if(!window._vxExtra.length){el.style.color='#9898b0';el.innerHTML='Nenhuma função selecionada';return;}
+  el.innerHTML=window._vxExtra.map(i=>{const f=fns.find(x=>x.id===i);return`<span style="display:inline-flex;align-items:center;gap:4px;background:#eeedfe;border-radius:4px;padding:2px 7px;margin:2px;font-size:11px">${esc(f?.name||'?')}<span onclick="removeVxExtra('${i}')" style="cursor:pointer;color:#534AB7;font-weight:700">×</span></span>`;}).join('');
+}
+
+function saveVarEndo(){
+  const nome=document.getElementById('ve-nome').value.trim();
+  const fnId=document.getElementById('ve-fn').value;
+  if(!nome){alert('Informe o Nome do Fator.');return;}
+  if(!fnId){alert('Selecione a Função Afetada.');return;}
+  vars.push({
+    id:uid(), category:'endogena',
+    cat_label:document.getElementById('ve-cat').value,
+    variability_type:document.getElementById('ve-tipo').value||'Endógena',
+    name:nome,
+    affected_function_id:fnId,
+    description:document.getElementById('ve-desc').value,
+    created_date:new Date().toISOString()
+  });
+  renderSB(); draw(); closePn();
+}
+
+function saveVarExo(){
+  const nome=document.getElementById('vx-nome').value.trim();
+  const tgtId=document.getElementById('vx-tgt').value;
+  if(!nome){alert('Informe o Nome do Fator.');return;}
+  if(!tgtId){alert('Selecione a Função Receptora.');return;}
+  vars.push({
+    id:uid(), category:'exogena',
+    variability_type:document.getElementById('vx-tipo').value||'Exógena',
+    name:nome,
+    source_function_id:document.getElementById('vx-src').value||null,
+    affected_function_id:tgtId,
+    extra_affected:window._vxExtra||[],
+    description:document.getElementById('vx-desc').value,
+    propagated_effect:document.getElementById('vx-ef').value,
+    created_date:new Date().toISOString()
+  });
+  window._vxExtra=[];
+  renderSB(); draw(); closePn();
 }
 function addRes(){
   if(!selFn){alert('Selecione a função inicial.');return;}
@@ -689,6 +869,44 @@ function saveRes(fnId){
 }
 
 // ════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════
+// TAXONOMIA DGR-FRAM
+// ════════════════════════════════════════════════════
+const TAXO={
+  RE:{label:'RE — Variabilidade Endógena',color:'#854f0b',bg:'#faeeda',items:[
+    {code:'RE-A.1',name:'Desvio Procedimental por Rigidez Normativa'},
+    {code:'RE-A.2',name:'Saturação Cognitiva por Controles de Conformidade'},
+    {code:'RE-A.3',name:'Execução sobre Metadados Obsoletos'},
+    {code:'RE-B.1',name:'Fadiga de Alertas e Log Intermitente'},
+    {code:'RE-B.2',name:'Silos Informacionais e Ruptura de Coordenação'},
+    {code:'RE-B.3',name:'Latência de Visibilidade Operacional'},
+    {code:'RE-C.1',name:'Rigidez Semântica de Validação'},
+    {code:'RE-C.2',name:'Bloqueio de Concorrência Transacional (Data Locking)'},
+    {code:'RE-C.3',name:'Tomada de Decisão sobre Replicação Defasada'},
+  ]},
+  RX:{label:'RX — Variabilidade Exógena',color:'#c0392b',bg:'#fdecea',items:[
+    {code:'RX-A.1',name:'Ressonância por Pico de Demanda Coletiva'},
+    {code:'RX-A.2',name:'Instabilidade por Atuação Regulatório-Legal Súbita'},
+    {code:'RX-A.3',name:'Contaminação de Entrada por Inconsistência na Origem'},
+    {code:'RX-B.1',name:'Quebra de Acoplamento por Alteração Unilateral de Interface'},
+    {code:'RX-B.2',name:'Paralisia por Conflito Interpretativo Multi-Ator'},
+    {code:'RX-B.3',name:'Interrupção por Falha em Cascata de Utilidades Básicas'},
+    {code:'RX-B.5',name:'Força Maior e Distúrbios Ambientais/Físicos de Fronteira'},
+  ]},
+  MR:{label:'MR — Mecanismos de Resiliência (Amortecimento)',color:'#0f6e56',bg:'#e8f8f0',items:[
+    {code:'MR-A.1',name:'Ativação Dinâmica de Barreiras (Fail-Safe Data)'},
+    {code:'MR-A.2',name:'Consciência Situacional Preemptiva'},
+    {code:'MR-A.3',name:'Orquestração Ágil de Recursos Informacionais'},
+    {code:'MR-B.1',name:'Autonomia de Coordenação Interequipes'},
+    {code:'MR-B.2',name:'Degradação Graciosa do Serviço Informacional'},
+    {code:'MR-B.3',name:'Improvisação Técnico-Estruturada (Coping)'},
+    {code:'MR-C.1',name:'Institucionalização do Conhecimento Tácito'},
+    {code:'MR-C.2',name:'Retroalimentação Pós-Incidente'},
+    {code:'MR-C.3',name:'Longevidade de Hábitos Técnicos Resilientes'},
+  ]}
+};
+
+// ════════════════════════════════════════════════════
 // MONTE CARLO
 // ════════════════════════════════════════════════════
 function tri(mn,mp,mx){
@@ -699,6 +917,36 @@ function tri(mn,mp,mx){
 }
 function outDeg(id){return coups.filter(c=>c.source_function_id===id).length;}
 function maxOutDeg(){return Math.max(1,...fns.map(fn=>outDeg(fn.id)));}
+
+// subs[fnId][code] = {sel, mn, mp, mx}
+let subs={};
+function initSubs(id){
+  if(!subs[id]) subs[id]={};
+  [...TAXO.RE.items,...TAXO.RX.items,...TAXO.MR.items].forEach(item=>{
+    if(!subs[id][item.code]) subs[id][item.code]={sel:false,mn:0,mp:0.3,mx:0.6};
+  });
+}
+function toggleSub(fnId,code){
+  initSubs(fnId);
+  subs[fnId][code].sel=!subs[fnId][code].sel;
+  computeAutoParams(fnId);
+  renderMC();
+}
+function setSubVal(fnId,code,field,val){
+  initSubs(fnId);
+  subs[fnId][code][field]=Math.max(0,Math.min(1,parseFloat(val)||0));
+  computeAutoParams(fnId);
+}
+function computeAutoParams(fnId){
+  initP(fnId);initSubs(fnId);
+  const s=subs[fnId];
+  const avg=(items,f)=>{const sel=items.filter(i=>s[i.code]?.sel);return sel.length?sel.reduce((a,i)=>a+(s[i.code][f]||0),0)/sel.length:null;};
+  const set=(grpItems,key)=>{
+    const mn=avg(grpItems,'mn'),mp=avg(grpItems,'mp'),mx=avg(grpItems,'mx');
+    if(mn!==null){params[fnId][key].mn=+mn.toFixed(3);params[fnId][key].mp=+mp.toFixed(3);params[fnId][key].mx=+mx.toFixed(3);}
+  };
+  set(TAXO.RE.items,'ve');set(TAXO.RX.items,'vx');set(TAXO.MR.items,'ar');
+}
 
 function doMC(){
   const N=mcN,maxOD=maxOutDeg();
@@ -713,18 +961,14 @@ function doMC(){
     }
     vfrs.sort((a,b)=>a-b);
     const mean=vfrs.reduce((s,v)=>s+v,0)/N;
-    const p90=vfrs[Math.floor(N*0.90)];
-    const p95=vfrs[Math.floor(N*0.95)];
-    const p99=vfrs[Math.floor(N*0.99)];
-    const lcrit=p95;
-    const probCrit=vfrs.filter(v=>v>=lcrit).length/N;
+    const p90=vfrs[Math.floor(N*0.90)],p95=vfrs[Math.floor(N*0.95)],p99=vfrs[Math.floor(N*0.99)];
+    const probCrit=vfrs.filter(v=>v>=p95).length/N;
     const ip=outDeg(fn.id)/maxOD;
-    const iis=mean*ip;
-    // Histogram: 20 bins 0–1 (cap at 1 for display)
     const hist=Array(20).fill(0);
     vfrs.forEach(v=>hist[Math.min(19,Math.floor(Math.min(v,0.9999)*20))]++);
     const hmax=Math.max(...hist)||1;
-    mcRes[fn.id]={mean,p90,p95,p99,lcrit,probCrit,ip,iis,n:N,min:vfrs[0],max:vfrs[N-1],median:vfrs[Math.floor(N/2)],hist:hist.map(h=>h/hmax)};
+    mcRes[fn.id]={mean,p90,p95,p99,lcrit:p95,probCrit,ip,iis:mean*ip,n:N,
+      min:vfrs[0],max:vfrs[N-1],median:vfrs[Math.floor(N/2)],hist:hist.map(h=>h/hmax)};
   });
 }
 
@@ -742,70 +986,102 @@ function vColor(v){
 }
 function pct(v,dec=1){return(v*100).toFixed(dec)+'%';}
 
-// ════════════════════════════════════════════════════
-// SAVE DOM PARAMS
-// ════════════════════════════════════════════════════
 function saveDOMParams(){
-  document.querySelectorAll('.pinp').forEach(inp=>{
+  document.querySelectorAll('.pinp[data-fn]').forEach(inp=>{
     const id=inp.dataset.fn,v=inp.dataset.v,f=inp.dataset.f;
-    if(!id||!v||!f)return;
-    initP(id);
-    params[id][v][f]=Math.max(0,Math.min(1,parseFloat(inp.value)||0));
+    if(!id||!v||!f||v.startsWith('sub_'))return;
+    initP(id);params[id][v][f]=Math.max(0,Math.min(1,parseFloat(inp.value)||0));
   });
 }
 function saveP(inp){
   const id=inp.dataset.fn,v=inp.dataset.v,f=inp.dataset.f;
-  if(!id||!v||!f)return;
+  if(!id||!v||!f||v.startsWith('sub_'))return;
   initP(id);params[id][v][f]=Math.max(0,Math.min(1,parseFloat(inp.value)||0));
 }
 function validateP(inp){
-  const row=inp.closest('.prow');if(!row)return;
-  const ins=row.querySelectorAll('.pinp');
+  const row=inp.closest('.prow,[style*=grid]');if(!row)return;
+  const ins=row.querySelectorAll('.pinp');if(ins.length<3)return;
   const mn=+ins[0].value,mp=+ins[1].value,mx=+ins[2].value;
   ins.forEach(i=>i.classList.toggle('err',!(mn<=mp&&mp<=mx&&mn>=0&&mx<=1)));
 }
 
-// ════════════════════════════════════════════════════
-// RENDER MC PAGE
-// ════════════════════════════════════════════════════
+let mcActiveFn=null;
+
 function renderMC(){
   if(!fns.length){document.getElementById('mc-inner').innerHTML='<div style="padding:40px;text-align:center;color:#9898b0">Adicione funções no Diagrama FRAM primeiro.</div>';return;}
   const hasRes=fns.some(fn=>mcRes[fn.id]);
   const maxOD=maxOutDeg();
+  fns.forEach(fn=>{initP(fn.id);initSubs(fn.id);});
 
   let h=`<div class="pgtit">Monte Carlo — VFR por Função</div>
-<div class="pgsub">Defina os parâmetros de distribuição triangular (mín / mais provável / máx, entre 0 e 1) para cada função e execute a simulação.<br><b>Fórmula:</b> VFR = (VE + VX) × (1 − AR) &nbsp;·&nbsp; LC = P95 &nbsp;·&nbsp; IP = saídas ÷ ${maxOD} &nbsp;·&nbsp; IIS = VFR média × IP</div>
-<span class="help-lnk" onclick="showHelp=!showHelp;renderMC()">${showHelp?'▲ Ocultar':'▼ Ver'} referência conceptual RE / RX / MR</span>
-${showHelp?`<div class="infobox" style="margin-top:8px">
-<b>VE — Variabilidade Endógena</b> (RE): representa perturbações originadas dentro da função — desvios procedimentais (RE-A.1), saturação cognitiva (RE-A.2), metadados obsoletos (RE-A.3), fadiga de alertas (RE-B.1), silos informacionais (RE-B.2), latência de visibilidade (RE-B.3), rigidez semântica (RE-C.1), data locking (RE-C.2), replicação defasada (RE-C.3).<br><br>
-<b>VX — Variabilidade Exógena</b> (RX): perturbações provenientes do ambiente — pico de demanda (RX-A.1), instabilidade regulatória (RX-A.2), contaminação de entrada (RX-A.3), quebra de interface (RX-B.1), conflito interpretativo (RX-B.2), falha em cascata (RX-B.3), força maior (RX-B.5).<br><br>
-<b>AR — Amortecimento Resiliente</b> (MR): capacidade de absorção — barreiras fail-safe (MR-A.1), consciência situacional (MR-A.2), orquestração ágil (MR-A.3), autonomia interequipes (MR-B.1), degradação graciosa (MR-B.2), coping (MR-B.3), institucionalização tácita (MR-C.1), retroalimentação pós-incidente (MR-C.2), memória organizacional (MR-C.3).<br><br>
-<b>VFR</b> = variabilidade funcional residual após amortecimento. <b>LC</b> = Limite Crítico = P95. <b>Prob. Criticidade</b> = % simulações com VFR ≥ LC. <b>IP</b> = Índice de Propagação. <b>IIS</b> = Índice de Impacto Sistêmico.
-</div>`:''}
+<div class="pgsub"><b>VFR = (VE + VX) × (1 − AR)</b> &nbsp;·&nbsp; LC = P95 &nbsp;·&nbsp; IP = saídas ÷ ${maxOD} &nbsp;·&nbsp; IIS = VFR × IP<br>
+Selecione as subcategorias RE, RX e MR de cada função. Os parâmetros VE, VX e AR são calculados automaticamente como média das notas das subcategorias selecionadas. É possível também ajustar manualmente.</div>`;
 
-<div class="pgrid">
-${fns.map(fn=>{
-  initP(fn.id);const p=params[fn.id];const col=FC[fn.style||'red']||FC.red;
-  const mkGrp=(key,label,color)=>{
-    const v=p[key];
-    return`<div class="pgrp">
-<span class="pgrp-lbl" style="color:${color}">${label}</span>
-<div class="prow">
-  <div class="pcell"><label>Mínimo</label><input type="number" class="pinp" data-fn="${fn.id}" data-v="${key}" data-f="mn" min="0" max="1" step="0.01" value="${v.mn}" onchange="saveP(this)" oninput="validateP(this)"></div>
-  <div class="pcell"><label>Mais provável</label><input type="number" class="pinp" data-fn="${fn.id}" data-v="${key}" data-f="mp" min="0" max="1" step="0.01" value="${v.mp}" onchange="saveP(this)" oninput="validateP(this)"></div>
-  <div class="pcell"><label>Máximo</label><input type="number" class="pinp" data-fn="${fn.id}" data-v="${key}" data-f="mx" min="0" max="1" step="0.01" value="${v.mx}" onchange="saveP(this)" oninput="validateP(this)"></div>
-</div></div>`;
-  };
-  return`<div class="pcard">
-<div class="pcard-title"><span style="width:11px;height:11px;border-radius:2px;background:${col.fill};border:2px solid ${col.stroke};display:inline-block;flex-shrink:0"></span>${esc(fn.name)}</div>
-${mkGrp('ve','VE — Variabilidade Endógena','#854f0b')}
-${mkGrp('vx','VX — Variabilidade Exógena','#c0392b')}
-${mkGrp('ar','AR — Amortecimento Resiliente','#0f6e56')}
+  fns.forEach(fn=>{
+    initP(fn.id);initSubs(fn.id);
+    const p=params[fn.id];const col=FC[fn.style||'red']||FC.red;
+    const isOpen=mcActiveFn===fn.id;
+    const reN=TAXO.RE.items.filter(i=>subs[fn.id][i.code]?.sel).length;
+    const rxN=TAXO.RX.items.filter(i=>subs[fn.id][i.code]?.sel).length;
+    const mrN=TAXO.MR.items.filter(i=>subs[fn.id][i.code]?.sel).length;
+    const tot=reN+rxN+mrN;
+    const badge=tot>0?`<span style="font-size:11px;color:#534AB7;font-weight:600">${tot} selecionada${tot!==1?'s':''}</span>`:`<span style="font-size:11px;color:#9898b0">Nenhuma selecionada</span>`;
+
+    h+=`<div style="border:1px solid #d4d4e0;border-radius:8px;margin-bottom:10px;overflow:hidden">
+<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:#f8f8fc;cursor:pointer;user-select:none" onclick="mcActiveFn=mcActiveFn==='${fn.id}'?null:'${fn.id}';renderMC()">
+  <span style="width:11px;height:11px;border-radius:2px;background:${col.fill};border:2px solid ${col.stroke};flex-shrink:0;display:inline-block"></span>
+  <span style="flex:1;font-size:13px;font-weight:600">${esc(fn.name)}</span>
+  ${badge}
+  <span style="font-size:12px;color:#9898b0;flex-shrink:0">${isOpen?'▲':'▼'}</span>
 </div>`;
-}).join('')}
-</div>
 
-<div class="runrow">
+    if(isOpen){
+      h+=`<div style="padding:14px 16px;border-top:1px solid #e8e8f0">`;
+      Object.entries(TAXO).forEach(([gk,g])=>{
+        h+=`<div style="margin-bottom:14px">
+<div style="font-size:11px;font-weight:700;color:${g.color};background:${g.bg};padding:4px 10px;border-radius:4px;display:inline-block;margin-bottom:8px">${g.label}</div>`;
+        g.items.forEach(item=>{
+          const sv=subs[fn.id][item.code];
+          const sel=sv?.sel;
+          h+=`<div style="border:1.5px solid ${sel?g.color:'#d4d4e0'};border-radius:6px;overflow:hidden;background:${sel?g.bg:'#fff'};margin-bottom:5px">
+<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer" onclick="toggleSub('${fn.id}','${item.code}')">
+  <div style="width:17px;height:17px;border-radius:4px;border:2px solid ${sel?g.color:'#c0c0d0'};background:${sel?g.color:'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .1s">
+    ${sel?`<svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3L9 1" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`:''}
+  </div>
+  <span style="font-size:10px;font-family:monospace;font-weight:700;color:${g.color};flex-shrink:0">${item.code}</span>
+  <span style="font-size:12px">${esc(item.name)}</span>
+</div>
+${sel?`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:0 10px 9px 35px">
+  <div><label style="font-size:10px;color:#9898b0;display:block;margin-bottom:2px">Mínimo</label><input type="number" class="pinp" data-fn="${fn.id}" data-v="sub_${item.code}" data-f="mn" min="0" max="1" step="0.01" value="${sv.mn}" oninput="setSubVal('${fn.id}','${item.code}','mn',this.value)"></div>
+  <div><label style="font-size:10px;color:#9898b0;display:block;margin-bottom:2px">Mais provável</label><input type="number" class="pinp" data-fn="${fn.id}" data-v="sub_${item.code}" data-f="mp" min="0" max="1" step="0.01" value="${sv.mp}" oninput="setSubVal('${fn.id}','${item.code}','mp',this.value)"></div>
+  <div><label style="font-size:10px;color:#9898b0;display:block;margin-bottom:2px">Máximo</label><input type="number" class="pinp" data-fn="${fn.id}" data-v="sub_${item.code}" data-f="mx" min="0" max="1" step="0.01" value="${sv.mx}" oninput="setSubVal('${fn.id}','${item.code}','mx',this.value)"></div>
+</div>`:''}
+</div>`;
+        });
+        h+=`</div>`;
+      });
+      // Summary + manual override
+      h+=`<div style="background:#f0f0f8;border-radius:7px;padding:11px 13px;margin-top:4px">
+<div style="font-size:11px;font-weight:600;color:#534AB7;margin-bottom:8px">Parâmetros resultantes (média das subcategorias selecionadas)</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+${[{k:'ve',l:'VE',c:'#854f0b'},{k:'vx',l:'VX',c:'#c0392b'},{k:'ar',l:'AR',c:'#0f6e56'}].map(({k,l,c})=>`
+<div style="background:#fff;border:1px solid ${c};border-radius:6px;padding:8px;text-align:center">
+  <div style="font-size:11px;font-weight:700;color:${c};margin-bottom:5px">${l}</div>
+  <div style="display:flex;justify-content:space-around;gap:4px">
+    <div><div style="font-size:9px;color:#9898b0">mín</div><input type="number" class="pinp" style="width:44px;text-align:center;font-size:11px;padding:3px 2px;border-color:${c}" data-fn="${fn.id}" data-v="${k}" data-f="mn" min="0" max="1" step="0.01" value="${p[k].mn}" onchange="saveP(this)"></div>
+    <div><div style="font-size:9px;color:#9898b0">mp</div><input type="number" class="pinp" style="width:44px;text-align:center;font-size:11px;padding:3px 2px;border-color:${c};font-weight:700" data-fn="${fn.id}" data-v="${k}" data-f="mp" min="0" max="1" step="0.01" value="${p[k].mp}" onchange="saveP(this)"></div>
+    <div><div style="font-size:9px;color:#9898b0">máx</div><input type="number" class="pinp" style="width:44px;text-align:center;font-size:11px;padding:3px 2px;border-color:${c}" data-fn="${fn.id}" data-v="${k}" data-f="mx" min="0" max="1" step="0.01" value="${p[k].mx}" onchange="saveP(this)"></div>
+  </div>
+</div>`).join('')}
+</div>
+<div style="font-size:10px;color:#9898b0;margin-top:6px">Os valores são calculados automaticamente. Você pode ajustá-los manualmente — o ajuste manual prevalece sobre o cálculo até que uma subcategoria seja marcada/desmarcada.</div>
+</div>
+</div>`;
+    }
+    h+=`</div>`;
+  });
+
+  h+=`<div class="runrow" style="margin-top:16px">
   <b style="font-size:13px">Iterações:</b>
   ${[1000,5000,10000,50000].map(n=>`<button class="itb${mcN===n?' on':''}" onclick="mcN=${n};renderMC()">${n.toLocaleString()}</button>`).join('')}
   <button class="bsav" style="width:auto;padding:8px 22px;font-size:13px" onclick="saveDOMParams();doMC();renderMC()">▶ Simular</button>
@@ -813,31 +1089,19 @@ ${mkGrp('ar','AR — Amortecimento Resiliente','#0f6e56')}
 </div>`;
 
   if(hasRes){
-    // RANKING
-    const rmetrics={mean:'VFR média',p95:'P95 (Limite Crítico)',probCrit:'Prob. Criticidade',iis:'IIS'};
+    const rmetrics={mean:'VFR média',p95:'P95 / LC',probCrit:'Prob. Criticidade',iis:'IIS'};
     h+=`<div style="margin-bottom:14px"><div class="restit">Ranking por:</div>
 <div class="rtabs">${Object.entries(rmetrics).map(([k,l])=>`<button class="rtab${rankBy===k?' on':''}" onclick="rankBy='${k}';renderMC()">${l}</button>`).join('')}</div>`;
     const ranked=[...fns].filter(fn=>mcRes[fn.id]).sort((a,b)=>(mcRes[b.id][rankBy]||0)-(mcRes[a.id][rankBy]||0));
     const maxV=Math.max(...ranked.map(fn=>mcRes[fn.id][rankBy]||0),0.001);
     ranked.forEach((fn,i)=>{
-      const r=mcRes[fn.id],v=r[rankBy];
-      const ci=critInfo(r.p95);
-      h+=`<div class="rcard">
-<span class="rnum">${i+1}</span>
-<span class="rname" title="${esc(fn.name)}">${esc(fn.name)}</span>
-<span class="cbadge ${ci.cls}">${ci.lbl}</span>
-<div class="rbar"><div class="rbarbg"><div class="rbarfill" style="width:${Math.round(v/maxV*100)}%;background:${vColor(r.p95)}"></div></div></div>
-<span class="rval" style="color:${vColor(r.p95)}">${pct(v)}</span>
-</div>`;
+      const r=mcRes[fn.id],v=r[rankBy];const ci=critInfo(r.p95);
+      h+=`<div class="rcard"><span class="rnum">${i+1}</span><span class="rname">${esc(fn.name)}</span><span class="cbadge ${ci.cls}">${ci.lbl}</span><div class="rbar"><div class="rbarbg"><div class="rbarfill" style="width:${Math.round(v/maxV*100)}%;background:${vColor(r.p95)}"></div></div></div><span class="rval" style="color:${vColor(r.p95)}">${pct(v)}</span></div>`;
     });
-    h+='</div>';
-
-    // DETAIL CARDS
-    h+='<div class="restit">Resultados por Função</div><div class="dgrid">';
+    h+=`</div><div class="restit">Resultados por Função</div><div class="dgrid">`;
     fns.filter(fn=>mcRes[fn.id]).forEach(fn=>{
       const r=mcRes[fn.id];const ci=critInfo(r.p95);
-      h+=`<div class="dc">
-<div class="dc-head"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px">${esc(fn.name)}</span><span class="cbadge ${ci.cls}" style="flex-shrink:0">${ci.lbl}</span></div>
+      h+=`<div class="dc"><div class="dc-head"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px">${esc(fn.name)}</span><span class="cbadge ${ci.cls}" style="flex-shrink:0">${ci.lbl}</span></div>
 <div class="sgrid">
   <div class="sbox"><span class="sval" style="color:#534AB7">${pct(r.mean)}</span><span class="slbl">VFR média</span></div>
   <div class="sbox"><span class="sval" style="color:#854f0b">${pct(r.p90)}</span><span class="slbl">P90</span></div>
@@ -846,17 +1110,15 @@ ${mkGrp('ar','AR — Amortecimento Resiliente','#0f6e56')}
   <div class="sbox"><span class="sval" style="color:#0f6e56">${pct(r.ip)}</span><span class="slbl">IP</span></div>
   <div class="sbox"><span class="sval" style="color:#534AB7">${pct(r.iis)}</span><span class="slbl">IIS</span></div>
 </div>
-<div class="probrow">Prob. Criticidade (VFR ≥ LC): <b style="color:${vColor(r.p95)}">${pct(r.probCrit)}</b> &nbsp;·&nbsp; Min: ${pct(r.min)} · Mediana: ${pct(r.median)} · Máx: ${pct(r.max)}</div>
+<div class="probrow">Prob. Criticidade (VFR ≥ LC): <b style="color:${vColor(r.p95)}">${pct(r.probCrit)}</b> · Min: ${pct(r.min)} · Med: ${pct(r.median)} · Máx: ${pct(r.max)}</div>
 <div class="histwrap">
   <div style="font-size:10px;color:#9898b0;margin-bottom:4px">Distribuição VFR — ${r.n.toLocaleString()} iterações</div>
-  <div class="histbars">${r.hist.map((hv,i)=>{const bv=i/20;return`<div class="hb" style="height:${Math.round(hv*64)}px;background:${vColor(bv)};opacity:${0.6+hv*0.4}" title="${pct(bv)}–${pct(bv+0.05,0)}: ${pct(hv,0)}"></div>`;}).join('')}</div>
+  <div class="histbars">${r.hist.map((hv,bi)=>`<div class="hb" style="height:${Math.round(hv*64)}px;background:${vColor(bi/20)};opacity:${0.6+hv*0.4}"></div>`).join('')}</div>
   <div class="histax"><span>0</span><span>0.25</span><span>0.50</span><span>0.75</span><span>1.0</span></div>
-</div>
-</div>`;
+</div></div>`;
     });
-    h+='</div>';
+    h+=`</div>`;
   }
-
   document.getElementById('mc-inner').innerHTML=h;
 }
 
@@ -1059,17 +1321,22 @@ function renderSB(){
 </div>`;
   }).join('')||'<div class="se">Use Conectar</div>';
 
-  const dc={endogena:'#e8a83a',exogena:'#c0392b',mecanismo:'#0f6e56'};
+  const dc={endogena:'#854f0b',exogena:'#c0392b',mecanismo:'#0f6e56'};
+  const dcbg={endogena:'#faeeda',exogena:'#fdecea',mecanismo:'#e8f8f0'};
+  const dclbl={endogena:'Endógena',exogena:'Exógena',mecanismo:'Mecanismo'};
   document.getElementById('sbv').innerHTML=vars.map(v=>{
     const fn=fns.find(f=>f.id===v.affected_function_id);
-    return`<div class="si">
-<div class="sic">
-  <div class="cdot" style="background:${dc[v.category]||'#888'}"></div>
-  <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${esc(v.variability_type)} · ${esc(fn?.name||'?')}</span>
-</div>
-<button class="sdl" onclick="vars=vars.filter(x=>x.id!=='${v.id}');renderSB();draw()">×</button>
+    const cat=v.category||'endogena';
+    return`<div class="si" style="flex-direction:column;align-items:flex-start;padding:7px 8px;gap:3px">
+  <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+    <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:${dcbg[cat]||'#f4f4f8'};color:${dc[cat]||'#888'}">${dclbl[cat]||cat}</span>
+    <button class="sdl" onclick="vars=vars.filter(x=>x.id!=='${v.id}');renderSB();draw()">×</button>
+  </div>
+  <span style="font-size:12px;font-weight:500;color:#1a1a2e;line-height:1.3;word-break:break-word">${esc(v.name)}</span>
+  ${v.variability_type?`<span style="font-size:10px;color:#9898b0">${esc(v.variability_type)}</span>`:''}
+  <span style="font-size:11px;color:#5a5a7a">→ ${esc(fn?.name||'?')}</span>
 </div>`;
-  }).join('')||'<div class="se">Nenhuma</div>';
+  }).join('')||'<div class="se">Nenhuma variabilidade</div>';
 
   document.getElementById('sbr').innerHTML=resEvs.map(r=>`
 <div class="si">
