@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DGR-FRAM — Modelador de Ressonância Funcional</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* ─── RESET & BASE ─────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#1a1a1f;--bg2:#22222a;--bg3:#2a2a35;--bg4:#32323f;
+  --border:#3a3a4a;--border2:#4a4a5e;
+  --text:#e8e8f0;--text2:#9898b0;--text3:#5a5a70;
+  --purple:#7c6ff7;--purple2:#9a95f9;--purple-dim:#3a3560;
+  --red:#e85555;--red-dim:#5a2020;
+  --green:#4db87a;--green-dim:#1e4030;
+  --amber:#e8a83a;--amber-dim:#4a3010;
+  --blue:#4a9ef0;--blue-dim:#1a3260;
+  --grey:#8a8aaa;--grey-dim:#2e2e3e;
+  --teal:#38c4b0;--teal-dim:#103830;
+  /* FRAM canonical colors */
+  --fn-red-fill:#4a1515;--fn-red-stroke:#e85555;
+  --fn-green-fill:#0f2b1a;--fn-green-stroke:#4db87a;
+  --fn-grey-fill:#1e1e28;--fn-grey-stroke:#6a6a88;
+  --fn-white-fill:#252535;--fn-white-stroke:#b0b0c8;
+  --fn-selected-stroke:#7c6ff7;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;font-size:13px;line-height:1.5}
+
+/* ─── LAYOUT ───────────────────────────────────────────── */
+#app{display:flex;flex-direction:column;height:100vh}
+#topbar{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;z-index:10}
+#main{display:flex;flex:1;overflow:hidden;min-height:0}
+#sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;display:flex;flex-direction:column}
+#canvas-wrap{flex:1;position:relative;overflow:hidden;cursor:default}
+canvas#c{display:block;width:100%;height:100%}
+
+/* ─── TOPBAR ────────────────────────────────────────────── */
+.app-name{font-size:14px;font-weight:600;color:var(--purple2);white-space:nowrap;margin-right:4px}
+.sep{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.tb-btn{display:flex;align-items:center;gap:4px;padding:5px 10px;font-size:12px;border:1px solid var(--border);border-radius:5px;cursor:pointer;background:transparent;color:var(--text2);white-space:nowrap;transition:all .12s;font-family:inherit}
+.tb-btn:hover{background:var(--bg3);color:var(--text);border-color:var(--border2)}
+.tb-btn.active{background:var(--purple-dim);color:var(--purple2);border-color:var(--purple)}
+.tb-btn.success{background:var(--green-dim);color:var(--green);border-color:var(--green)}
+.tb-btn.warn{background:var(--amber-dim);color:var(--amber);border-color:var(--amber)}
+.tb-btn.danger{background:var(--red-dim);color:var(--red);border-color:var(--red)}
+.mode-pill{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:500;background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.mode-pill.connect{background:var(--green-dim);color:var(--green);border-color:var(--green)}
+
+/* ─── SIDEBAR ───────────────────────────────────────────── */
+.sb-sec{padding:10px 10px 8px;border-bottom:1px solid var(--border)}
+.sb-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+.sb-item{display:flex;align-items:center;gap:7px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;margin-bottom:3px;transition:all .12s;color:var(--text2);background:var(--bg3)}
+.sb-item:hover{border-color:var(--border2);color:var(--text)}
+.sb-item.sel{border-color:var(--purple);background:var(--purple-dim);color:var(--purple2)}
+.sb-add{width:100%;padding:6px 8px;font-size:11px;border:1px dashed var(--border);border-radius:5px;cursor:pointer;background:transparent;color:var(--text3);transition:all .12s;margin-top:4px;font-family:inherit;text-align:left}
+.sb-add:hover{border-color:var(--border2);color:var(--text2);background:var(--bg3)}
+.fn-swatch{width:12px;height:12px;border-radius:2px;flex-shrink:0;border:1px solid}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sb-empty{font-size:11px;color:var(--text3);padding:4px 2px}
+
+/* ─── DETAIL PANEL ──────────────────────────────────────── */
+#panel{position:absolute;right:12px;top:12px;width:280px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;z-index:100;max-height:calc(100% - 24px);overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,.5);display:none}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px;border-bottom:1px solid var(--border)}
+.panel-title{font-size:13px;font-weight:600;color:var(--text)}
+.panel-close{cursor:pointer;font-size:18px;color:var(--text3);border:none;background:none;padding:0 2px;line-height:1}
+.panel-body{padding:12px 14px}
+.fl{font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:500}
+.fi{width:100%;padding:6px 8px;font-size:12px;border:1px solid var(--border);border-radius:5px;background:var(--bg3);color:var(--text);font-family:inherit;margin-bottom:9px;outline:none;transition:border-color .12s}
+.fi:focus{border-color:var(--purple)}
+textarea.fi{resize:vertical;min-height:54px}
+.fi-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stars{display:flex;gap:3px;margin-bottom:9px}
+.star{font-size:16px;cursor:pointer;color:var(--border2);transition:color .1s;line-height:1}
+.star.on{color:var(--amber)}
+.btn-row{display:flex;gap:6px;margin-top:10px}
+.btn-save{flex:1;padding:7px;font-size:12px;border:none;border-radius:5px;background:var(--purple);color:#fff;cursor:pointer;font-weight:500;transition:opacity .12s;font-family:inherit}
+.btn-save:hover{opacity:.85}
+.btn-del{padding:7px 10px;font-size:12px;border:1px solid var(--red-dim);border-radius:5px;color:var(--red);background:transparent;cursor:pointer;font-family:inherit;transition:all .12s}
+.btn-del:hover{background:var(--red-dim)}
+.asp-section{margin-bottom:10px}
+.asp-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;display:block}
+.fn-type-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:9px}
+.fn-type-btn{padding:6px;font-size:11px;border:1px solid var(--border);border-radius:5px;cursor:pointer;background:var(--bg3);color:var(--text2);text-align:center;transition:all .12s;font-family:inherit}
+.fn-type-btn.sel-red{border-color:var(--fn-red-stroke);background:var(--fn-red-fill);color:var(--red)}
+.fn-type-btn.sel-green{border-color:var(--fn-green-stroke);background:var(--fn-green-fill);color:var(--green)}
+.fn-type-btn.sel-grey{border-color:var(--fn-grey-stroke);background:var(--fn-grey-fill);color:var(--grey)}
+.fn-type-btn.sel-white{border-color:var(--fn-white-stroke);background:var(--fn-white-fill);color:#c8c8e0}
+.divider{height:1px;background:var(--border);margin:10px 0}
+
+/* ─── MONTE CARLO ───────────────────────────────────────── */
+#mc-panel{position:absolute;left:232px;bottom:12px;width:320px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;z-index:100;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.5);display:none}
+.mc-hdr{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.mc-body{padding:12px 14px}
+.mc-bar-wrap{margin-bottom:10px}
+.mc-bar-bg{height:8px;border-radius:4px;background:var(--bg4);overflow:hidden}
+.mc-bar-fill{height:100%;border-radius:4px;transition:width .6s}
+.mc-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px}
+.mc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.mc-stat{background:var(--bg3);border-radius:5px;padding:8px 6px;text-align:center;border:1px solid var(--border)}
+.mc-stat-val{font-size:18px;font-weight:600;display:block}
+.mc-stat-lbl{font-size:10px;color:var(--text3)}
+
+/* ─── CONN MODAL ─────────────────────────────────────────── */
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:none;align-items:center;justify-content:center}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;width:300px;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.modal h3{font-size:14px;font-weight:600;margin-bottom:4px;color:var(--text)}
+.modal-sub{font-size:12px;color:var(--text2);margin-bottom:14px}
+.modal-actions{display:flex;gap:8px;margin-top:14px}
+
+/* ─── LEGEND ─────────────────────────────────────────────── */
+#legend{position:absolute;left:12px;bottom:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--text2);z-index:50;pointer-events:none}
+.leg-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.leg-row:last-child{margin-bottom:0}
+.leg-box{width:12px;height:12px;border-radius:2px;border:1px solid;flex-shrink:0}
+
+/* ─── TOOLTIP ─────────────────────────────────────────────── */
+#tip{position:absolute;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:11px;pointer-events:none;z-index:200;display:none;max-width:220px;line-height:1.5;box-shadow:0 2px 12px rgba(0,0,0,.5)}
+
+/* ─── SCROLLBAR ──────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ─── IMPORT LABEL ───────────────────────────────────────── */
+.import-label{display:flex;align-items:center;gap:4px;padding:5px 10px;font-size:12px;border:1px solid var(--border);border-radius:5px;cursor:pointer;background:transparent;color:var(--text2);white-space:nowrap;transition:all .12s;font-family:inherit}
+.import-label:hover{background:var(--bg3);color:var(--text);border-color:var(--border2)}
+</style>
+</head>
+<body>
+<div id="app">
+<!-- ═══ TOPBAR ═══ -->
+<div id="topbar">
+  <span class="app-name">DGR-FRAM</span>
+  <span class="sep"></span>
+  <button class="tb-btn active" id="btn-sel" onclick="setMode('select')">↖ Selecionar</button>
+  <button class="tb-btn" id="btn-con" onclick="setMode('connect')">⟿ Conectar</button>
+  <span class="sep"></span>
+  <button class="tb-btn" onclick="addFn()">＋ Função</button>
+  <button class="tb-btn" onclick="addVar()">⚡ Variabilidade</button>
+  <button class="tb-btn" onclick="addRes()">∿ Ressonância</button>
+  <span class="sep"></span>
+  <button class="tb-btn success" onclick="runMC()">🎲 Monte Carlo</button>
+  <span class="sep"></span>
+  <button class="tb-btn" onclick="exportJSON()" title="Exportar JSON reutilizável">⬇ JSON</button>
+  <button class="tb-btn" onclick="exportPNG()" title="Exportar imagem PNG do diagrama">⬇ PNG</button>
+  <button class="tb-btn" onclick="exportPDF()" title="Exportar PDF com diagrama e relatório">⬇ PDF</button>
+  <label class="import-label" title="Importar JSON salvo anteriormente">⬆ Importar<input type="file" accept=".json" onchange="importJSON(event)" style="display:none"></label>
+  <label class="import-label" title="Importar arquivo .xfmv do FRAM Model Visualizer">⬆ XFMV<input type="file" accept=".xfmv" onchange="importXFMV(event)" style="display:none"></label>
+  <span class="sep"></span>
+  <button class="tb-btn danger" onclick="clearAll()">✕ Limpar</button>
+  <span class="sep"></span>
+  <span class="mode-pill" id="mode-pill">Selecionar</span>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div id="main">
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="sb-sec">
+    <div class="sb-title">Funções</div>
+    <div id="sb-fns"></div>
+    <button class="sb-add" onclick="addFn()">＋ Nova função</button>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-title">Acoplamentos</div>
+    <div id="sb-coups"></div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-title">Variabilidades</div>
+    <div id="sb-vars"></div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-title">Eventos de Ressonância</div>
+    <div id="sb-res"></div>
+  </div>
+</div>
+
+<!-- CANVAS -->
+<div id="canvas-wrap">
+  <canvas id="c"></canvas>
+  <div id="tip"></div>
+  <div id="legend">
+    <div class="leg-row"><div class="leg-box" style="background:var(--fn-red-fill);border-color:var(--fn-red-stroke)"></div>Função organizacional (ativa)</div>
+    <div class="leg-row"><div class="leg-box" style="background:var(--fn-green-fill);border-color:var(--fn-green-stroke)"></div>Função background (suporte)</div>
+    <div class="leg-row"><div class="leg-box" style="background:var(--fn-grey-fill);border-color:var(--fn-grey-stroke)"></div>Função humana</div>
+    <div class="leg-row"><div class="leg-box" style="background:var(--fn-white-fill);border-color:var(--fn-white-stroke)"></div>Função tecnológica</div>
+    <div class="leg-row" style="margin-top:5px">
+      <svg width="28" height="12" style="flex-shrink:0"><path d="M2 6 Q7 2 14 6 Q21 10 26 6" fill="none" stroke="#e85555" stroke-width="1.5"/></svg>
+      Ressonância ativa
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div id="panel">
+  <div class="panel-hdr">
+    <span class="panel-title" id="panel-title"></span>
+    <button class="panel-close" onclick="closePanel()">×</button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<!-- MONTE CARLO PANEL -->
+<div id="mc-panel">
+  <div class="mc-hdr">
+    <span style="font-size:13px;font-weight:600">Simulação Monte Carlo</span>
+    <button class="panel-close" onclick="document.getElementById('mc-panel').style.display='none'">×</button>
+  </div>
+  <div class="mc-body" id="mc-body"></div>
+</div>
+
+<!-- CONNECTION MODAL -->
+<div id="overlay">
+  <div class="modal">
+    <h3>Definir acoplamento</h3>
+    <div class="modal-sub" id="conn-info"></div>
+    <label class="fl">Aspecto de ORIGEM</label>
+    <select class="fi" id="c-src"><option value="O">O — Output</option><option value="I">I — Input</option><option value="P">P — Precondição</option><option value="R">R — Recurso</option><option value="C">C — Controle</option><option value="T">T — Tempo</option></select>
+    <label class="fl">Aspecto de DESTINO</label>
+    <select class="fi" id="c-tgt"><option value="I">I — Input</option><option value="O">O — Output</option><option value="P">P — Precondição</option><option value="R">R — Recurso</option><option value="C">C — Controle</option><option value="T">T — Tempo</option></select>
+    <label class="fl">Rótulo</label>
+    <input type="text" class="fi" id="c-lbl" placeholder="ex: alimenta, controla, condiciona">
+    <label class="fl">Tipo</label>
+    <select class="fi" id="c-type"><option value="normal">Normal</option><option value="variable">Variável (tracejado)</option><option value="critical">Crítico (vermelho)</option></select>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="confirmConn()">Criar acoplamento</button>
+      <button class="btn-del" onclick="cancelConn()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════════
+let fns=[], coups=[], vars=[], resEvents=[], govMechs=[];
+let mode='select', selFn=null, dragFn=null, dragOX=0, dragOY=0, dragging=false;
+let panX=0, panY=0, scale=1, isPanning=false, panSX=0, panSY=0;
+let connSrc=null, connPending=null, connSrcFn=null, connTgtFn=null;
+let mcResults=null, hoverFn=null, animT=0;
+let animRunning=false;
+
+// ════════════════════════════════════════════════════════════
+//  CANVAS SETUP
+// ════════════════════════════════════════════════════════════
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+const wrap=document.getElementById('canvas-wrap');
+const tip=document.getElementById('tip');
+
+function resize(){canvas.width=wrap.offsetWidth;canvas.height=wrap.offsetHeight;draw();}
+window.addEventListener('resize',resize);
+resize();
+
+// ════════════════════════════════════════════════════════════
+//  GEOMETRY — FRAM-style hexagon (flat-top)
+// ════════════════════════════════════════════════════════════
+const HR=46; // hex radius
+
+// Flat-top hexagon: 0°=right vertex
+function hexPts(cx,cy,r){
+  const p=[];
+  for(let i=0;i<6;i++){const a=Math.PI/3*i;p.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]);}
+  return p;
+}
+
+// Aspect positions — FRAM convention on flat-top hex
+// I=left, O=right, P=top-right, R=bottom-right, C=top-left, T=bottom-left
+const ASP_ANGLES={I:Math.PI,O:0,P:-Math.PI/3,R:Math.PI/3,C:-2*Math.PI/3,T:2*Math.PI/3};
+function aspPt(cx,cy,r,asp){
+  const a=ASP_ANGLES[asp]||0;
+  return [cx+r*Math.cos(a),cy+r*Math.sin(a)];
+}
+// Inner label pos (slightly inside)
+function aspLabelPt(cx,cy,r,asp){
+  const a=ASP_ANGLES[asp]||0;
+  return [cx+(r+16)*Math.cos(a),cy+(r+16)*Math.sin(a)];
+}
+
+function ptInHex(px,py,cx,cy,r){return Math.hypot(px-cx,py-cy)<r*0.95;}
+
+// ════════════════════════════════════════════════════════════
+//  COORDINATE TRANSFORM
+// ════════════════════════════════════════════════════════════
+function w2s(wx,wy){return [wx*scale+panX,wy*scale+panY];}
+function s2w(sx,sy){return [(sx-panX)/scale,(sy-panY)/scale];}
+
+// ════════════════════════════════════════════════════════════
+//  COLORS
+// ════════════════════════════════════════════════════════════
+const FN_COLORS={
+  red:  {fill:'#4a1515',stroke:'#e85555',text:'#f0a0a0'},
+  green:{fill:'#0f2b1a',stroke:'#4db87a',text:'#90d8a8'},
+  grey: {fill:'#1e1e28',stroke:'#6a6a88',text:'#9898b8'},
+  white:{fill:'#252535',stroke:'#b0b0c8',text:'#d0d0e8'},
+};
+const ASP_COLORS={I:'#4a9ef0',O:'#4db87a',P:'#e8a83a',R:'#8a8aaa',C:'#e85555',T:'#7c6ff7'};
+
+function getFnCol(fn){
+  if(selFn&&fn.id===selFn.id) return {fill:'#2a2560',stroke:'#7c6ff7',text:'#c0bcff'};
+  return FN_COLORS[fn.style||'red']||FN_COLORS.red;
+}
+
+// ════════════════════════════════════════════════════════════
+//  DRAW
+// ════════════════════════════════════════════════════════════
+function draw(){
+  const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  // Grid
+  ctx.save();
+  ctx.strokeStyle='rgba(255,255,255,0.03)';ctx.lineWidth=1;
+  const gs=50*scale,ox=panX%gs,oy=panY%gs;
+  for(let x=ox;x<W;x+=gs){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=oy;y<H;y+=gs){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.restore();
+
+  const resonantIds=getResonantIds();
+
+  // Couplings
+  coups.forEach(c=>drawCoupling(c));
+
+  // In-progress connection
+  if(mode==='connect'&&connSrc&&connPending){
+    const [sx,sy]=w2s(connSrc.x,connSrc.y);
+    ctx.save();ctx.strokeStyle='#4db87a';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(connPending.x,connPending.y);ctx.stroke();
+    ctx.setLineDash([]);ctx.restore();
+  }
+
+  // Functions
+  fns.forEach(fn=>drawFn(fn, resonantIds.has(fn.id)));
+
+  // MC overlay
+  if(mcResults) drawMCOverlay();
+
+  if(resonantIds.size>0&&!animRunning){animRunning=true;animLoop();}
+  else if(resonantIds.size===0) animRunning=false;
+}
+
+function animLoop(){
+  if(!animRunning) return;
+  animT++;
+  draw();
+  requestAnimationFrame(animLoop);
+}
+
+function drawFn(fn, hasResonance){
+  const [cx,cy]=w2s(fn.x,fn.y);
+  const r=HR*scale;
+  const col=getFnCol(fn);
+  const isHov=hoverFn&&hoverFn.id===fn.id;
+  const isSel=selFn&&selFn.id===fn.id;
+
+  // Hex
+  ctx.save();
+  const pts=hexPts(cx,cy,r);
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<6;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.closePath();
+  ctx.fillStyle=col.fill;
+  ctx.fill();
+  ctx.strokeStyle=col.stroke;
+  ctx.lineWidth=isHov||isSel?2.5:1.5;
+  ctx.stroke();
+  ctx.restore();
+
+  // Resonance sinusoid
+  if(hasResonance){
+    ctx.save();
+    ctx.strokeStyle='#e85555';ctx.lineWidth=1.8;
+    const amp=r*0.18,freq=4,w2=r*0.72;
+    ctx.beginPath();
+    for(let x=-w2;x<=w2;x+=1){
+      const yy=cy+amp*Math.sin(freq*(x/w2)*Math.PI+animT*0.07);
+      if(x===-w2) ctx.moveTo(cx+x,yy); else ctx.lineTo(cx+x,yy);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Function name (word-wrapped)
+  ctx.save();
+  ctx.fillStyle=col.text;
+  const fs=Math.max(9,11*Math.min(scale,1));
+  ctx.font=`500 ${fs}px "Segoe UI",system-ui`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  const maxW=r*1.5;
+  const words=(fn.name||'Função').split(' ');
+  const lines=[];let cur='';
+  words.forEach(w=>{
+    const t=cur?cur+' '+w:w;
+    if(ctx.measureText(t).width>maxW){if(cur)lines.push(cur);cur=w;}else cur=t;
+  });
+  lines.push(cur);
+  const lh=Math.max(12,fs*1.3);
+  const totalH=(lines.length-1)*lh;
+  lines.forEach((l,i)=>ctx.fillText(l,cx,cy-totalH/2+i*lh+(hasResonance?-8*scale:0)));
+  ctx.restore();
+
+  // Function type badge (fnType: 0=org,1=background,2=tech)
+  const typeLabels={0:'ORG',1:'BKG',2:'TEC',3:''};
+  const tl=typeLabels[fn.fnType||0];
+  if(tl){
+    ctx.save();
+    ctx.font=`600 ${Math.max(7,8*scale)}px "Segoe UI",system-ui`;
+    ctx.fillStyle=col.stroke;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(tl,cx,cy+r*0.55);
+    ctx.restore();
+  }
+
+  // Aspect circles on hex vertices — show always for selected, hover for others
+  if(isSel||isHov){
+    ['I','O','P','R','C','T'].forEach(asp=>{
+      const [ax,ay]=w2s(...aspPt(fn.x,fn.y,HR,asp));
+      ctx.save();
+      ctx.beginPath();ctx.arc(ax,ay,Math.max(6,7*scale),0,Math.PI*2);
+      ctx.fillStyle=ASP_COLORS[asp];ctx.fill();
+      ctx.strokeStyle=col.fill;ctx.lineWidth=1.5;ctx.stroke();
+      ctx.fillStyle='#fff';
+      ctx.font=`700 ${Math.max(7,7*scale)}px monospace`;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(asp,ax,ay);
+      ctx.restore();
+    });
+  }
+
+  // Always show small aspect dots if has coupling on that aspect
+  const fnCoups=coups.filter(c=>c.source_function_id===fn.id||c.target_function_id===fn.id);
+  const usedAsps=new Set();
+  fnCoups.forEach(c=>{
+    if(c.source_function_id===fn.id) usedAsps.add(c.source_aspect);
+    if(c.target_function_id===fn.id) usedAsps.add(c.target_aspect);
+  });
+  if(!isSel&&!isHov){
+    usedAsps.forEach(asp=>{
+      const [ax,ay]=w2s(...aspPt(fn.x,fn.y,HR,asp));
+      ctx.save();
+      ctx.beginPath();ctx.arc(ax,ay,Math.max(4,5*scale),0,Math.PI*2);
+      ctx.fillStyle=ASP_COLORS[asp];ctx.fill();
+      ctx.restore();
+    });
+  }
+}
+
+function drawCoupling(c){
+  const src=fns.find(f=>f.id===c.source_function_id);
+  const tgt=fns.find(f=>f.id===c.target_function_id);
+  if(!src||!tgt) return;
+
+  const [sx,sy]=w2s(...aspPt(src.x,src.y,HR,c.source_aspect||'O'));
+  const [tx,ty]=w2s(...aspPt(tgt.x,tgt.y,HR,c.target_aspect||'I'));
+
+  // Control midpoint - perpendicular offset for curve
+  const mx=(sx+tx)/2,my=(sy+ty)/2;
+  const dx=tx-sx,dy=ty-sy,len=Math.hypot(dx,dy);
+  const off=Math.min(60,len*0.3);
+  const cpx=mx-dy/len*off, cpy=my+dx/len*off;
+
+  const lt=c.line_type||'normal';
+  ctx.save();
+  ctx.beginPath();ctx.moveTo(sx,sy);ctx.quadraticCurveTo(cpx,cpy,tx,ty);
+  if(lt==='variable') ctx.setLineDash([6,4]);
+  else ctx.setLineDash([]);
+  ctx.strokeStyle=lt==='critical'?'#e85555':'rgba(160,160,190,0.6)';
+  ctx.lineWidth=lt==='critical'?2:1.2;
+  ctx.stroke();ctx.setLineDash([]);
+
+  // Arrow at target
+  const t1=0.92,t2=0.98;
+  const ax=(1-t2)*(1-t2)*sx+2*(1-t2)*t2*cpx+t2*t2*tx;
+  const ay=(1-t2)*(1-t2)*sy+2*(1-t2)*t2*cpy+t2*t2*ty;
+  const bx=(1-t1)*(1-t1)*sx+2*(1-t1)*t1*cpx+t1*t1*tx;
+  const by=(1-t1)*(1-t1)*sy+2*(1-t1)*t1*cpy+t1*t1*ty;
+  const ang=Math.atan2(ay-by,ax-bx);
+  const al=9*Math.min(scale,1.2);
+  ctx.beginPath();
+  ctx.moveTo(ax,ay);
+  ctx.lineTo(ax-al*Math.cos(ang-0.45),ay-al*Math.sin(ang-0.45));
+  ctx.lineTo(ax-al*Math.cos(ang+0.45),ay-al*Math.sin(ang+0.45));
+  ctx.closePath();
+  ctx.fillStyle=lt==='critical'?'#e85555':'rgba(160,160,190,0.7)';
+  ctx.fill();
+
+  // Label on curve midpoint
+  if(c.label){
+    const lx=(sx+tx)/2-dy/len*off*0.5, ly=(sy+ty)/2+dx/len*off*0.5-8;
+    ctx.font=`10px "Segoe UI",system-ui`;
+    ctx.fillStyle='rgba(180,180,210,0.7)';
+    ctx.textAlign='center';ctx.fillText(c.label,lx,ly);
+  }
+
+  // Aspect labels at endpoints
+  ctx.font=`700 9px monospace`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle=ASP_COLORS[c.source_aspect||'O'];
+  const [slx,sly]=w2s(...aspLabelPt(src.x,src.y,HR,c.source_aspect||'O'));
+  // small text near src asp dot
+  ctx.restore();
+}
+
+function drawMCOverlay(){
+  Object.entries(mcResults).forEach(([id,r])=>{
+    const fn=fns.find(f=>f.id===id);
+    if(!fn) return;
+    const [cx,cy]=w2s(fn.x,fn.y);
+    const rad=HR*scale;
+    const p=r.resonanceProb;
+    if(p<0.05) return;
+    ctx.save();
+    ctx.globalAlpha=p*0.3;
+    ctx.beginPath();ctx.arc(cx,cy,rad*1.4,0,Math.PI*2);
+    ctx.fillStyle=p>0.6?'#e85555':p>0.3?'#e8a83a':'#4db87a';
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle=p>0.6?'#e85555':p>0.3?'#e8a83a':'#4db87a';
+    ctx.font=`700 ${Math.max(9,10*scale)}px monospace`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(Math.round(p*100)+'%',cx,cy+rad*0.9);
+    ctx.restore();
+  });
+}
+
+function getResonantIds(){
+  const ids=new Set();
+  resEvents.forEach(re=>{
+    if(re.initial_function_id) ids.add(re.initial_function_id);
+    (re.affected_function_ids||[]).forEach(id=>ids.add(id));
+  });
+  return ids;
+}
+
+// ════════════════════════════════════════════════════════════
+//  MOUSE
+// ════════════════════════════════════════════════════════════
+canvas.addEventListener('mousedown',onDown);
+canvas.addEventListener('mousemove',onMove);
+canvas.addEventListener('mouseup',onUp);
+canvas.addEventListener('wheel',onWheel,{passive:false});
+canvas.addEventListener('dblclick',onDbl);
+
+function onDown(e){
+  const [wx,wy]=s2w(e.offsetX,e.offsetY);
+  const fn=fns.find(f=>ptInHex(wx,wy,f.x,f.y,HR));
+  if(mode==='select'){
+    if(fn){dragFn=fn;dragOX=wx-fn.x;dragOY=wy-fn.y;dragging=false;selectFn(fn);}
+    else{dragFn=null;selFn=null;closePanel();isPanning=true;panSX=e.offsetX-panX;panSY=e.offsetY-panY;renderSidebar();draw();}
+  } else if(mode==='connect'){
+    if(fn){
+      if(!connSrc){connSrc=fn;draw();}
+      else if(fn.id!==connSrc.id){openConnModal(connSrc,fn);}
+      else{connSrc=null;draw();}
+    } else {connSrc=null;draw();}
+  }
+}
+function onMove(e){
+  const [wx,wy]=s2w(e.offsetX,e.offsetY);
+  if(isPanning){panX=e.offsetX-panSX;panY=e.offsetY-panSY;draw();return;}
+  if(dragFn){
+    if(Math.hypot(wx-dragFn.x-dragOX,wy-dragFn.y-dragOY)>2) dragging=true;
+    dragFn.x=wx-dragOX;dragFn.y=wy-dragOY;draw();return;
+  }
+  if(mode==='connect'&&connSrc) connPending={x:e.offsetX,y:e.offsetY};
+  const fn=fns.find(f=>ptInHex(wx,wy,f.x,f.y,HR));
+  if(fn!==hoverFn){hoverFn=fn;draw();}
+  if(fn){
+    tip.style.display='block';
+    tip.style.left=(e.offsetX+14)+'px';
+    tip.style.top=(e.offsetY-10)+'px';
+    const v=vars.find(v=>v.affected_function_id===fn.id);
+    tip.innerHTML=`<b>${fn.name}</b>`+(fn.description?`<br>${fn.description.slice(0,80)}`:'')+(v?`<br>⚡ ${v.name||v.variability_type}`:'');
+  } else tip.style.display='none';
+}
+function onUp(){dragFn=null;dragging=false;isPanning=false;}
+function onDbl(e){
+  const [wx,wy]=s2w(e.offsetX,e.offsetY);
+  const fn=fns.find(f=>ptInHex(wx,wy,f.x,f.y,HR));
+  if(fn) openFnPanel(fn);
+}
+function onWheel(e){
+  e.preventDefault();
+  const d=e.deltaY>0?0.88:1.14;
+  panX=(panX-e.offsetX)*d+e.offsetX;
+  panY=(panY-e.offsetY)*d+e.offsetY;
+  scale=Math.max(0.25,Math.min(3,scale*d));
+  draw();
+}
+
+// ════════════════════════════════════════════════════════════
+//  MODE
+// ════════════════════════════════════════════════════════════
+function setMode(m){
+  mode=m;
+  document.getElementById('btn-sel').classList.toggle('active',m==='select');
+  document.getElementById('btn-con').classList.toggle('active',m==='connect');
+  const pill=document.getElementById('mode-pill');
+  pill.textContent=m==='connect'?'Conectar — clique na origem e depois no destino':'Selecionar';
+  pill.className='mode-pill'+(m==='connect'?' connect':'');
+  connSrc=null;connPending=null;draw();
+}
+
+// ════════════════════════════════════════════════════════════
+//  FUNCTIONS
+// ════════════════════════════════════════════════════════════
+function uid(){return 'fn'+Math.random().toString(36).slice(2,8)+Date.now();}
+
+function addFn(){
+  const cx=(wrap.offsetWidth/2-panX)/scale;
+  const cy=(wrap.offsetHeight/2-panY)/scale;
+  const fn={id:uid(),name:'Nova função',description:'',input:'',output:'',precondition:'',resource:'',control:'',time:'',criticality:3,coupling_degree:3,status:'ativa',style:'red',fnType:0,x:cx+(Math.random()-.5)*120,y:cy+(Math.random()-.5)*80};
+  fns.push(fn);renderSidebar();selectFn(fn);draw();
+}
+
+function selectFn(fn){selFn=fn;openFnPanel(fn);renderSidebar();draw();}
+function closePanel(){document.getElementById('panel').style.display='none';}
+
+function openFnPanel(fn){
+  document.getElementById('panel').style.display='block';
+  document.getElementById('panel-title').textContent=fn.name;
+  const asps=[{k:'input',l:'I — Input',c:'#4a9ef0'},{k:'output',l:'O — Output',c:'#4db87a'},{k:'precondition',l:'P — Precondição',c:'#e8a83a'},{k:'resource',l:'R — Recurso',c:'#8a8aaa'},{k:'control',l:'C — Controle',c:'#e85555'},{k:'time',l:'T — Tempo',c:'#7c6ff7'}];
+  const styles=[{v:'red',n:'Organizacional (ativa)'},{v:'green',n:'Background (suporte)'},{v:'grey',n:'Humana'},{v:'white',n:'Tecnológica'}];
+  document.getElementById('panel-body').innerHTML=`
+<label class="fl">Nome da função</label>
+<input class="fi" id="fp-name" value="${esc(fn.name)}">
+<label class="fl">Descrição</label>
+<textarea class="fi" id="fp-desc">${esc(fn.description||'')}</textarea>
+<label class="fl">Tipo / estilo</label>
+<div class="fn-type-grid">${styles.map(s=>`<button class="fn-type-btn${fn.style===s.v?' sel-'+s.v:''}" onclick="setStyle('${fn.id}','${s.v}',this)">${s.n}</button>`).join('')}</div>
+<div class="divider"></div>
+${asps.map(a=>`<label class="fl" style="color:${a.c}">${a.l}</label><input class="fi" id="fp-${a.k}" value="${esc(fn[a.k]||'')}" placeholder="${a.l}">`).join('')}
+<div class="divider"></div>
+<label class="fl">Criticidade</label>
+<div class="stars" id="fp-crit-s">${[1,2,3,4,5].map(s=>`<span class="star${(fn.criticality||3)>=s?' on':''}" onclick="setStar('crit',${s},'${fn.id}')">${s<=3?'★':'☆'}</span>`).join('')}</div>
+<input type="hidden" id="fp-crit" value="${fn.criticality||3}">
+<label class="fl">Grau de acoplamento</label>
+<div class="stars" id="fp-coup-s">${[1,2,3,4,5].map(s=>`<span class="star${(fn.coupling_degree||3)>=s?' on':''}" onclick="setStar('coup',${s},'${fn.id}')">${s<=3?'●':'○'}</span>`).join('')}</div>
+<input type="hidden" id="fp-coup" value="${fn.coupling_degree||3}">
+<div class="btn-row">
+  <button class="btn-save" onclick="saveFnPanel('${fn.id}')">Salvar</button>
+  <button class="btn-del" onclick="deleteFn('${fn.id}')">Excluir</button>
+</div>`;
+}
+
+function setStyle(id,style,btn){
+  const fn=fns.find(f=>f.id===id);if(!fn)return;
+  fn.style=style;
+  btn.closest('.fn-type-grid').querySelectorAll('.fn-type-btn').forEach(b=>{
+    b.className='fn-type-btn';
+  });
+  btn.className='fn-type-btn sel-'+style;
+  draw();
+}
+function setStar(key,val,fnId){
+  document.getElementById('fp-'+key).value=val;
+  document.querySelectorAll('#fp-'+key+'-s .star').forEach((s,i)=>s.classList.toggle('on',i<val));
+}
+function saveFnPanel(id){
+  const fn=fns.find(f=>f.id===id);if(!fn)return;
+  fn.name=document.getElementById('fp-name').value||fn.name;
+  fn.description=document.getElementById('fp-desc').value;
+  fn.input=document.getElementById('fp-input').value;
+  fn.output=document.getElementById('fp-output').value;
+  fn.precondition=document.getElementById('fp-precondition').value;
+  fn.resource=document.getElementById('fp-resource').value;
+  fn.control=document.getElementById('fp-control').value;
+  fn.time=document.getElementById('fp-time').value;
+  fn.criticality=parseInt(document.getElementById('fp-crit').value)||3;
+  fn.coupling_degree=parseInt(document.getElementById('fp-coup').value)||3;
+  document.getElementById('panel-title').textContent=fn.name;
+  renderSidebar();draw();
+}
+function deleteFn(id){
+  fns=fns.filter(f=>f.id!==id);
+  coups=coups.filter(c=>c.source_function_id!==id&&c.target_function_id!==id);
+  selFn=null;closePanel();renderSidebar();draw();
+}
+
+// ════════════════════════════════════════════════════════════
+//  COUPLINGS
+// ════════════════════════════════════════════════════════════
+function openConnModal(src,tgt){
+  connSrcFn=src;connTgtFn=tgt;
+  document.getElementById('conn-info').textContent=src.name+' → '+tgt.name;
+  document.getElementById('c-lbl').value='';
+  document.getElementById('overlay').style.display='flex';
+}
+function confirmConn(){
+  if(!connSrcFn||!connTgtFn)return;
+  coups.push({id:uid(),source_function_id:connSrcFn.id,target_function_id:connTgtFn.id,source_aspect:document.getElementById('c-src').value,target_aspect:document.getElementById('c-tgt').value,label:document.getElementById('c-lbl').value,line_type:document.getElementById('c-type').value,created_date:new Date().toISOString()});
+  document.getElementById('overlay').style.display='none';
+  connSrcFn=null;connTgtFn=null;connSrc=null;connPending=null;
+  renderSidebar();draw();
+}
+function cancelConn(){document.getElementById('overlay').style.display='none';connSrcFn=null;connTgtFn=null;connSrc=null;connPending=null;draw();}
+
+// ════════════════════════════════════════════════════════════
+//  VARIABILITY
+// ════════════════════════════════════════════════════════════
+function addVar(){
+  if(!selFn){alert('Selecione uma função primeiro.');return;}
+  const fn=selFn;
+  document.getElementById('panel').style.display='block';
+  document.getElementById('panel-title').textContent='⚡ Variabilidade — '+fn.name;
+  document.getElementById('panel-body').innerHTML=`
+<label class="fl">Nome</label><input class="fi" id="v-name" placeholder="Nome da variabilidade">
+<label class="fl">Código DGR</label>
+<select class="fi" id="v-code">
+  <option value="RE-A.1">RE-A.1 Desvio procedimental</option><option value="RE-A.2">RE-A.2 Saturação cognitiva</option><option value="RE-A.3">RE-A.3 Metadados obsoletos</option>
+  <option value="RE-B.1">RE-B.1 Fadiga de alertas</option><option value="RE-B.2">RE-B.2 Silos informacionais</option><option value="RE-B.3">RE-B.3 Latência de visibilidade</option>
+  <option value="RE-C.1">RE-C.1 Rigidez semântica</option><option value="RE-C.2">RE-C.2 Data Locking</option><option value="RE-C.3">RE-C.3 Replicação defasada</option>
+  <option value="RX-A.1">RX-A.1 Pico de demanda</option><option value="RX-A.2">RX-A.2 Instabilidade regulatória</option><option value="RX-A.3">RX-A.3 Contaminação de entrada</option>
+  <option value="RX-B.1">RX-B.1 Quebra de interface</option><option value="RX-B.2">RX-B.2 Conflito interpretativo</option><option value="RX-B.3">RX-B.3 Falha em cascata</option>
+  <option value="MR-A.1">MR-A.1 Barreiras Fail-Safe</option><option value="MR-A.2">MR-A.2 Consciência situacional</option><option value="MR-A.3">MR-A.3 Orquestração ágil</option>
+  <option value="MR-B.1">MR-B.1 Autonomia interequipes</option><option value="MR-B.2">MR-B.2 Degradação graciosa</option><option value="MR-B.3">MR-B.3 Coping estruturado</option>
+  <option value="MR-C.1">MR-C.1 Institucionalização tácita</option><option value="MR-C.2">MR-C.2 Retroalimentação pós-incidente</option><option value="MR-C.3">MR-C.3 Memória organizacional</option>
+</select>
+<label class="fl">Descrição</label><textarea class="fi" id="v-desc"></textarea>
+<div class="fi-row">
+  <div><label class="fl">Intensidade (1-5)</label><input type="number" class="fi" id="v-int" min="1" max="5" value="3"></div>
+  <div><label class="fl">Probabilidade (1-5)</label><input type="number" class="fi" id="v-prob" min="1" max="5" value="3"></div>
+</div>
+<div class="fi-row">
+  <div><label class="fl">Propagação (1-5)</label><input type="number" class="fi" id="v-prop" min="1" max="5" value="3"></div>
+  <div><label class="fl">Detectabilidade (1-5)</label><input type="number" class="fi" id="v-det" min="1" max="5" value="3"></div>
+</div>
+<div class="btn-row"><button class="btn-save" onclick="saveVar('${fn.id}')">Salvar variabilidade</button></div>`;
+}
+function saveVar(fnId){
+  vars.push({id:uid(),affected_function_id:fnId,name:document.getElementById('v-name').value||'Variabilidade',variability_type:document.getElementById('v-code').value,category:document.getElementById('v-code').value.startsWith('RE')?'endogena':document.getElementById('v-code').value.startsWith('RX')?'exogena':'mecanismo',description:document.getElementById('v-desc').value,intensity:+document.getElementById('v-int').value||3,probability:+document.getElementById('v-prob').value||3,propagation_potential:+document.getElementById('v-prop').value||3,detectability:+document.getElementById('v-det').value||3,created_date:new Date().toISOString()});
+  renderSidebar();draw();
+  if(selFn) openFnPanel(selFn);
+}
+
+// ════════════════════════════════════════════════════════════
+//  RESONANCE
+// ════════════════════════════════════════════════════════════
+function addRes(){
+  if(!selFn){alert('Selecione a função inicial da ressonância.');return;}
+  const fn=selFn;
+  document.getElementById('panel').style.display='block';
+  document.getElementById('panel-title').textContent='∿ Evento de ressonância — '+fn.name;
+  const others=fns.filter(f=>f.id!==fn.id);
+  document.getElementById('panel-body').innerHTML=`
+<label class="fl">Título</label><input class="fi" id="r-title" placeholder="Ex: Pico Auxílio Emergencial 2020">
+<label class="fl">Descrição / evidências</label><textarea class="fi" id="r-desc"></textarea>
+<label class="fl">Funções afetadas</label>
+${others.map(f=>`<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);margin-bottom:5px"><input type="checkbox" id="rf-${f.id}" style="width:auto;accent-color:var(--purple)"> ${esc(f.name)}</label>`).join('')}
+<div class="fi-row" style="margin-top:8px">
+  <div><label class="fl">GA Score (1-5)</label><input type="number" class="fi" id="r-ga" min="1" max="5" value="3"></div>
+  <div><label class="fl">PV Score (1-5)</label><input type="number" class="fi" id="r-pv" min="1" max="5" value="3"></div>
+</div>
+<label class="fl">Impacto operacional</label>
+<select class="fi" id="r-impact"><option value="baixo">Baixo</option><option value="moderado" selected>Moderado</option><option value="alto">Alto</option><option value="critico">Crítico</option></select>
+<div class="btn-row"><button class="btn-save" onclick="saveRes('${fn.id}')">Registrar evento</button></div>`;
+}
+function saveRes(fnId){
+  const aff=fns.filter(f=>f.id!==fnId&&document.getElementById('rf-'+f.id)?.checked).map(f=>f.id);
+  resEvents.push({id:uid(),initial_function_id:fnId,title:document.getElementById('r-title').value||'Evento',description:document.getElementById('r-desc').value,affected_function_ids:aff,ga_score:+document.getElementById('r-ga').value||3,pv_score:+document.getElementById('r-pv').value||3,operational_impact:document.getElementById('r-impact').value,status:'identificado',created_date:new Date().toISOString()});
+  renderSidebar();draw();
+  if(!animRunning){animRunning=true;animLoop();}
+}
+
+// ════════════════════════════════════════════════════════════
+//  MONTE CARLO
+// ════════════════════════════════════════════════════════════
+function runMC(){
+  if(fns.length<1){alert('Adicione funções ao modelo.');return;}
+  const N=8000;
+  const results={};
+  fns.forEach(fn=>{
+    const v=vars.find(v=>v.affected_function_id===fn.id);
+    const baseP=v?(v.intensity||3)*(v.probability||3)/25:(fn.criticality||3)/10;
+    const coup=(fn.coupling_degree||3)/5;
+    const scores=[];
+    for(let i=0;i<N;i++){
+      let p=baseP;
+      coups.filter(c=>c.target_function_id===fn.id).forEach(c=>{
+        const sf=fns.find(f=>f.id===c.source_function_id);
+        if(sf){const sv=vars.find(vv=>vv.affected_function_id===sf.id);const sp=sv?(sv.intensity||3)*(sv.probability||3)/25:(sf.criticality||3)/10;p+=sp*coup*0.35;}
+      });
+      const noise=(Math.random()+Math.random()+Math.random()-1.5)/3;
+      scores.push(Math.min(1,Math.max(0,p+noise*0.3)));
+    }
+    scores.sort((a,b)=>a-b);
+    const mean=scores.reduce((a,b)=>a+b,0)/N;
+    results[fn.id]={resonanceProb:scores.filter(s=>s>0.45).length/N,mean,p5:scores[Math.floor(N*.05)],p95:scores[Math.floor(N*.95)],name:fn.name};
+  });
+  mcResults=results;
+  const sorted=Object.values(results).sort((a,b)=>b.resonanceProb-a.resonanceProb);
+  const maxP=sorted[0]?.resonanceProb||0.01;
+  document.getElementById('mc-panel').style.display='block';
+  document.getElementById('mc-body').innerHTML=`
+<div style="font-size:11px;color:var(--text3);margin-bottom:10px">N=${N.toLocaleString()} simulações · probabilidade de ressonância funcional</div>
+${sorted.map(r=>`
+<div class="mc-bar-wrap">
+  <div class="mc-lbl"><span>${r.name}</span><span style="font-weight:600;color:${r.resonanceProb>.6?'#e85555':r.resonanceProb>.3?'#e8a83a':'#4db87a'}">${Math.round(r.resonanceProb*100)}%</span></div>
+  <div class="mc-bar-bg"><div class="mc-bar-fill" style="width:${Math.round(r.resonanceProb/maxP*100)}%;background:${r.resonanceProb>.6?'#e85555':r.resonanceProb>.3?'#e8a83a':'#4db87a'}"></div></div>
+  <div style="font-size:10px;color:var(--text3);margin-top:2px">P5=${Math.round(r.p5*100)}% · Média=${Math.round(r.mean*100)}% · P95=${Math.round(r.p95*100)}%</div>
+</div>`).join('')}
+<div class="mc-stats">
+  <div class="mc-stat"><span class="mc-stat-val" style="color:#e85555">${sorted.filter(r=>r.resonanceProb>.6).length}</span><span class="mc-stat-lbl">Crítico</span></div>
+  <div class="mc-stat"><span class="mc-stat-val" style="color:#e8a83a">${sorted.filter(r=>r.resonanceProb>.3&&r.resonanceProb<=.6).length}</span><span class="mc-stat-lbl">Médio</span></div>
+  <div class="mc-stat"><span class="mc-stat-val" style="color:#4db87a">${sorted.filter(r=>r.resonanceProb<=.3).length}</span><span class="mc-stat-lbl">Baixo</span></div>
+</div>
+<button class="btn-del" style="width:100%;margin-top:10px;font-size:11px" onclick="mcResults=null;document.getElementById('mc-panel').style.display='none';draw()">Limpar resultados</button>`;
+  draw();
+}
+
+// ════════════════════════════════════════════════════════════
+//  EXPORT / IMPORT
+// ════════════════════════════════════════════════════════════
+function exportJSON(){
+  const data={
+    meta:{version:'1.0',created:new Date().toISOString(),tool:'DGR-FRAM Modeler',description:'Modelo DGR-FRAM — Governança de Dados e Resiliência Organizacional'},
+    functions:fns.map(fn=>({...fn})),
+    layouts:fns.map(fn=>({function_id:fn.id,x:Math.round(fn.x),y:Math.round(fn.y),variability_type:fn.variability_type||'none',id:uid()})),
+    couplings:coups,variabilities:vars,resonanceEvents:resEvents,governanceMechanisms:govMechs,
+    monteCarlo:mcResults?{results:mcResults,runDate:new Date().toISOString(),n:8000}:null
+  };
+  dl(JSON.stringify(data,null,2),'application/json','dgr-fram-model.json');
+}
+
+function exportPNG(){
+  const offCanvas=document.createElement('canvas');
+  const margin=60;
+  // Compute bounds
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  fns.forEach(fn=>{minX=Math.min(minX,fn.x-HR-20);minY=Math.min(minY,fn.y-HR-20);maxX=Math.max(maxX,fn.x+HR+20);maxY=Math.max(maxY,fn.y+HR+20);});
+  if(fns.length===0){minX=0;minY=0;maxX=800;maxY=600;}
+  const W=maxX-minX+margin*2, H=maxY-minY+margin*2;
+  offCanvas.width=W*2;offCanvas.height=H*2; // 2x for retina
+  const oc=offCanvas.getContext('2d');
+  oc.scale(2,2);
+  // Dark bg
+  oc.fillStyle='#1a1a1f';oc.fillRect(0,0,W,H);
+  // Translate so model fits
+  const savedPanX=panX,savedPanY=panY,savedScale=scale;
+  panX=-minX+margin;panY=-minY+margin;scale=1;
+  // Redraw on offCanvas
+  const savedCtx=ctx;
+  Object.assign(ctx,oc); // hack: swap ctx reference
+  // Actually just re-draw directly on oc
+  const tmpCtx=ctx;
+  drawAllOnCtx(oc,W,H,-minX+margin,-minY+margin,1);
+  panX=savedPanX;panY=savedPanY;scale=savedScale;
+  offCanvas.toBlob(blob=>{
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='dgr-fram-diagrama.png';a.click();URL.revokeObjectURL(url);
+  },'image/png');
+}
+
+function drawAllOnCtx(oc,W,H,px,py,sc){
+  const resonantIds=getResonantIds();
+  // Grid
+  oc.strokeStyle='rgba(255,255,255,0.03)';oc.lineWidth=1;
+  const gs=50*sc,ox=px%gs,oy=py%gs;
+  for(let x=ox;x<W;x+=gs){oc.beginPath();oc.moveTo(x,0);oc.lineTo(x,H);oc.stroke();}
+  for(let y=oy;y<H;y+=gs){oc.beginPath();oc.moveTo(0,y);oc.lineTo(W,y);oc.stroke();}
+  // Couplings
+  coups.forEach(c=>{
+    const src=fns.find(f=>f.id===c.source_function_id),tgt=fns.find(f=>f.id===c.target_function_id);
+    if(!src||!tgt)return;
+    const sxp=aspPt(src.x,src.y,HR,c.source_aspect||'O'),txp=aspPt(tgt.x,tgt.y,HR,c.target_aspect||'I');
+    const sx=sxp[0]*sc+px,sy=sxp[1]*sc+py,tx2=txp[0]*sc+px,ty2=txp[1]*sc+py;
+    const mx=(sx+tx2)/2,my=(sy+ty2)/2,dx=tx2-sx,dy=ty2-sy,len=Math.hypot(dx,dy)||1,off=Math.min(60,len*0.3);
+    const cpx=mx-dy/len*off,cpy=my+dx/len*off;
+    const lt=c.line_type||'normal';
+    oc.save();oc.beginPath();oc.moveTo(sx,sy);oc.quadraticCurveTo(cpx,cpy,tx2,ty2);
+    if(lt==='variable')oc.setLineDash([6,4]);else oc.setLineDash([]);
+    oc.strokeStyle=lt==='critical'?'#e85555':'rgba(160,160,190,0.6)';oc.lineWidth=lt==='critical'?2:1.2;oc.stroke();oc.setLineDash([]);
+    const t2v=0.98,ax2=(1-t2v)*(1-t2v)*sx+2*(1-t2v)*t2v*cpx+t2v*t2v*tx2,ay2=(1-t2v)*(1-t2v)*sy+2*(1-t2v)*t2v*cpy+t2v*t2v*ty2;
+    const t1v=0.92,bx2=(1-t1v)*(1-t1v)*sx+2*(1-t1v)*t1v*cpx+t1v*t1v*tx2,by2=(1-t1v)*(1-t1v)*sy+2*(1-t1v)*t1v*cpy+t1v*t1v*ty2;
+    const ang=Math.atan2(ay2-by2,ax2-bx2);const al=9;
+    oc.beginPath();oc.moveTo(ax2,ay2);oc.lineTo(ax2-al*Math.cos(ang-.45),ay2-al*Math.sin(ang-.45));oc.lineTo(ax2-al*Math.cos(ang+.45),ay2-al*Math.sin(ang+.45));oc.closePath();
+    oc.fillStyle=lt==='critical'?'#e85555':'rgba(160,160,190,0.7)';oc.fill();
+    oc.restore();
+  });
+  // Functions
+  fns.forEach(fn=>{
+    const cx=fn.x*sc+px,cy=fn.y*sc+py,r=HR*sc;
+    const col=FN_COLORS[fn.style||'red']||FN_COLORS.red;
+    const pts=hexPts2(cx,cy,r);
+    oc.save();
+    oc.beginPath();oc.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<6;i++)oc.lineTo(pts[i][0],pts[i][1]);oc.closePath();
+    oc.fillStyle=col.fill;oc.fill();oc.strokeStyle=col.stroke;oc.lineWidth=1.5;oc.stroke();
+    if(resonantIds.has(fn.id)){
+      oc.strokeStyle='#e85555';oc.lineWidth=1.8;
+      const amp=r*.18,freq=4,w2=r*.72;
+      oc.beginPath();for(let x=-w2;x<=w2;x+=1){const yy=cy+amp*Math.sin(freq*(x/w2)*Math.PI);if(x===-w2)oc.moveTo(cx+x,yy);else oc.lineTo(cx+x,yy);}oc.stroke();
+    }
+    oc.fillStyle=col.text;const fs=Math.max(9,11*Math.min(sc,1));
+    oc.font=`500 ${fs}px "Segoe UI",system-ui`;oc.textAlign='center';oc.textBaseline='middle';
+    const words=(fn.name||'').split(' ');const lines2=[];let cur='';
+    words.forEach(w=>{const t=cur?cur+' '+w:w;if(oc.measureText(t).width>r*1.5){if(cur)lines2.push(cur);cur=w;}else cur=t;});lines2.push(cur);
+    const lh=Math.max(12,fs*1.3),totalH=(lines2.length-1)*lh;
+    lines2.forEach((l,i)=>oc.fillText(l,cx,cy-totalH/2+i*lh));
+    // aspect dots for used aspects
+    const usedA=new Set();
+    coups.forEach(c=>{if(c.source_function_id===fn.id)usedA.add(c.source_aspect);if(c.target_function_id===fn.id)usedA.add(c.target_aspect);});
+    usedA.forEach(asp=>{const[ax,ay]=[aspPt(fn.x,fn.y,HR,asp)[0]*sc+px,aspPt(fn.x,fn.y,HR,asp)[1]*sc+py];oc.beginPath();oc.arc(ax,ay,Math.max(4,5*sc),0,Math.PI*2);oc.fillStyle=ASP_COLORS[asp];oc.fill();});
+    oc.restore();
+  });
+  // Watermark
+  oc.save();oc.fillStyle='rgba(255,255,255,0.15)';oc.font='11px "Segoe UI",system-ui';oc.textAlign='right';
+  oc.fillText('DGR-FRAM Modeler · '+new Date().toLocaleDateString('pt-BR'),W-12,H-10);oc.restore();
+}
+
+function hexPts2(cx,cy,r){const p=[];for(let i=0;i<6;i++){const a=Math.PI/3*i;p.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]);}return p;}
+
+function exportPDF(){
+  if(!window.jspdf){alert('Biblioteca PDF ainda carregando, tente novamente em instantes.');return;}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const W=297,H=210;
+
+  // Cover page
+  doc.setFillColor(26,26,31);doc.rect(0,0,W,H,'F');
+  doc.setTextColor(124,111,247);doc.setFontSize(22);doc.setFont('helvetica','bold');
+  doc.text('DGR-FRAM — Modelo de Governança de Dados e Resiliência',W/2,40,{align:'center'});
+  doc.setTextColor(152,152,176);doc.setFontSize(12);doc.setFont('helvetica','normal');
+  doc.text('Dataprev — Infraestrutura Crítica Digital',W/2,52,{align:'center'});
+  doc.setFontSize(10);doc.text('Gerado em: '+new Date().toLocaleString('pt-BR'),W/2,62,{align:'center'});
+
+  // Stats
+  doc.setTextColor(200,200,220);doc.setFontSize(11);
+  const stats=[['Funções',fns.length],['Acoplamentos',coups.length],['Variabilidades',vars.length],['Eventos de ressonância',resEvents.length]];
+  stats.forEach((s,i)=>{doc.text(s[0]+': '+s[1],30+i*65,80);});
+
+  // Diagram page
+  doc.addPage();
+  doc.setFillColor(26,26,31);doc.rect(0,0,W,H,'F');
+  doc.setTextColor(124,111,247);doc.setFontSize(14);doc.setFont('helvetica','bold');
+  doc.text('Diagrama Funcional FRAM',W/2,15,{align:'center'});
+
+  // Render model to offscreen canvas then add as image
+  const offC=document.createElement('canvas');offC.width=1800;offC.height=1100;
+  const oc2=offC.getContext('2d');
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  fns.forEach(fn=>{minX=Math.min(minX,fn.x-HR*1.5);minY=Math.min(minY,fn.y-HR*1.5);maxX=Math.max(maxX,fn.x+HR*1.5);maxY=Math.max(maxY,fn.y+HR*1.5);});
+  if(fns.length===0){minX=0;minY=0;maxX=1600;maxY=900;}
+  const bW=maxX-minX,bH=maxY-minY;
+  const sc2=Math.min(1700/bW,1000/bH,1.5);
+  const px2=(1800-(bW*sc2))/2-minX*sc2, py2=(1100-(bH*sc2))/2-minY*sc2;
+  oc2.fillStyle='#1a1a1f';oc2.fillRect(0,0,1800,1100);
+  drawAllOnCtx(oc2,1800,1100,px2,py2,sc2);
+  const imgData=offC.toDataURL('image/png');
+  doc.addImage(imgData,'PNG',5,20,W-10,H-25);
+
+  // Functions page
+  if(fns.length>0){
+    doc.addPage();
+    doc.setFillColor(26,26,31);doc.rect(0,0,W,H,'F');
+    doc.setTextColor(124,111,247);doc.setFontSize(14);doc.setFont('helvetica','bold');
+    doc.text('Funções FRAM — Aspectos I-O-P-R-C-T',W/2,15,{align:'center'});
+    let y=28;
+    fns.forEach((fn,fi)=>{
+      if(y>H-20){doc.addPage();doc.setFillColor(26,26,31);doc.rect(0,0,W,H,'F');y=20;}
+      doc.setTextColor(200,200,220);doc.setFontSize(11);doc.setFont('helvetica','bold');
+      doc.text((fi+1)+'. '+fn.name,10,y);y+=6;
+      const aspRows=[['Input',fn.input],['Output',fn.output],['Precondição',fn.precondition],['Recurso',fn.resource],['Controle',fn.control],['Tempo',fn.time]];
+      aspRows.forEach(([k,v])=>{if(v){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(152,152,176);doc.text(k+': ',12,y);doc.setTextColor(200,200,220);doc.text(v.slice(0,120),35,y);y+=5;}});
+      y+=3;
+    });
+  }
+
+  // Variabilities page
+  if(vars.length>0){
+    doc.addPage();
+    doc.setFillColor(26,26,31);doc.rect(0,0,W,H,'F');
+    doc.setTextColor(124,111,247);doc.setFontSize(14);doc.setFont('helvetica','bold');
+    doc.text('Variabilidades e Perturbações DGR-FRAM',W/2,15,{align:'center'});
+    let y=28;
+    vars.forEach((v,i)=>{
+      if(y>H-20){doc.addPage();doc.setFillColor(26,26,31);doc.rect(0,0,W,H,'F');y=20;}
+      const fn=fns.find(f=>f.id===v.affected_function_id);
+      doc.setTextColor(232,168,58);doc.setFontSize(10);doc.setFont('helvetica','bold');
+      doc.text('['+v.variability_type+'] '+v.name,10,y);y+=5;
+      doc.setTextColor(152,152,176);doc.setFontSize(9);doc.setFont('helvetica','normal');
+      doc.text('Função: '+(fn?.name||'N/A')+' | Intensidade: '+v.intensity+'/5 | Prob: '+v.probability+'/5 | Propagação: '+v.propagation_potential+'/5',10,y);y+=4;
+      if(v.description){doc.setTextColor(180,180,200);doc.text(v.description.slice(0,160),10,y);y+=5;}
+      y+=3;
+    });
+  }
+
+  // MC results page
+  if(mcResults){
+    doc.addPage();
+    doc.setFillColor(26,26,31);doc.rect(0,0,W,H,'F');
+    doc.setTextColor(124,111,247);doc.setFontSize(14);doc.setFont('helvetica','bold');
+    doc.text('Resultados — Simulação Monte Carlo (N=8.000)',W/2,15,{align:'center'});
+    let y=28;
+    const sorted=Object.values(mcResults).sort((a,b)=>b.resonanceProb-a.resonanceProb);
+    sorted.forEach(r=>{
+      if(y>H-15){doc.addPage();doc.setFillColor(26,26,31);doc.rect(0,0,W,H,'F');y=20;}
+      const p=r.resonanceProb;
+      const col=p>.6?[232,85,85]:p>.3?[232,168,58]:[77,184,122];
+      doc.setTextColor(...col);doc.setFontSize(10);doc.setFont('helvetica','bold');
+      doc.text(r.name+': '+Math.round(p*100)+'%',10,y);
+      doc.setDrawColor(...col);doc.setFillColor(...col);
+      const bw=(W-80)*p;doc.rect(80,y-4,bw,5,'F');
+      doc.setTextColor(152,152,176);doc.setFontSize(8);doc.setFont('helvetica','normal');
+      doc.text('P5='+Math.round(r.p5*100)+'% | Média='+Math.round(r.mean*100)+'% | P95='+Math.round(r.p95*100)+'%',10,y+5);
+      y+=13;
+    });
+  }
+
+  doc.save('dgr-fram-relatorio.pdf');
+}
+
+function dl(content,mime,fname){
+  const blob=new Blob([content],{type:mime});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=fname;a.click();URL.revokeObjectURL(url);
+}
+
+function importJSON(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      loadData(data);
+    }catch(err){alert('Arquivo JSON inválido: '+err.message);}
+    e.target.value='';
+  };r.readAsText(f);
+}
+
+function loadData(data){
+  fns=(data.functions||[]).map(fn=>{
+    const lay=(data.layouts||[]).find(l=>l.function_id===fn.id)||{x:300,y:300};
+    return{...fn,x:fn.x??lay.x??300,y:fn.y??lay.y??300,style:fn.style||'red'};
+  });
+  coups=data.couplings||[];
+  vars=data.variabilities||[];
+  resEvents=data.resonanceEvents||[];
+  govMechs=data.governanceMechanisms||[];
+  mcResults=null;selFn=null;connSrc=null;
+  closePanel();
+  document.getElementById('mc-panel').style.display='none';
+  renderSidebar();draw();
+  // Auto-fit
+  if(fns.length>0){
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    fns.forEach(fn=>{minX=Math.min(minX,fn.x);minY=Math.min(minY,fn.y);maxX=Math.max(maxX,fn.x);maxY=Math.max(maxY,fn.y);});
+    const bW=maxX-minX+HR*4,bH=maxY-minY+HR*4;
+    scale=Math.min(wrap.offsetWidth/bW,wrap.offsetHeight/bH,1.2);
+    panX=wrap.offsetWidth/2-(minX+bW/2)*scale;
+    panY=wrap.offsetHeight/2-(minY+bH/2)*scale;
+    draw();
+  }
+}
+
+function importXFMV(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const parser=new DOMParser();
+      const xml=parser.parseFromString(ev.target.result,'text/xml');
+      const fnEls=xml.querySelectorAll('Function');
+      const newFns=[],idMap={};
+      fnEls.forEach(el=>{
+        const idNr=el.querySelector('IDNr')?.textContent||'0';
+        const name=el.querySelector('IDName')?.textContent||'Função';
+        const desc=el.querySelector('Description')?.textContent||'';
+        const x=parseFloat(el.getAttribute('x'))||300;
+        const y=parseFloat(el.getAttribute('y'))||300;
+        const style=el.getAttribute('style')||'';
+        const fmStyle=style==='red'?'red':style==='green'?'green':style==='grey'?'grey':'white';
+        const fnType=parseInt(el.querySelector('FunctionType')?.textContent||'0');
+        const id=uid();
+        idMap[idNr]=id;
+        newFns.push({id,name,description:desc,input:'',output:'',precondition:'',resource:'',control:'',time:'',criticality:3,coupling_degree:3,status:'ativa',style:fmStyle,fnType,x,y});
+      });
+      // Parse aspects as couplings
+      const aspEls=xml.querySelectorAll('Aspect');
+      const newCoups=[];
+      aspEls.forEach(el=>{
+        const name=el.querySelector('Name')?.textContent||'';
+        const parts=name.split('|');
+        if(parts.length>=4){
+          const srcIdNr=parts[0],tgtIdNr=parts[2],tgtAsp=parts[3];
+          const srcId=idMap[srcIdNr],tgtId=idMap[tgtIdNr];
+          if(srcId&&tgtId&&srcId!==tgtId){
+            newCoups.push({id:uid(),source_function_id:srcId,target_function_id:tgtId,source_aspect:'O',target_aspect:tgtAsp||'I',label:parts[1]||'',line_type:'normal',created_date:new Date().toISOString()});
+          }
+        }
+      });
+      loadData({functions:newFns,couplings:newCoups,variabilities:[],resonanceEvents:[],governanceMechanisms:[]});
+    }catch(err){alert('Erro ao importar XFMV: '+err.message);}
+    e.target.value='';
+  };r.readAsText(f);
+}
+
+function clearAll(){
+  if(!confirm('Limpar todo o modelo?'))return;
+  fns=[];coups=[];vars=[];resEvents=[];govMechs=[];mcResults=null;selFn=null;
+  animRunning=false;closePanel();
+  document.getElementById('mc-panel').style.display='none';
+  renderSidebar();draw();
+}
+
+// ════════════════════════════════════════════════════════════
+//  SIDEBAR
+// ════════════════════════════════════════════════════════════
+function renderSidebar(){
+  const styleMap={red:'#e85555',green:'#4db87a',grey:'#6a6a88',white:'#b0b0c8'};
+  document.getElementById('sb-fns').innerHTML=fns.map(fn=>`
+    <div class="sb-item${selFn&&selFn.id===fn.id?' sel':''}" onclick="selectFn(fns.find(f=>f.id==='${fn.id}'))">
+      <div class="fn-swatch" style="background:${FN_COLORS[fn.style||'red'].fill};border-color:${styleMap[fn.style||'red']}"></div>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(fn.name)}</span>
+      ${vars.some(v=>v.affected_function_id===fn.id)?'<span style="color:#e85555;font-size:10px">⚡</span>':''}
+    </div>`).join('')||'<div class="sb-empty">Nenhuma função</div>';
+
+  document.getElementById('sb-coups').innerHTML=coups.map(c=>{
+    const s=fns.find(f=>f.id===c.source_function_id),t=fns.find(f=>f.id===c.target_function_id);
+    return `<div class="sb-item" title="Clique duplo para excluir" ondblclick="removeComp('coup','${c.id}')">
+      <span style="font-size:10px;font-family:monospace;color:${ASP_COLORS[c.source_aspect||'O']}">${c.source_aspect||'O'}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${esc(s?.name||'?')} → ${esc(t?.name||'?')}</span>
+      <span style="font-size:10px;font-family:monospace;color:${ASP_COLORS[c.target_aspect||'I']}">${c.target_aspect||'I'}</span>
+    </div>`;
+  }).join('')||'<div class="sb-empty">Use Conectar</div>';
+
+  const dotCol={endogena:'#e8a83a',exogena:'#e85555',mecanismo:'#4db87a'};
+  document.getElementById('sb-vars').innerHTML=vars.map(v=>{
+    const fn=fns.find(f=>f.id===v.affected_function_id);
+    return `<div class="sb-item" onclick="selFn&&openFnPanel(fns.find(f=>f.id==='${v.affected_function_id}'))">
+      <div class="dot" style="background:${dotCol[v.category]||'#888'}"></div>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${esc(v.variability_type)} <span style="color:var(--text3)">${esc(fn?.name||'?')}</span></span>
+    </div>`;
+  }).join('')||'<div class="sb-empty">Nenhuma variabilidade</div>';
+
+  document.getElementById('sb-res').innerHTML=resEvents.map(r=>`
+    <div class="sb-item">
+      <span style="font-size:12px">∿</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${esc(r.title||'Evento')}</span>
+      <span style="font-size:9px;color:${r.operational_impact==='critico'?'#e85555':'#e8a83a'}">${r.operational_impact}</span>
+    </div>`).join('')||'<div class="sb-empty">Nenhum evento</div>';
+}
+
+function removeComp(type,id){
+  if(type==='coup') coups=coups.filter(c=>c.id!==id);
+  renderSidebar();draw();
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ════════════════════════════════════════════════════════════
+//  SAMPLE DATA (Dataprev)
+// ════════════════════════════════════════════════════════════
+loadData({
+  functions:[
+    {id:'f1',name:'Processar benefícios INSS',input:'Solicitação do cidadão',output:'Concessão / pagamento',precondition:'CNIS atualizado',resource:'Mainframe e cloud Dataprev',control:'Legislação previdenciária',time:'Calendário INSS',criticality:5,coupling_degree:4,style:'red',fnType:0,x:350,y:200},
+    {id:'f2',name:'Validar elegibilidade',input:'Dados brutos de órgãos',output:'Registro validado',precondition:'Catálogo de metadados ativo',resource:'Regras de negócio, staging',control:'LGPD, acordos institucionais',time:'SLA de processamento em lote',criticality:4,coupling_degree:4,style:'red',fnType:0,x:570,y:130},
+    {id:'f3',name:'Integrar órgãos parceiros',input:'Demandas MDS / Receita / INSS',output:'Dados interoperáveis',precondition:'APIs ativas e contratos vigentes',resource:'Equipe integração, middleware',control:'SLAs, ANPD',time:'Janelas de sincronização',criticality:4,coupling_degree:5,style:'green',fnType:1,x:560,y:330},
+    {id:'f4',name:'Monitorar continuidade',input:'Telemetria e logs de eventos',output:'Alertas e dashboards',precondition:'Painéis calibrados',resource:'Infraestrutura de observabilidade',control:'Planos de continuidade',time:'Tempo real',criticality:3,coupling_degree:3,style:'grey',fnType:2,x:200,y:330},
+    {id:'f5',name:'Responder incidentes críticos',input:'Alertas de degradação',output:'Resolução e comunicado',precondition:'Runbooks atualizados',resource:'Especialistas e ferramentas',control:'Protocolos de crise',time:'RTO definido',criticality:5,coupling_degree:4,style:'red',fnType:0,x:370,y:370},
+    {id:'f6',name:'Governar dados',input:'Ativos informacionais',output:'Políticas e catálogos',precondition:'Comitê de dados constituído',resource:'Equipe governance, ferramentas',control:'LGPD, TCU, Decreto Digital',time:'Ciclos de auditoria',criticality:4,coupling_degree:3,style:'white',fnType:1,x:150,y:180},
+  ],
+  couplings:[
+    {id:'c1',source_function_id:'f3',target_function_id:'f2',source_aspect:'O',target_aspect:'I',label:'alimenta',line_type:'normal'},
+    {id:'c2',source_function_id:'f2',target_function_id:'f1',source_aspect:'O',target_aspect:'P',label:'condiciona',line_type:'normal'},
+    {id:'c3',source_function_id:'f4',target_function_id:'f5',source_aspect:'O',target_aspect:'I',label:'dispara',line_type:'critical'},
+    {id:'c4',source_function_id:'f6',target_function_id:'f1',source_aspect:'O',target_aspect:'C',label:'governa',line_type:'normal'},
+    {id:'c5',source_function_id:'f6',target_function_id:'f2',source_aspect:'O',target_aspect:'C',label:'governa',line_type:'normal'},
+  ],
+  variabilities:[
+    {id:'v1',affected_function_id:'f5',name:'Pico — Auxílio Emergencial 2020',variability_type:'RX-A.1',category:'exogena',description:'Saturação de capacidade por demanda massiva de cidadãos',intensity:5,probability:4,propagation_potential:5,detectability:2},
+    {id:'v2',affected_function_id:'f2',name:'Metadados obsoletos — DBAs',variability_type:'RE-A.3',category:'endogena',description:'Engenheiros usando tabelas divergentes do catálogo corporativo',intensity:3,probability:3,propagation_potential:4,detectability:3},
+  ],
+  resonanceEvents:[
+    {id:'re1',initial_function_id:'f5',title:'Ressonância COVID-19 — Auxílio Emergencial',description:'Pico massivo de demanda propagado por toda a rede funcional',affected_function_ids:['f1','f2','f3'],ga_score:5,pv_score:5,operational_impact:'critico',status:'identificado'},
+  ],
+  governanceMechanisms:[],
+});
+</script>
+</body>
+</html>
