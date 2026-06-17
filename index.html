@@ -1699,3 +1699,40 @@ loadData({
 </script>
 </body>
 </html>
+
+
+function exportProject(){
+  const data={
+    fns: (typeof fns!=='undefined'?fns:[]),
+    coups: (typeof coups!=='undefined'?coups:[]),
+    vars: (typeof vars!=='undefined'?vars:[]),
+    mechs: (typeof mechs!=='undefined'?mechs:[]),
+    resEvs: (typeof resEvs!=='undefined'?resEvs:[]),
+    avaliacoes: (typeof avaliacoes!=='undefined'?avaliacoes:{}),
+    mcResults: (typeof mcResults!=='undefined'?mcResults:{})
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='projeto.dgrfram';
+  a.click();
+}
+
+function importProject(input){
+  const f=input.files[0];
+  if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const d=JSON.parse(e.target.result);
+    if(typeof fns!=='undefined') fns=d.fns||[];
+    if(typeof coups!=='undefined') coups=d.coups||[];
+    if(typeof vars!=='undefined') vars=d.vars||[];
+    if(typeof mechs!=='undefined') mechs=d.mechs||[];
+    if(typeof resEvs!=='undefined') resEvs=d.resEvs||[];
+    if(typeof avaliacoes!=='undefined') avaliacoes=d.avaliacoes||{};
+    if(typeof mcResults!=='undefined') mcResults=d.mcResults||{};
+    alert('Projeto importado com sucesso.');
+    location.reload();
+  };
+  r.readAsText(f);
+}
