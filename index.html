@@ -234,8 +234,8 @@ textarea.fi{resize:vertical;min-height:60px}
   </div>
   <div id="nav-bottom">
     <div class="nav-sec">Dados</div>
-    <div class="nav-tool" onclick="expJSON()"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 19h14"/></svg>Exportar</div>
-    <label class="nav-tool"><svg viewBox="0 0 24 24"><path d="M12 21V9m0 0l-4 4m4-4l4 4"/><path d="M5 5h14"/></svg>Importar<input type="file" accept=".json" onchange="impJSON(event)" style="display:none"></label>
+    <div class="nav-tool" onclick="expProject()"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 19h14"/></svg>Exportar Projeto</div>
+    <label class="nav-tool"><svg viewBox="0 0 24 24"><path d="M12 21V9m0 0l-4 4m4-4l4 4"/><path d="M5 5h14"/></svg>Importar Projeto<input type="file" accept=".dgrfram,.json" onchange="impProject(event)" style="display:none"></label>
     <div class="nav-tool r" onclick="clearAll()"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M7 6l1 14h8l1-14"/><path d="M10 10v6M14 10v6"/></svg>Apagar Tudo</div>
     <div class="nav-tool" onclick="expPDF()"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h6"/></svg>Exportar PDF</div>
   </div>
@@ -257,8 +257,7 @@ textarea.fi{resize:vertical;min-height:60px}
     <button class="ibtn" title="Refazer" onclick="redoLast()">↷</button>
     <span class="ibtn sep"></span>
     <button class="tbtn on" id="bsel" onclick="setMode('select')">↖ Selecionar</button>
-    <button class="tbtn connect-main" id="bcon" onclick="setMode('connect')">⟿ Conectar</button>
-    <button class="tbtn" onclick="openConnectPanel()">＋ Conexão por lista</button>
+    <button class="tbtn" onclick="openConnectPanel()">＋ Gerenciar Conexões</button>
     <button class="tbtn" id="bera" onclick="setMode('erase')">✕ Apagar</button>
     <span style="width:1px;height:18px;background:#e0e0ea;flex-shrink:0"></span>
     <button class="tbtn" onclick="addFn()">＋ Função</button>
@@ -716,9 +715,9 @@ function onMove(e){
 function setMode(m){
   mode=m;connSrc=null;connPend=null;hovCoup=null;dragFn=null;isPan=false;
   if(m==='connect')document.getElementById('fnpanel').style.display='none';
-  ['bsel','bcon','bera'].forEach(id=>document.getElementById(id).classList.remove('on'));
-  document.getElementById({select:'bsel',connect:'bcon',erase:'bera'}[m]).classList.add('on');
-  document.getElementById('mstat').textContent=m==='connect'?'Arraste da função de origem até a função de destino':m==='erase'?'Clique para apagar':'';
+  ['bsel','bera'].forEach(id=>{const el=document.getElementById(id); if(el) el.classList.remove('on');});
+  const activeId={select:'bsel',erase:'bera'}[m]; const activeEl=activeId?document.getElementById(activeId):null; if(activeEl) activeEl.classList.add('on');
+  document.getElementById('mstat').textContent=m==='erase'?'Clique para apagar':'';
   draw();
 }
 
@@ -794,8 +793,11 @@ function delFn(id){
 function openConnectPanel(){
   if(fns.length<2){alert('Adicione pelo menos duas funções para criar uma conexão.');return;}
   const opts=fns.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
-  const aspOpts=`<option value="O">O — Output</option><option value="I">I — Input</option><option value="P">P — Precondição</option><option value="R">R — Recurso</option><option value="C">C — Controle</option><option value="T">T — Tempo</option>`;
-  document.getElementById('fnptitle').textContent='Criar conexão';
+  const connRows=coups.length?coups.map(c=>{
+    const src=fns.find(f=>f.id===c.source_function_id),tgt=fns.find(f=>f.id===c.target_function_id);
+    return `<div class="item-card" style="cursor:default"><div class="item-card-body"><div class="item-card-title">${esc(src?.name||'?')} <span style="color:#9898b0">(${c.source_aspect||'O'})</span> → ${esc(tgt?.name||'?')} <span style="color:#9898b0">(${c.target_aspect||'I'})</span></div><div class="item-card-sub">${esc(c.label||'Sem rótulo')} · ${esc(c.line_type||'normal')}</div></div><div class="item-card-actions"><button class="ico-btn" title="Excluir conexão" onclick="delConn('${c.id}')">🗑</button></div></div>`;
+  }).join(''):`<div class="empty" style="padding:18px 8px"><p>Nenhuma conexão cadastrada.</p></div>`;
+  document.getElementById('fnptitle').textContent='Gerenciar conexões';
   document.getElementById('fnpbody').innerHTML=`
 <label class="fl">Função de ORIGEM</label>
 <select class="fi" id="cp-src" onchange="if(document.getElementById('cp-tgt').value===this.value){document.getElementById('cp-tgt').selectedIndex=(this.selectedIndex+1)%document.getElementById('cp-tgt').options.length}">${opts}</select>
@@ -807,7 +809,10 @@ function openConnectPanel(){
 <select class="fi" id="cp-ta"><option value="I" selected>I — Input</option><option value="O">O — Output</option><option value="P">P — Precondição</option><option value="R">R — Recurso</option><option value="C">C — Controle</option><option value="T">T — Tempo</option></select>
 <label class="fl">Rótulo da conexão</label><input class="fi" id="cp-lbl" placeholder="Ex.: alimenta, controla, informa">
 <label class="fl">Tipo de linha</label><select class="fi" id="cp-type"><option value="normal">Normal</option><option value="variable">Variável / tracejada</option><option value="critical">Crítica / vermelha</option></select>
-<div class="brow"><button class="bsav" onclick="saveConnFromPanel()">Criar conexão</button><button class="bdel" onclick="document.getElementById('fnpanel').style.display='none'">Cancelar</button></div>`;
+<div class="brow"><button class="bsav" onclick="saveConnFromPanel()">Criar conexão</button><button class="bdel" onclick="document.getElementById('fnpanel').style.display='none'">Fechar</button></div>
+<div class="dv"></div>
+<div style="font-size:13px;font-weight:600;margin-bottom:8px">Conexões cadastradas</div>
+<div class="item-list" style="gap:6px;margin-bottom:0">${connRows}</div>`;
   const tgt=document.getElementById('cp-tgt'); if(tgt.options.length>1)tgt.selectedIndex=1;
   document.getElementById('fnpanel').style.display='block';
 }
@@ -815,9 +820,15 @@ function saveConnFromPanel(){
   const s=document.getElementById('cp-src').value,t=document.getElementById('cp-tgt').value;
   if(!s||!t||s===t){alert('Escolha duas funções diferentes.');return;}
   coups.push({id:uid(),source_function_id:s,target_function_id:t,source_aspect:document.getElementById('cp-sa').value,target_aspect:document.getElementById('cp-ta').value,label:document.getElementById('cp-lbl').value,line_type:document.getElementById('cp-type').value,created_date:new Date().toISOString()});
-  document.getElementById('fnpanel').style.display='none';
   selFn=fns.find(f=>f.id===s)||null;
   draw();
+  openConnectPanel();
+}
+function delConn(id){
+  if(!confirm('Excluir esta conexão?')) return;
+  coups=coups.filter(c=>c.id!==id);
+  draw();
+  openConnectPanel();
 }
 
 function openConnModal(src,tgt){
@@ -1540,12 +1551,12 @@ ${Object.entries({mean:'VFR média',p95:'P95',probCrit:'Prob. Criticidade',iis:'
 // ══════════════════════════════════════════
 // EXPORT / IMPORT
 // ══════════════════════════════════════════
-function expJSON(){
-  const d={meta:{version:'1.5',created:new Date().toISOString(),tool:'DGR-FRAM Modeler'},
+function expProject(){
+  const d={meta:{version:'1.6',created:new Date().toISOString(),tool:'DGR-FRAM Analyze'},
     functions:fns,layouts:fns.map(fn=>({function_id:fn.id,x:Math.round(fn.x),y:Math.round(fn.y),id:uid()})),
     couplings:coups,variabilities:vars,mechanisms:mechs,resonanceEvents:resEvs,
     params,subs,monteCarlo:Object.keys(mcRes).length?mcRes:null};
-  dl(JSON.stringify(d,null,2),'application/json','dgr-fram-model.json');
+  dl(JSON.stringify(d,null,2),'application/json','dgr-fram-projeto.dgrfram');
 }
 function expPNG(){
   let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infinity;
@@ -1614,7 +1625,9 @@ function expPDF(){
   doc.save('dgr-fram-relatorio.pdf');
 }
 function dl(c,m,f){const b=new Blob([c],{type:m});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=f;a.click();URL.revokeObjectURL(u);}
-function impJSON(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{loadData(JSON.parse(ev.target.result));}catch(err){alert('JSON inválido: '+err.message);}e.target.value='';};r.readAsText(f);}
+function expJSON(){expProject();}
+function impProject(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{loadData(JSON.parse(ev.target.result));alert('Projeto importado com sucesso.');}catch(err){alert('Arquivo de projeto inválido: '+err.message);}e.target.value='';};r.readAsText(f);}
+function impJSON(e){impProject(e);}
 function loadData(d){
   fns=(d.functions||[]).map(fn=>{const l=(d.layouts||[]).find(l=>l.function_id===fn.id)||{x:300,y:300};return{...fn,x:fn.x??l.x??300,y:fn.y??l.y??300,style:fn.style||'red'};});
   coups=d.couplings||[];vars=d.variabilities||[];mechs=d.mechanisms||[];resEvs=d.resonanceEvents||[];
