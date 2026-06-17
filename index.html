@@ -98,7 +98,7 @@ textarea.fi{resize:vertical;min-height:55px}
 .subcat-item-row:hover{background:#f8f8fc}
 .subcat-check{width:16px;height:16px;border-radius:4px;border:2px solid #c8c8d8;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .subcat-check.on{background:var(--sc-color,#4778e8);border-color:var(--sc-color,#4778e8)}
-.subcat-vals{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:0 12px 10px 36px}
+.subcat-vals{display:grid;grid-template-columns:1fr;gap:6px;padding:0 12px 10px 36px}
 .subcat-val-cell label{font-size:10px;color:#9898b0;display:block;margin-bottom:2px}
 .pinp{width:100%;padding:4px 5px;font-size:11px;border:1px solid #d0d0da;border-radius:4px;text-align:center;outline:none}
 .count-badge{font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px}
@@ -214,7 +214,7 @@ textarea.fi{resize:vertical;min-height:55px}
       <div class="screen act scroll-screen" id="s-mc">
         <div class="form-wrap">
           <div class="page-title">Simulação Monte Carlo & Dashboard</div>
-          <div class="page-sub">Cálculos iterativos unificados: <b>VT = VE + VX</b>; <b>VFR = VT × (1 − AR)</b>. Limite Crítico = P95.</div>
+          <div class="page-sub">Cálculos iterativos unificados com <b>avaliação Beta-PERT</b>: <b>VT = VE + VX</b>; <b>VFR = VT × (1 − AR)</b>. Parâmetros informados como mínima, média e máxima. Limite Crítico = P95.</div>
           
           <div class="dash-grid" id="dash-stats"></div>
 
@@ -618,6 +618,7 @@ const DGRManager = {
   init() {
     this.removeLegacyResonanceUI();
     this.loadData();
+    this.normalizeEvaluationLevels();
     DGRHistory.push();
     window.addEventListener('resize', () => { if(DGRState.curPage === 'mc') this.renderCharts(); });
   },
@@ -677,6 +678,43 @@ const DGRManager = {
   pct(v, d = 1) { return (v * 100).toFixed(d) + '%'; },
   vColor(v) { return v >= 0.70 ? '#c0392b' : v >= 0.50 ? '#854f0b' : v >= 0.30 ? '#4778e8' : '#0f6e56'; },
   critInfo(v) { return v >= 0.70 ? {cls:'cb-c', lbl:'Crítica'} : v >= 0.50 ? {cls:'cb-a', lbl:'Alta'} : v >= 0.30 ? {cls:'cb-m', lbl:'Moderada'} : {cls:'cb-b', lbl:'Baixa'}; },
+
+  evalPreset(level) {
+    // Avaliação simplificada para o usuário; o software converte internamente para Beta-PERT.
+    const presets = {
+      minima: { mn: 0.05, mp: 0.15, mx: 0.30 },
+      media:  { mn: 0.25, mp: 0.50, mx: 0.70 },
+      maxima: { mn: 0.60, mp: 0.80, mx: 1.00 }
+    };
+    return presets[level] || presets.media;
+  },
+
+  inferEvalLevel(sv) {
+    const m = +(sv?.mp ?? sv?.mean ?? 0.5);
+    if (m < 0.35) return 'minima';
+    if (m > 0.65) return 'maxima';
+    return 'media';
+  },
+
+  applyEvalLevel(fnId, code, level) {
+    if (!DGRState.subs[fnId]) DGRState.subs[fnId] = {};
+    const preset = this.evalPreset(level);
+    DGRState.subs[fnId][code] = { ...(DGRState.subs[fnId][code] || {}), level, ...preset };
+  },
+
+  normalizeEvaluationLevels() {
+    DGRState.fns.forEach(fn => {
+      if (!DGRState.subs[fn.id]) DGRState.subs[fn.id] = {};
+      [...TAXO.RE.items, ...TAXO.RX.items, ...TAXO.MR.items].forEach(item => {
+        const cur = DGRState.subs[fn.id][item.code] || { sel:false };
+        const level = cur.level || this.inferEvalLevel(cur);
+        const preset = this.evalPreset(level);
+        DGRState.subs[fn.id][item.code] = { ...cur, level, ...preset };
+      });
+      this.recalcParams(fn.id);
+    });
+  },
+
 
   countSelectedTaxonomy(taxoKey) {
     return Object.values(DGRState.subs || {}).reduce((total, fnSubs) => {
@@ -983,7 +1021,7 @@ const DGRManager = {
       DGRState.params[nid] = { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.2,mp:0.4,mx:0.7} };
       DGRState.subs[nid] = {};
       [...TAXO.RE.items, ...TAXO.RX.items, ...TAXO.MR.items].forEach(i => {
-        DGRState.subs[nid][i.code] = { sel: false, mn: 0.1, mp: 0.3, mx: 0.6 };
+        DGRState.subs[nid][i.code] = { sel: false, level: 'media', mn: 0.25, mp: 0.50, mx: 0.70 };
       });
     }
     this.clearFnForm();
@@ -1349,7 +1387,7 @@ const DGRManager = {
         grpDiv.innerHTML = `<span class="subcat-group-lbl" style="background:${color}15;color:${color}">${grp.label}</span>`;
 
         grp.items.forEach(item => {
-          const sv = DGRState.subs[fn.id]?.[item.code] || {sel:false, mn:0.1, mp:0.3, mx:0.6};
+          const sv = DGRState.subs[fn.id]?.[item.code] || {sel:false, level:'media', mn:0.25, mp:0.50, mx:0.70};
           const itemDiv = document.createElement('div');
           itemDiv.className = `subcat-item ${sv.sel ? 'sel' : ''}`;
           
@@ -1358,6 +1396,7 @@ const DGRManager = {
           row.onclick = () => {
             DGRHistory.push();
             DGRState.subs[fn.id][item.code].sel = !DGRState.subs[fn.id][item.code].sel;
+            this.applyEvalLevel(fn.id, item.code, DGRState.subs[fn.id][item.code].level || 'media');
             this.recalcParams(fn.id);
             DGRHistory.push();
             this.saveToLocalStorage(true);
@@ -1375,15 +1414,28 @@ const DGRManager = {
           if (sv.sel) {
             const vals = document.createElement('div');
             vals.className = 'subcat-vals';
+            const level = sv.level || this.inferEvalLevel(sv);
             vals.innerHTML = `
-              <div class="subcat-val-cell"><label>Mínimo</label><input type="number" class="pinp" step="0.01" value="${sv.mn}"></div>
-              <div class="subcat-val-cell"><label>Provável</label><input type="number" class="pinp" step="0.01" value="${sv.mp}"></div>
-              <div class="subcat-val-cell"><label>Máximo</label><input type="number" class="pinp" step="0.01" value="${sv.mx}"></div>`;
-            
-            const inputs = vals.querySelectorAll('input');
-            inputs[0].oninput = (e) => { DGRState.subs[fn.id][item.code].mn = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)); this.recalcParams(fn.id); this.saveToLocalStorage(true); };
-            inputs[1].oninput = (e) => { DGRState.subs[fn.id][item.code].mp = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)); this.recalcParams(fn.id); this.saveToLocalStorage(true); };
-            inputs[2].oninput = (e) => { DGRState.subs[fn.id][item.code].mx = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)); this.recalcParams(fn.id); this.saveToLocalStorage(true); };
+              <div class="subcat-val-cell">
+                <label>Avaliação da intensidade</label>
+                <select class="pinp" style="text-align:left;padding:6px 8px">
+                  <option value="minima" ${level === 'minima' ? 'selected' : ''}>Mínima</option>
+                  <option value="media" ${level === 'media' ? 'selected' : ''}>Média</option>
+                  <option value="maxima" ${level === 'maxima' ? 'selected' : ''}>Máxima</option>
+                </select>
+                <div style="font-size:10px;color:#9898b0;margin-top:3px">Convertido internamente para Beta-PERT.</div>
+              </div>`;
+            const select = vals.querySelector('select');
+            select.onchange = (e) => {
+              DGRHistory.push();
+              this.applyEvalLevel(fn.id, item.code, e.target.value);
+              this.recalcParams(fn.id);
+              DGRHistory.push();
+              this.saveToLocalStorage(true);
+              this.renderTaxonomyAccordion(taxoKey, containerId);
+              this.renderKPIs(DGRState.fns.some(f => DGRState.mcRes[f.id]));
+              this.drawStaticVarsChart();
+            };
             itemDiv.appendChild(vals);
           }
           grpDiv.appendChild(itemDiv);
@@ -1414,11 +1466,49 @@ const DGRManager = {
     document.getElementById('mcn-' + n).classList.add('on');
   },
 
-  triangularSample(mn, mp, mx) {
-    mn = Math.max(0, Math.min(1, +mn || 0)); mp = Math.max(mn, Math.min(1, +mp || 0)); mx = Math.max(mp, Math.min(1, +mx || 1));
-    if (mx === mn) return mp;
-    const u = Math.random(), fc = (mp - mn) / (mx - mn);
-    return u < fc ? mn + Math.sqrt(u * (mx - mn) * (mp - mn)) : mx - Math.sqrt((1 - u) * (mx - mn) * (mx - mp));
+  gammaSample(alpha) {
+    // Amostragem Gamma por Marsaglia e Tsang. Necessária para gerar Beta(a,b).
+    alpha = Math.max(1e-6, +alpha || 1);
+    if (alpha < 1) {
+      const u = Math.random();
+      return this.gammaSample(alpha + 1) * Math.pow(u, 1 / alpha);
+    }
+    const d = alpha - 1 / 3;
+    const c = 1 / Math.sqrt(9 * d);
+    while (true) {
+      let x, v;
+      do {
+        const u1 = Math.max(1e-12, Math.random());
+        const u2 = Math.random();
+        x = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+        v = 1 + c * x;
+      } while (v <= 0);
+      v = v * v * v;
+      const u = Math.random();
+      if (u < 1 - 0.0331 * Math.pow(x, 4)) return d * v;
+      if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+    }
+  },
+
+  betaSample(alpha, beta) {
+    const x = this.gammaSample(alpha);
+    const y = this.gammaSample(beta);
+    return x / (x + y);
+  },
+
+  betaPertSample(mn, mean, mx, lambda = 4) {
+    // Interface: mínima, média e máxima.
+    // Internamente, a média informada é convertida para a moda equivalente da Beta-PERT:
+    // média = (mínima + lambda × moda + máxima) / (lambda + 2).
+    mn = Math.max(0, Math.min(1, +mn || 0));
+    mx = Math.max(mn, Math.min(1, +mx || 1));
+    mean = Math.max(mn, Math.min(mx, +mean || mn));
+    if (mx === mn) return mn;
+    let mode = ((lambda + 2) * mean - mn - mx) / lambda;
+    mode = Math.max(mn, Math.min(mx, mode));
+    const alpha = 1 + lambda * (mode - mn) / (mx - mn);
+    const beta = 1 + lambda * (mx - mode) / (mx - mn);
+    return mn + this.betaSample(alpha, beta) * (mx - mn);
   },
 
   runSimulation() {
@@ -1430,9 +1520,9 @@ const DGRManager = {
       const p = DGRState.params[fn.id] || { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.2,mp:0.4,mx:0.7} };
       const vfrs = [];
       for (let i = 0; i < N; i++) {
-        const VE = this.triangularSample(p.ve.mn, p.ve.mp, p.ve.mx);
-        const VX = this.triangularSample(p.vx.mn, p.vx.mp, p.vx.mx);
-        const AR = this.triangularSample(p.ar.mn, p.ar.mp, p.ar.mx);
+        const VE = this.betaPertSample(p.ve.mn, p.ve.mp, p.ve.mx);
+        const VX = this.betaPertSample(p.vx.mn, p.vx.mp, p.vx.mx);
+        const AR = this.betaPertSample(p.ar.mn, p.ar.mp, p.ar.mx);
         vfrs.push(Math.max(0, Math.min(2, (VE + VX) * (1 - AR))));
       }
       vfrs.sort((a, b) => a - b);
@@ -1712,7 +1802,7 @@ const DGRManager = {
 
   saveToLocalStorage(silent = false) {
     localStorage.setItem('dgr_autosave', DGRState.serialize());
-    alert('Autosave atualizado localmente!');
+    if (!silent) alert('Autosave atualizado localmente!');
   },
 
   loadData() {
@@ -1728,7 +1818,7 @@ const DGRManager = {
     DGRState.fns.forEach(f => {
       DGRState.params[f.id] = { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.2,mp:0.4,mx:0.7} };
       DGRState.subs[f.id] = {};
-      [...TAXO.RE.items, ...TAXO.RX.items, ...TAXO.MR.items].forEach(i => { DGRState.subs[f.id][i.code] = { sel: false, mn: 0.1, mp: 0.3, mx: 0.6 }; });
+      [...TAXO.RE.items, ...TAXO.RX.items, ...TAXO.MR.items].forEach(i => { DGRState.subs[f.id][i.code] = { sel: false, level: 'media', mn: 0.25, mp: 0.50, mx: 0.70 }; });
     });
     this.refreshUI();
   },
@@ -1753,7 +1843,7 @@ const DGRManager = {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 15, 25);
-    doc.text('Modelo: VT = VE + VX; VFR = VT × (1 − AR); Limite Crítico = P95.', 15, 31);
+    doc.text('Modelo: Beta-PERT (mínima, média, máxima); VT = VE + VX; VFR = VT × (1 − AR); Limite Crítico = P95.', 15, 31);
 
     let y = 42;
     const sorted = DGRState.fns.filter(f => DGRState.mcRes[f.id]).sort((a,b) => DGRState.mcRes[b.id].p95 - DGRState.mcRes[a.id].p95);
