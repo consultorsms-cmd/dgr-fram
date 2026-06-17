@@ -3,414 +3,469 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>DGR-FRAM Modeler</title>
+<title>DGR-FRAM Analyze</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;overflow:hidden;background:#f0f0f5;color:#1a1a2e;font-family:"Segoe UI",system-ui,sans-serif;font-size:13px}
-#app{display:flex;height:100vh;overflow:hidden}
+#app{display:flex;height:100vh;overflow:hidden;flex-direction:column}
+
+/* ── TOPBAR GLOBAL ── */
+#topbar{background:#1f2532;height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid #303747;flex-shrink:0}
+#topbar .logo-area{display:flex;align-items:center;gap:10px}
+#topbar .title{font-size:16px;font-weight:700;color:#fff;letter-spacing:.02em}
+#topbar .sub{font-size:11px;color:#9aa4b8}
+#topbar .actions{display:flex;align-items:center;gap:6px}
+
+.gbtn{display:flex;align-items:center;gap:5px;padding:6px 12px;font-size:12px;font-weight:600;border:1px solid #303747;border-radius:6px;cursor:pointer;background:#2b3344;color:#fff;transition:all .15s;font-family:inherit}
+.gbtn:hover{background:#3a455a;border-color:#4778e8}
+.gbtn.r{background:#c0392b;border-color:#a63226}
+.gbtn.r:hover{background:#d63b29}
+
+/* ── MAIN WORKSPACE ── */
+#main-container{display:flex;flex:1;overflow:hidden;min-height:0}
 
 /* ── NAV SIDEBAR ── */
-#nav{width:200px;background:#1e1e2e;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
-#nav-logo{padding:18px 16px 14px;border-bottom:1px solid #2e2e42}
-#nav-logo .title{font-size:15px;font-weight:700;color:#fff;letter-spacing:.02em}
-#nav-logo .sub{font-size:11px;color:#6868a0;margin-top:2px}
-#nav-items{padding:10px 8px;flex:1;overflow-y:auto}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;color:#8888b0;font-size:13px;font-weight:500;transition:all .15s;margin-bottom:2px;user-select:none}
-.nav-item:hover{background:#2a2a3e;color:#c0c0e0}
-.nav-item.act{background:#534AB7;color:#fff}
+#nav{width:220px;background:#181d28;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;border-right:1px solid #252b36}
+#nav-items{padding:12px 0;flex:1;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:0 9px 9px 0;cursor:pointer;color:#a8b0c0;font-size:13px;font-weight:600;transition:all .15s;margin:3px 0;user-select:none}
+.nav-item:hover{background:#222938;color:#fff}
+.nav-item.act{background:#4778e8;color:#fff;box-shadow:inset 4px 0 0 rgba(255,255,255,.3)}
 .nav-item svg{flex-shrink:0;opacity:.8}
 .nav-item.act svg{opacity:1}
-#nav-bottom{padding:10px 8px;border-top:1px solid #2e2e42}
-.nav-tool{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;color:#6868a0;font-size:12px;transition:all .12s;margin-bottom:2px}
-.nav-tool:hover{background:#2a2a3e;color:#a0a0c8}
-.nav-tool.r:hover{color:#e85555}
 
 /* ── CONTENT AREA ── */
-#content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-/* topbar only for FRAM tab */
-#frambar{display:flex;align-items:center;gap:5px;padding:6px 12px;background:#fff;border-bottom:1px solid #e0e0ea;flex-shrink:0;flex-wrap:wrap}
-.tbtn{display:flex;align-items:center;gap:4px;padding:5px 9px;font-size:12px;border:1px solid #d0d0da;border-radius:5px;cursor:pointer;background:#fff;color:#5a5a7a;white-space:nowrap;transition:all .1s;font-family:inherit}
-.tbtn:hover{background:#ebebef;color:#1a1a2e;border-color:#b0b0c0}
-.tbtn.on{background:#eeedfe;color:#534AB7;border-color:#534AB7;font-weight:600}
-.tbtn.r{color:#c0392b;border-color:#c0392b;background:#fdecea}
-.ifl{display:flex;align-items:center;gap:4px;padding:5px 9px;font-size:12px;border:1px solid #d0d0da;border-radius:5px;cursor:pointer;background:#fff;color:#5a5a7a;white-space:nowrap;transition:all .1s}
-.ifl:hover{background:#ebebef}
-#mstat{font-size:11px;color:#5a5a7a;padding:3px 0}
+#content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;background:#f0f0f5}
 
 /* ── SCREENS ── */
 .screen{display:none;flex:1;overflow:hidden;flex-direction:column;min-height:0}
 .screen.act{display:flex}
+.scroll-screen{overflow-y:auto;padding:24px 32px}
 
-/* FRAM canvas */
-#s-fram{position:relative;overflow:hidden;background:#fff}
-canvas{display:block;width:100%;height:100%}
+/* DASHBOARD & GRID ELEMENTS */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.dash-card{background:#fff;border-radius:8px;padding:14px 16px;border:1px solid #e0e0ea;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.dash-card-val{font-size:26px;font-weight:700;margin-bottom:2px}
+.dash-card-lbl{font-size:11px;color:#8888a8;font-weight:500}
+.dash-section{background:#fff;border-radius:8px;padding:16px 20px;border:1px solid #e0e0ea;margin-bottom:14px}
+.dash-section h3{font-size:13px;font-weight:600;margin-bottom:10px;color:#1a1a2e}
 
-/* SCROLLABLE SCREENS */
-.scroll-screen{overflow-y:auto;padding:28px 32px;background:#f0f0f5}
-
-/* PAINEL */
-.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:24px}
-.dash-card{background:#fff;border-radius:10px;padding:18px 20px;border:1px solid #e0e0ea;box-shadow:0 1px 4px rgba(0,0,0,.05)}
-.dash-card-val{font-size:32px;font-weight:700;margin-bottom:4px}
-.dash-card-lbl{font-size:12px;color:#8888a8;font-weight:500}
-.dash-section{background:#fff;border-radius:10px;padding:18px 20px;border:1px solid #e0e0ea;margin-bottom:16px}
-.dash-section h3{font-size:14px;font-weight:600;margin-bottom:12px;color:#1a1a2e}
-
-/* FORMS */
-.form-wrap{max-width:860px;width:100%}
-.form-card{background:#fff;border-radius:10px;padding:20px 22px;border:1px solid #e0e0ea;margin-bottom:14px}
-.form-card h3{font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e;display:flex;align-items:center;gap:8px}
-.form-card h3 span{font-size:11px;font-weight:400;color:#9898b0;padding:2px 8px;background:#f0f0f5;border-radius:20px}
+/* FORMS & INTERFACE */
+.form-wrap{max-width:960px;width:100%;margin:0 auto}
+.form-card{background:#fff;border-radius:8px;padding:18px 20px;border:1px solid #e0e0ea;margin-bottom:14px}
+.form-card h3{font-size:13px;font-weight:600;margin-bottom:12px;color:#1a1a2e;display:flex;align-items:center;gap:6px}
 .fl{font-size:11px;color:#5a5a7a;display:block;margin-bottom:3px;font-weight:500}
-.fi{width:100%;padding:7px 9px;font-size:12px;border:1px solid #d0d0da;border-radius:6px;background:#fff;color:#1a1a2e;font-family:inherit;margin-bottom:10px;outline:none;transition:border-color .1s}
-.fi:focus{border-color:#534AB7}
-textarea.fi{resize:vertical;min-height:60px}
+.fi{width:100%;padding:7px 10px;font-size:12px;border:1px solid #d0d0da;border-radius:6px;background:#fff;color:#1a1a2e;font-family:inherit;margin-bottom:10px;outline:none;transition:border-color .1s}
+.fi:focus{border-color:#4778e8}
+textarea.fi{resize:vertical;min-height:55px}
 .fir{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.fi3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.page-title{font-size:22px;font-weight:700;color:#1a1a2e;margin-bottom:4px}
-.page-sub{font-size:13px;color:#8888a8;margin-bottom:22px}
-.bsav{padding:8px 18px;font-size:13px;border:none;border-radius:6px;background:#534AB7;color:#fff;cursor:pointer;font-weight:500;font-family:inherit;transition:opacity .12s}
-.bsav:hover{opacity:.85}
-.bdel{padding:8px 14px;font-size:12px;border:1px solid #f7c1c1;border-radius:6px;color:#c0392b;background:transparent;cursor:pointer;font-family:inherit}
+.page-title{font-size:20px;font-weight:700;color:#1a1a2e;margin-bottom:2px}
+.page-sub{font-size:12px;color:#8888a8;margin-bottom:16px}
+.bsav{padding:7px 16px;font-size:12px;border:none;border-radius:5px;background:#4778e8;color:#fff;cursor:pointer;font-weight:600;font-family:inherit;transition:opacity .1s}
+.bsav:hover{opacity:.9}
+.bdel{padding:7px 12px;font-size:12px;border:1px solid #f7c1c1;border-radius:5px;color:#c0392b;background:transparent;cursor:pointer;font-family:inherit;font-weight:500}
 .bdel:hover{background:#fdecea}
 .brow{display:flex;gap:8px;margin-top:4px;align-items:center}
-.tgrd{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
-.ftb{padding:8px 10px;font-size:12px;border:1.5px solid #d8d8e4;border-radius:8px;cursor:pointer;background:#fff;color:#5a5a7a;text-align:left;font-family:inherit;transition:all .12s;font-weight:500;display:flex;align-items:center;gap:7px}
-.ftb:hover{border-color:#b0b0c0;color:#1a1a2e}
-.ftb.sr{border-color:#c0392b;color:#1a1a2e;font-weight:600}
-.ftb.sg{border-color:#0f6e56;color:#1a1a2e;font-weight:600}
-.ftb.sh{border-color:#6a6a88;color:#1a1a2e;font-weight:600}
-.ftb.st2{border-color:#534AB7;color:#1a1a2e;font-weight:600}
-.cgrd{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap}
-.cb{padding:6px 11px;font-size:12px;font-weight:500;border:1.5px solid #d8d8e4;border-radius:8px;cursor:pointer;background:#fff;color:#5a5a7a;font-family:inherit;transition:all .12s}
-.cb:hover{border-color:#b0b0c0;color:#1a1a2e}
-.cb.c1{border-color:#0f6e56;color:#1a1a2e;font-weight:600}
-.cb.c2{border-color:#854f0b;color:#1a1a2e;font-weight:600}
-.cb.c3{border-color:#c0392b;color:#1a1a2e;font-weight:600}
-.cb.c4{border-color:#7c0000;color:#1a1a2e;font-weight:600}
-.dv{height:1px;background:#f0f0f5;margin:12px 0}
-/* LIST in screens */
-.item-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
-.item-card{background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;cursor:pointer;transition:all .12s}
-.item-card:hover{border-color:#b0b0c8;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.item-card.sel{border-color:#534AB7;box-shadow:0 0 0 2px #eeedfe}
+
+/* LIST CARDS */
+.item-list{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.item-card{background:#fff;border:1px solid #e0e0ea;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;transition:all .1s}
+.item-card:hover{border-color:#b0b0c8;box-shadow:0 1px 5px rgba(0,0,0,.04)}
+.item-card.sel{border-color:#4778e8;background:#f9faff}
 .item-card-body{flex:1;min-width:0}
-.item-card-title{font-size:13px;font-weight:600;margin-bottom:3px}
-.item-card-sub{font-size:11px;color:#8888a8}
-.item-card-actions{display:flex;gap:6px;align-items:center;flex-shrink:0}
-.ico-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;cursor:pointer;border-radius:5px;color:#9898b0;font-size:14px;transition:all .1s}
-.ico-btn:hover{background:#f0f0f5;color:#c0392b}
-.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700}
-.badge-endo{background:#faeeda;color:#854f0b;border:1px solid #854f0b}
-.badge-exo{background:#fdecea;color:#c0392b;border:1px solid #c0392b}
-.badge-mr{background:#e8f8f0;color:#0f6e56;border:1px solid #0f6e56}
-.badge-org{background:#fff0ee;color:#c0392b;border:1px solid #c0392b}
-.badge-bkg{background:#e8f8f0;color:#0f6e56;border:1px solid #0f6e56}
-.badge-hum{background:#f4f4f8;color:#6a6a88;border:1px solid #6a6a88}
-.badge-tec{background:#eeedfe;color:#534AB7;border:1px solid #534AB7}
-/* empty state */
-.empty{text-align:center;padding:48px 24px;color:#9898b0}
-.empty svg{margin-bottom:12px;opacity:.3}
-.empty p{font-size:14px;margin-bottom:16px}
-/* INLINE FORM */
-.inline-form{background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:20px 22px;margin-bottom:20px}
-.inline-form h3{font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e}
-/* FRAM LEGEND */
-#leg{position:absolute;left:12px;bottom:12px;background:rgba(255,255,255,.96);border:1px solid #d4d4e0;border-radius:8px;padding:7px 11px;font-size:11px;color:#5a5a7a;z-index:50;pointer-events:none}
-.lr{display:flex;align-items:center;gap:6px;margin-bottom:3px}
-.lr:last-child{margin-bottom:0}
-.lb{width:11px;height:11px;border-radius:2px;border:1.5px solid;flex-shrink:0}
-/* TOOLTIP */
-#tip{position:absolute;background:#fff;border:1px solid #d0d0da;color:#1a1a2e;padding:6px 10px;border-radius:6px;font-size:11px;pointer-events:none;z-index:200;display:none;max-width:220px;line-height:1.5;box-shadow:0 2px 8px rgba(0,0,0,.1)}
-/* CONN MODAL */
-#ov{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:300;display:none;align-items:center;justify-content:center}
-#ov.show{display:flex}
-.modal{background:#fff;border:1px solid #d0d0da;border-radius:12px;padding:20px;width:300px;box-shadow:0 4px 24px rgba(0,0,0,.15)}
-.modal h3{font-size:14px;font-weight:600;margin-bottom:3px}
-.modal-sub{font-size:12px;color:#5a5a7a;margin-bottom:14px}
-.mac{display:flex;gap:8px;margin-top:12px}
-/* MC */
-.pinp{width:100%;padding:5px 6px;font-size:12px;border:1px solid #d0d0da;border-radius:4px;text-align:center;font-family:inherit;outline:none;background:#fff}
-.pinp:focus{border-color:#534AB7}
-.itb{padding:6px 12px;font-size:12px;font-weight:600;border:2px solid #d0d0da;border-radius:5px;cursor:pointer;background:#fff;color:#5a5a7a;transition:all .1s;font-family:inherit}
-.itb:hover{border-color:#534AB7;color:#534AB7}
-.itb.on{border-color:#534AB7;background:#eeedfe;color:#534AB7}
-.rtab{padding:5px 12px;font-size:11px;font-weight:600;border:1px solid #d0d0da;border-radius:20px;cursor:pointer;background:#fff;color:#5a5a7a;font-family:inherit;transition:all .1s}
-.rtab:hover{background:#ebebef}
-.rtab.on{background:#eeedfe;color:#534AB7;border-color:#534AB7}
-.rcard{display:flex;align-items:center;gap:9px;padding:9px 12px;border:1px solid #e0e0ea;border-radius:8px;margin-bottom:5px;background:#fff}
-.rnum{font-size:15px;font-weight:700;color:#b0b0c0;min-width:22px;text-align:center}
-.rname{flex:1;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rbar{width:120px}
-.rbarbg{height:7px;border-radius:4px;background:#e8e8f0;overflow:hidden}
-.rbarfill{height:100%;border-radius:4px;transition:width .4s}
-.rval{font-size:12px;font-weight:700;min-width:44px;text-align:right}
-.cbadge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.item-card-title{font-size:13px;font-weight:600;color:#1a1a2e}
+.item-card-sub{font-size:11px;color:#8888a8;margin-top:2px}
+.item-card-actions{display:flex;gap:4px;align-items:center;flex-shrink:0}
+
+/* BADGES & COLOURED TAGS */
+.cbadge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;text-align:center}
 .cb-b{background:#e8f8f0;color:#0f6e56;border:1px solid #0f6e56}
 .cb-m{background:#faeeda;color:#854f0b;border:1px solid #854f0b}
 .cb-a{background:#fdecea;color:#c0392b;border:1px solid #c0392b}
 .cb-c{background:#f5dddd;color:#7c0000;border:1px solid #7c0000}
-.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:20px}
-.dc{background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:14px 16px}
-.dc-head{font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
-.sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:9px}
-.sbox{background:#f8f8fc;border:1px solid #e0e0e8;border-radius:5px;padding:7px 5px;text-align:center}
-.sval{font-size:17px;font-weight:700;display:block}
-.slbl{font-size:10px;color:#9898b0}
-.histbars{display:flex;align-items:flex-end;gap:2px;height:68px}
-.hb{border-radius:2px 2px 0 0;flex:1;min-width:0}
-.histax{display:flex;justify-content:space-between;font-size:9px;color:#9898b0;margin-top:2px}
 
-/* Subcategory selector */
-.subcat-fn-block{border:1px solid #e0e0ea;border-radius:8px;margin-bottom:10px;overflow:hidden}
-.subcat-fn-hdr{display:flex;align-items:center;gap:10px;padding:11px 14px;background:#f8f8fc;cursor:pointer;user-select:none}
+/* TAXONOMY ENGINE ACCORDIONS */
+.subcat-fn-block{border:1px solid #e0e0ea;border-radius:8px;margin-bottom:8px;overflow:hidden;background:#fff}
+.subcat-fn-hdr{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8f8fc;cursor:pointer;user-select:none}
 .subcat-fn-hdr:hover{background:#f0f0f8}
-.subcat-fn-body{padding:14px 16px;border-top:1px solid #f0f0f5;display:none}
+.subcat-fn-body{padding:12px 14px;border-top:1px solid #f0f0f5;display:none}
 .subcat-fn-body.open{display:block}
-.subcat-group{margin-bottom:14px}
-.subcat-group-lbl{font-size:11px;font-weight:700;padding:4px 10px;border-radius:4px;display:inline-block;margin-bottom:8px}
-.subcat-item{border:1.5px solid #e0e0ea;border-radius:7px;overflow:hidden;background:#fff;margin-bottom:5px;transition:border-color .12s}
-.subcat-item.sel{border-color:var(--sc-color,#534AB7)}
-.subcat-item-row{display:flex;align-items:center;gap:9px;padding:9px 12px;cursor:pointer}
+.subcat-group{margin-bottom:12px}
+.subcat-group-lbl{font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:6px}
+.subcat-item{border:1.5px solid #e0e0ea;border-radius:6px;overflow:hidden;background:#fff;margin-bottom:4px}
+.subcat-item.sel{border-color:var(--sc-color,#4778e8)}
+.subcat-item-row{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer}
 .subcat-item-row:hover{background:#f8f8fc}
-.subcat-check{width:17px;height:17px;border-radius:4px;border:2px solid #c8c8d8;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .1s}
-.subcat-check.on{background:var(--sc-color,#534AB7);border-color:var(--sc-color,#534AB7)}
-.subcat-vals{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:0 12px 10px 38px}
+.subcat-check{width:16px;height:16px;border-radius:4px;border:2px solid #c8c8d8;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.subcat-check.on{background:var(--sc-color,#4778e8);border-color:var(--sc-color,#4778e8)}
+.subcat-vals{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:0 12px 10px 36px}
 .subcat-val-cell label{font-size:10px;color:#9898b0;display:block;margin-bottom:2px}
-.count-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:#f0f0f5}
-::-webkit-scrollbar-thumb{background:#c8c8d8;border-radius:3px}
+.pinp{width:100%;padding:4px 5px;font-size:11px;border:1px solid #d0d0da;border-radius:4px;text-align:center;outline:none}
+.count-badge{font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px}
+
+/* MONTE CARLO LAYOUT */
+.itb{padding:5px 12px;font-size:12px;font-weight:600;border:1px solid #d0d0da;border-radius:5px;cursor:pointer;background:#fff;color:#5a5a7a}
+.itb.on{border-color:#4778e8;background:#eeedfe;color:#4778e8}
+.rtab{padding:4px 10px;font-size:11px;font-weight:600;border:1px solid #d0d0da;border-radius:12px;cursor:pointer;background:#fff;color:#5a5a7a}
+.rtab.on{background:#eeedfe;color:#4778e8;border-color:#4778e8}
+.rcard{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #e0e0ea;border-radius:6px;margin-bottom:4px;background:#fff}
+.rnum{font-size:13px;font-weight:700;color:#b0b0c0;min-width:20px}
+.rname{flex:1;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rbar{width:100px;height:6px;background:#e8e8f0;border-radius:3px;overflow:hidden}
+.rbarfill{height:100%;border-radius:3px;transition:width .3s}
+.rval{font-size:11px;font-weight:700;min-width:40px;text-align:right}
+
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:12px}
+.dc{background:#fff;border:1px solid #e0e0ea;border-radius:8px;padding:12px 14px}
+.dc-head{font-size:12px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:6px}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:4px;margin-bottom:6px}
+.sbox{background:#f8f8fc;border:1px solid #e0e0e8;border-radius:4px;padding:6px 4px;text-align:center}
+.sval{font-size:14px;font-weight:700;display:block}
+.slbl{font-size:9px;color:#9898b0}
+.histbars{display:flex;align-items:flex-end;gap:1px;height:50px}
+.hb{border-radius:1px 1px 0 0;flex:1;min-width:0}
+.histax{display:flex;justify-content:space-between;font-size:8px;color:#9898b0;margin-top:2px}
+
+.empty{text-align:center;padding:32px 16px;color:#9898b0}
 </style>
 </head>
 <body>
+
 <div id="app">
-
-<!-- NAV -->
-<div id="nav">
-  <div id="nav-logo">
-    <div class="title">DGR-FRAM</div>
-    <div class="sub">Modeler v1.5</div>
-  </div>
-  <div id="nav-items">
-    <div class="nav-item act" id="ni-mc" onclick="goTo('mc')">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M2 20h20M4 20V10l8-8 8 8v10"/><path d="M9 20v-6h6v6"/></svg>
-      Monte Carlo
+  <div id="topbar">
+    <div class="logo-area">
+      <div class="title">DGR-FRAM</div>
+      <div class="sub">Modeler & Simulator</div>
     </div>
-    <div class="nav-item" id="ni-fram" onclick="goTo('fram')">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/></svg>
-      Diagrama FRAM
+    <div class="actions">
+      <button class="gbtn" onclick="DGRManager.saveToLocalStorage()">💾 Salvar</button>
+      <button class="gbtn" onclick="DGRManager.exportProject()">⬇ Exportar Projeto</button>
+      <label class="gbtn" style="margin-bottom:0">⬆ Importar Projeto<input type="file" accept=".dgrfram,.json" onchange="DGRManager.importProject(event)" style="display:none"></label>
+      <button class="gbtn" onclick="DGRManager.exportPDF()">📄 Exportar PDF</button>
+      <span style="width:1px;height:18px;background:#303747;margin:0 4px"></span>
+      <button class="gbtn" onclick="DGRHistory.undo()">↶ Desfazer</button>
+      <button class="gbtn" onclick="DGRHistory.redo()">↷ Refazer</button>
+      <button class="gbtn r" onclick="DGRManager.clearAll()" style="margin-left:10px">Apagar Tudo</button>
     </div>
-    <div class="nav-item" id="ni-endo" onclick="goTo('endo')">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
-      Variab. Endógena
-    </div>
-    <div class="nav-item" id="ni-exo" onclick="goTo('exo')">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-      Variab. Exógena
-    </div>
-    <div class="nav-item" id="ni-mr" onclick="goTo('mr')">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      Mecanismos de Resiliência
-    </div>
-
-  </div>
-  <div id="nav-bottom">
-    <div class="nav-tool r" onclick="clearAll()">⊘ Limpar tudo</div>
-  </div>
-</div>
-
-<!-- CONTENT -->
-<div id="content">
-
-  <!-- FRAM toolbar -->
-  <div id="frambar" style="display:none">
-    <button class="tbtn on" id="bsel" onclick="setMode('select')">↖ Selecionar</button>
-    <button class="tbtn" id="bera" onclick="setMode('erase')">✕ Apagar</button>
-    <span style="width:1px;height:18px;background:#e0e0ea;flex-shrink:0"></span>
-    <button class="tbtn" onclick="doUndo()" title="Desfazer (Ctrl+Z)">↩ Desfazer</button>
-    <button class="tbtn" onclick="doRedo()" title="Refazer (Ctrl+Y)">↪ Refazer</button>
-    <span style="width:1px;height:18px;background:#e0e0ea;flex-shrink:0"></span>
-    <button class="tbtn" onclick="addFn()">＋ Função</button>
-    <button class="tbtn" onclick="addResFromBar()">∿ Ressonância</button>
-    <span style="width:1px;height:18px;background:#e0e0ea;flex-shrink:0"></span>
-    <button class="tbtn" onclick="expJSON()">⬇ JSON</button>
-    <button class="tbtn" onclick="expPNG()">⬇ PNG</button>
-    <button class="tbtn" onclick="expPDF()">⬇ PDF</button>
-    <label class="ifl" style="font-size:12px">⬆ JSON<input type="file" accept=".json" onchange="impJSON(event)" style="display:none"></label>
-    <label class="ifl" style="font-size:12px">⬆ XFMV<input type="file" accept=".xfmv" onchange="impXFMV(event)" style="display:none"></label>
-    <span id="mstat" style="font-size:11px;color:#5a5a7a;margin-left:4px"></span>
   </div>
 
-  <!-- SCREENS -->
-
-  <!-- PAINEL -->
-  <div class="screen scroll-screen" id="s-painel">
-    <div style="max-width:980px;width:100%">
-      <div class="page-title">Painel DGR-FRAM</div>
-      <div class="page-sub">Dashboard visual do modelo — Dataprev como Infraestrutura Crítica Digital</div>
-      <!-- KPI row -->
-      <div class="dash-grid" id="dash-stats"></div>
-      <!-- Row 1: VFR bars + risk donut -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-        <div class="dash-section" style="margin-bottom:0">
-          <h3>VFR por Função <span style="font-size:10px;color:#9898b0;font-weight:400">(P95 — Limite Crítico)</span></h3>
-          <canvas id="ch-vfr" height="220"></canvas>
-          <div id="ch-vfr-empty" style="display:none;color:#9898b0;font-size:12px;text-align:center;padding:40px 0">Execute o Monte Carlo para ver os resultados</div>
+  <div id="main-container">
+    <div id="nav">
+      <div id="nav-items">
+        <div class="nav-item act" id="ni-mc" onclick="DGRManager.switchPage('mc')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          🎲 Monte Carlo
         </div>
-        <div class="dash-section" style="margin-bottom:0">
-          <h3>Distribuição de Criticidade</h3>
-          <canvas id="ch-donut" height="220"></canvas>
-          <div id="ch-donut-empty" style="display:none;color:#9898b0;font-size:12px;text-align:center;padding:40px 0">Execute o Monte Carlo para ver os resultados</div>
+        <div class="nav-item" id="ni-fram" onclick="DGRManager.switchPage('fram')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/></svg>
+          Funções e Conexões
+        </div>
+        <div class="nav-item" id="ni-endo" onclick="DGRManager.switchPage('endo')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
+          ⚡ Variab. Endógena RE
+        </div>
+        <div class="nav-item" id="ni-exo" onclick="DGRManager.switchPage('exo')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          🌐 Variab. Exógena RX
+        </div>
+        <div class="nav-item" id="ni-mr" onclick="DGRManager.switchPage('mr')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          🛡 Mecanismos MR
         </div>
       </div>
-      <!-- Row 2: Histograma de risco acumulado -->
-      <div class="dash-section" style="margin-bottom:16px">
-        <h3>Histograma de Risco Acumulado — VFR <span style="font-size:10px;color:#9898b0;font-weight:400">(distribuição agregada de todas as funções)</span></h3>
-        <canvas id="ch-hist" height="160"></canvas>
-        <div id="ch-hist-empty" style="display:none;color:#9898b0;font-size:12px;text-align:center;padding:32px 0">Execute o Monte Carlo para ver os resultados</div>
-      </div>
-      <!-- Row 3: Mapa de calor + IIS -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-        <div class="dash-section" style="margin-bottom:0">
-          <h3>Mapa de Calor das Funções <span style="font-size:10px;color:#9898b0;font-weight:400">(VFR × IP)</span></h3>
-          <canvas id="ch-heat" height="220"></canvas>
-          <div id="ch-heat-empty" style="display:none;color:#9898b0;font-size:12px;text-align:center;padding:40px 0">Execute o Monte Carlo para ver os resultados</div>
+    </div>
+
+    <div id="content">
+      
+      <div class="screen act scroll-screen" id="s-mc">
+        <div class="form-wrap">
+          <div class="page-title">Simulação Monte Carlo & Dashboard</div>
+          <div class="page-sub">Cálculos iterativos unificados: <b>VT = VE + VX</b>; <b>VFR = VT × (1 − AR)</b>. Limite Crítico = P95.</div>
+          
+          <div class="dash-grid" id="dash-stats"></div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div class="dash-section">
+              <h3>VFR por Função (P95 — Limite Crítico)</h3>
+              <canvas id="ch-vfr" height="200"></canvas>
+              <div id="ch-vfr-empty" class="empty">Execute a simulação para calcular</div>
+            </div>
+            <div class="dash-section">
+              <h3>Distribuição de Criticidade Estrutural</h3>
+              <canvas id="ch-donut" height="200"></canvas>
+              <div id="ch-donut-empty" class="empty">Execute a simulação para calcular</div>
+            </div>
+          </div>
+
+          <div class="dash-section" style="margin-bottom:14px">
+            <h3>Histograma de Risco Acumulado — Distribuição Agregada</h3>
+            <canvas id="ch-hist" height="130"></canvas>
+            <div id="ch-hist-empty" class="empty">Execute a simulação para calcular</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+            <div class="dash-section">
+              <h3>Mapa Sistêmico FRAM — Funções e Acoplamentos</h3>
+              <canvas id="ch-heat" height="280"></canvas>
+              <div id="ch-heat-empty" class="empty">Cadastre funções e conexões para visualizar o mapa</div>
+            </div>
+            <div class="dash-section">
+              <h3>Índice de Impacto Sistêmico (IIS)</h3>
+              <canvas id="ch-iis" height="200"></canvas>
+              <div id="ch-iis-empty" class="empty">Execute a simulação para calcular</div>
+            </div>
+          </div>
+
+          <div class="dash-section" style="margin-bottom:20px">
+            <h3>Variabilidades por Categoria Cadastrada</h3>
+            <canvas id="ch-vars" height="110"></canvas>
+          </div>
+
+          <div class="form-card">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span style="font-weight:600">Simulações de Amostragem:</span>
+              <button class="itb" id="mcn-1000" onclick="DGRManager.setMcN(1000)">1.000</button>
+              <button class="itb on" id="mcn-5000" onclick="DGRManager.setMcN(5000)">5.000</button>
+              <button class="itb" id="mcn-10000" onclick="DGRManager.setMcN(10000)">10.000</button>
+              <button class="bsav" style="padding:7px 20px;margin-left:auto" onclick="DGRManager.runSimulation()">▶ Rodar Simulação</button>
+            </div>
+          </div>
+
+          <div id="mc-inner"></div>
         </div>
-        <div class="dash-section" style="margin-bottom:0">
-          <h3>Índice de Impacto Sistêmico (IIS)</h3>
-          <canvas id="ch-iis" height="220"></canvas>
-          <div id="ch-iis-empty" style="display:none;color:#9898b0;font-size:12px;text-align:center;padding:40px 0">Execute o Monte Carlo para ver os resultados</div>
+      </div>
+
+      <div class="screen scroll-screen" id="s-fram">
+        <div class="form-wrap">
+          <div class="page-title">Funções e Acoplamentos Estruturais</div>
+          <div class="page-sub">Cadastro simplificado de funções e definição analítica das conexões matriciais.</div>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div>
+              <div class="form-card">
+                <h3 id="fnh3">Nova Função</h3>
+                <input type="hidden" id="edit-fn-id">
+                <label class="fl">Nome da Função *</label>
+                <input type="text" class="fi" id="fn-name" placeholder="Ex: Processar lote de pagamentos">
+                <label class="fl">Descrição / Escopo Operacional</label>
+                <textarea class="fi" id="fn-desc" placeholder="Detalhamento técnico da execução..."></textarea>
+                <div class="brow">
+                  <button class="bsav" onclick="DGRManager.saveFn()">Salvar Função</button>
+                  <button class="bdel" id="btn-cancel-fn" onclick="DGRManager.clearFnForm()" style="display:none">Cancelar</button>
+                </div>
+              </div>
+              <div class="item-list" id="fn-list-target"></div>
+            </div>
+
+            <div>
+              <div class="form-card">
+                <h3 id="connh3">Adicionar Conexão</h3>
+                <input type="hidden" id="edit-conn-id">
+                <div class="fir">
+                  <div>
+                    <label class="fl">Função de Origem *</label>
+                    <select class="fi" id="conn-src"></select>
+                  </div>
+                  <div>
+                    <label class="fl">Extremo de Saída da Origem</label>
+                    <select class="fi" id="conn-src-port">
+                      <option value="output" selected>Output</option>
+                      <option value="input">Input</option>
+                      <option value="precondition">Precondition</option>
+                      <option value="resource">Resource</option>
+                      <option value="control">Control</option>
+                      <option value="time">Time</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="fir">
+                  <div>
+                    <label class="fl">Função de Destino *</label>
+                    <select class="fi" id="conn-tgt"></select>
+                  </div>
+                  <div>
+                    <label class="fl">Extremo de Entrada no Destino</label>
+                    <select class="fi" id="conn-tgt-port">
+                      <option value="input" selected>Input</option>
+                      <option value="output">Output</option>
+                      <option value="precondition">Precondition</option>
+                      <option value="resource">Resource</option>
+                      <option value="control">Control</option>
+                      <option value="time">Time</option>
+                    </select>
+                  </div>
+                </div>
+                <label class="fl">Tipo de Relação / Acoplamento</label>
+                <select class="fi" id="conn-type">
+                  <option value="normal">Normal (Estável)</option>
+                  <option value="variable">Variável (Tracejado)</option>
+                  <option value="critical">Crítico (Alta Dependência)</option>
+                </select>
+                <label class="fl">Rótulo / Descritor do Link</label>
+                <input type="text" class="fi" id="conn-lbl" placeholder="Ex: Dados cadastrais">
+                <div class="brow">
+                  <button class="bsav" onclick="DGRManager.saveConn()">Adicionar Conexão</button>
+                  <button class="bdel" id="btn-cancel-conn" onclick="DGRManager.clearConnForm()" style="display:none">Cancelar</button>
+                </div>
+              </div>
+              <div class="item-list" id="conn-list-target"></div>
+            </div>
+          </div>
+          
+          <div class="form-card" style="margin-top:16px">
+            <h3 id="resh3">Registrar Cenário de Ressonância</h3>
+            <input type="hidden" id="edit-res-id">
+            <div class="fir">
+              <div>
+                <label class="fl">Título do Cenário</label>
+                <input type="text" class="fi" id="res-title" placeholder="Ex: Instabilidade de Link WAN">
+              </div>
+              <div>
+                <label class="fl">Função Propagadora Inicial</label>
+                <select class="fi" id="res-src"></select>
+              </div>
+            </div>
+            <label class="fl">Impacto Operacional Estimado</label>
+            <select class="fi" id="res-impact" style="width:200px">
+              <option value="baixo">Baixo</option>
+              <option value="moderado" selected>Moderado</option>
+              <option value="alto">Alto</option>
+              <option value="critico">Crítico</option>
+            </select>
+            <div class="brow">
+              <button class="bsav" onclick="DGRManager.saveResonanceEvent()">Salvar Cenário</button>
+              <button class="bdel" id="btn-cancel-res" onclick="DGRManager.clearResForm()" style="display:none">Cancelar</button>
+            </div>
+            <div class="item-list" id="res-list-target" style="margin-top:12px"></div>
+          </div>
         </div>
       </div>
-      <!-- Variabilidades summary -->
-      <div class="dash-section">
-        <h3>Variabilidades por Categoria</h3>
-        <canvas id="ch-vars" height="120"></canvas>
+
+      <div class="screen scroll-screen" id="s-endo">
+        <div class="form-wrap">
+          <div class="page-title">⚡ Ressonância por Perturbações Endógenas (RE)</div>
+          <div class="page-sub">Fatores intrínsecos às funções estruturadas que geram oscilações no parâmetro <b>VE</b>.</div>
+          
+          <div class="form-card">
+            <h3>Parametrização da Taxonomia RE</h3>
+            <div id="endo-subcat-sel"></div>
+          </div>
+
+          <div class="form-card">
+            <h3 id="endoh3">Novo Fator Endógeno</h3>
+            <input type="hidden" id="edit-endo-id">
+            <div class="fir">
+              <div>
+                <label class="fl">Nome do Fator *</label>
+                <input type="text" class="fi" id="endo-name" placeholder="Ex: Saturação Cognitiva">
+              </div>
+              <div>
+                <label class="fl">Função Afetada *</label>
+                <select class="fi" id="endo-fn"></select>
+              </div>
+            </div>
+            <label class="fl">Descrição Adicional</label>
+            <textarea class="fi" id="endo-desc"></textarea>
+            <div class="brow">
+              <button class="bsav" onclick="DGRManager.saveEndoVar()">Salvar Registro</button>
+              <button class="bdel" id="btn-cancel-endo" onclick="DGRManager.clearEndoForm()" style="display:none">Cancelar</button>
+            </div>
+          </div>
+          <div class="item-list" id="endo-list-target"></div>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <!-- DIAGRAMA FRAM -->
-  <div class="screen" id="s-fram" style="position:relative;overflow:hidden;background:#fff">
-    <canvas id="c"></canvas>
-    <div id="tip"></div>
-    <div id="leg">
-      <div class="lr"><div class="lb" style="background:#fff0ee;border-color:#c0392b"></div>Organizacional</div>
-      <div class="lr"><div class="lb" style="background:#e8f8f0;border-color:#0f6e56"></div>Background</div>
-      <div class="lr"><div class="lb" style="background:#f4f4f8;border-color:#6a6a88"></div>Humana</div>
-      <div class="lr"><div class="lb" style="background:#f8f8fc;border-color:#9090b8"></div>Tecnológica</div>
-      <div class="lr" style="margin-top:4px">
-        <svg width="26" height="12" style="flex-shrink:0"><path d="M2 6 Q6.5 2 13 6 Q19.5 10 24 6" fill="none" stroke="#c0392b" stroke-width="1.5"/></svg>Variabilidade
+      <div class="screen scroll-screen" id="s-exo">
+        <div class="form-wrap">
+          <div class="page-title">🌐 Ressonância por Perturbações Exógenas (RX)</div>
+          <div class="page-sub">Fatores e choques de fronteira externa que interferem no comportamento do parâmetro <b>VX</b>.</div>
+          
+          <div class="form-card">
+            <h3>Parametrização da Taxonomia RX</h3>
+            <div id="exo-subcat-sel"></div>
+          </div>
+
+          <div class="form-card">
+            <h3 id="exoh3">Novo Fator Exógeno</h3>
+            <input type="hidden" id="edit-exo-id">
+            <div class="fir">
+              <div>
+                <label class="fl">Nome do Fator Exógeno *</label>
+                <input type="text" class="fi" id="exo-name" placeholder="Ex: Queda de API Externa">
+              </div>
+              <div>
+                <label class="fl">Função Receptora do Choque *</label>
+                <select class="fi" id="exo-fn"></select>
+              </div>
+            </div>
+            <label class="fl">Descrição / Efeito de Borda</label>
+            <textarea class="fi" id="exo-desc"></textarea>
+            <div class="brow">
+              <button class="bsav" onclick="DGRManager.saveExoVar()">Salvar Registro</button>
+              <button class="bdel" id="btn-cancel-exo" onclick="DGRManager.clearExoForm()" style="display:none">Cancelar</button>
+            </div>
+          </div>
+          <div class="item-list" id="exo-list-target"></div>
+        </div>
       </div>
-    </div>
-    <!-- FN EDIT PANEL -->
-    <div id="fnpanel" style="position:absolute;right:12px;top:12px;width:280px;background:#fff;border:1px solid #d0d0da;border-radius:10px;z-index:100;max-height:calc(100% - 24px);overflow-y:auto;box-shadow:0 2px 14px rgba(0,0,0,.09);display:none">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 13px 8px;border-bottom:1px solid #eee">
-        <span style="font-size:13px;font-weight:600" id="fnptitle">Função</span>
-        <button onclick="document.getElementById('fnpanel').style.display='none'" style="cursor:pointer;font-size:18px;color:#9898b0;border:none;background:none;padding:0 2px;line-height:1">×</button>
+
+      <div class="screen scroll-screen" id="s-mr">
+        <div class="form-wrap">
+          <div class="page-title">🛡 Mecanismos de Resiliência (MR)</div>
+          <div class="page-sub">Barreiras e capacidades adaptativas configuradas para amortecer riscos e otimizar o parâmetro <b>AR</b>.</div>
+          
+          <div class="form-card">
+            <h3>Parametrização da Taxonomia MR</h3>
+            <div id="mr-subcat-sel"></div>
+          </div>
+
+          <div class="form-card">
+            <h3 id="mrh3">Novo Mecanismo de Resiliência</h3>
+            <input type="hidden" id="edit-mr-id">
+            <div class="fir">
+              <div>
+                <label class="fl">Nome do Mecanismo *</label>
+                <input type="text" class="fi" id="mr-name" placeholder="Ex: Circuit Breaker">
+              </div>
+              <div>
+                <label class="fl">Função Protegida / Controlada *</label>
+                <select class="fi" id="mr-fn"></select>
+              </div>
+            </div>
+            <label class="fl">Diretriz Técnica / Descrição do Mecanismo</label>
+            <textarea class="fi" id="mr-desc"></textarea>
+            <div class="brow">
+              <button class="bsav" onclick="DGRManager.saveMrMech()">Salvar Mecanismo</button>
+              <button class="bdel" id="btn-cancel-mr" onclick="DGRManager.clearMrForm()" style="display:none">Cancelar</button>
+            </div>
+          </div>
+          <div class="item-list" id="mr-list-target"></div>
+        </div>
       </div>
-      <div style="padding:12px 13px" id="fnpbody"></div>
+
     </div>
-  </div>
-
-  <!-- VAR ENDÓGENA -->
-  <div class="screen scroll-screen" id="s-endo">
-    <div class="form-wrap">
-      <div class="page-title">⚡ Variabilidade Endógena</div>
-      <div class="page-sub">Ressonância por Perturbações Endógenas — variabilidade intrínseca às funções FRAM (RE)<br>
-      <span style="color:#534AB7;font-size:12px">As subcategorias selecionadas aqui alimentam automaticamente o parâmetro <b>VE</b> no Monte Carlo.</span></div>
-      <!-- Subcategory selector by function -->
-      <div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:18px 20px;margin-bottom:18px">
-        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar Subcategorias RE por Função</h3>
-        <div id="endo-subcat-sel"></div>
-      </div>
-      <!-- Variabilidade form -->
-      <div class="inline-form" id="endo-form"></div>
-      <div class="item-list" id="endo-list"></div>
-    </div>
-  </div>
-
-  <!-- VAR EXÓGENA -->
-  <div class="screen scroll-screen" id="s-exo">
-    <div class="form-wrap">
-      <div class="page-title">🌐 Variabilidade Exógena</div>
-      <div class="page-sub">Ressonância por Perturbações Exógenas — variabilidade de fronteira entre funções e ecossistema (RX)<br>
-      <span style="color:#534AB7;font-size:12px">As subcategorias selecionadas aqui alimentam automaticamente o parâmetro <b>VX</b> no Monte Carlo.</span></div>
-      <div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:18px 20px;margin-bottom:18px">
-        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar Subcategorias RX por Função</h3>
-        <div id="exo-subcat-sel"></div>
-      </div>
-      <div class="inline-form" id="exo-form"></div>
-      <div class="item-list" id="exo-list"></div>
-    </div>
-  </div>
-
-  <!-- MECANISMOS MR -->
-  <div class="screen scroll-screen" id="s-mr">
-    <div class="form-wrap">
-      <div class="page-title">🛡 Mecanismos de Resiliência</div>
-      <div class="page-sub">Capacidades dinâmicas que amortecem variabilidade e garantem continuidade operacional (MR)<br>
-      <span style="color:#534AB7;font-size:12px">As subcategorias selecionadas aqui alimentam automaticamente o parâmetro <b>AR</b> no Monte Carlo.</span></div>
-      <div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:18px 20px;margin-bottom:18px">
-        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar Subcategorias MR por Função</h3>
-        <div id="mr-subcat-sel"></div>
-      </div>
-      <div class="inline-form" id="mr-form"></div>
-      <div class="item-list" id="mr-list"></div>
-    </div>
-  </div>
-
-  <!-- MONTE CARLO -->
-  <div class="screen act scroll-screen" id="s-mc">
-    <div style="max-width:960px;width:100%">
-      <div class="page-title">Simulação Monte Carlo</div>
-      <div class="page-sub"><b>VFR = (VE + VX) × (1 − AR)</b> &nbsp;·&nbsp; LC = P95 &nbsp;·&nbsp; IP = saídas ÷ máx_saídas &nbsp;·&nbsp; IIS = VFR × IP<br>
-      Selecione as subcategorias RE, RX, MR de cada função para calcular VE, VX e AR automaticamente.</div>
-      <div id="mc-inner"></div>
-    </div>
-  </div>
-
-</div><!-- /content -->
-</div><!-- /app -->
-
-<!-- CONN MODAL -->
-<div id="ov" onclick="if(event.target===this)cancelConn()">
-  <div class="modal">
-    <h3>Definir acoplamento</h3>
-    <div class="modal-sub" id="cinfo"></div>
-    <label class="fl">Aspecto de ORIGEM</label>
-    <select class="fi" id="csrc"><option value="O">O — Output</option><option value="I">I — Input</option><option value="P">P — Precondição</option><option value="R">R — Recurso</option><option value="C">C — Controle</option><option value="T">T — Tempo</option></select>
-    <label class="fl">Aspecto de DESTINO</label>
-    <select class="fi" id="ctgt"><option value="I">I — Input</option><option value="O">O — Output</option><option value="P">P — Precondição</option><option value="R">R — Recurso</option><option value="C">C — Controle</option><option value="T">T — Tempo</option></select>
-    <label class="fl">Rótulo</label>
-    <input type="text" class="fi" id="clbl" placeholder="ex: alimenta, controla">
-    <label class="fl">Tipo de linha</label>
-    <select class="fi" id="ctype"><option value="normal">Normal</option><option value="variable">Variável (tracejado)</option><option value="critical">Crítico (vermelho)</option></select>
-    <div class="mac"><button class="bsav" onclick="confirmConn()">Criar acoplamento</button><button class="bdel" onclick="cancelConn()">Cancelar</button></div>
   </div>
 </div>
 
 <script>
 // ══════════════════════════════════════════
-// TAXONOMIA
+// TAXONOMIA DO SISTEMA DGR-FRAM
 // ══════════════════════════════════════════
 const TAXO={
   RE:{
     label:'Ressonância por Perturbações Endógenas',color:'#854f0b',bg:'#faeeda',
     groups:[
-      {key:'A',label:'A) Desalinhamento Cognitivo e Operacional entre Procedimento e Execução (WAI vs. WAD)',items:[
+      {key:'A',label:'A) Desalinhamento entre Procedimento e Execução (WAI vs. WAD)',items:[
         {code:'RE-A.1',name:'Desvio Procedimental por Rigidez Normativa'},
         {code:'RE-A.2',name:'Saturação Cognitiva por Controles de Conformidade'},
         {code:'RE-A.3',name:'Execução sobre Metadados Obsoletos'},
       ]},
-      {key:'B',label:'B) Perda de Consciência Situacional e Saturação de Recursos Locais',items:[
+      {key:'B',label:'B) Perda de Consciência Situacional e Saturação Local',items:[
         {code:'RE-B.1',name:'Fadiga de Alertas e Log Intermitente'},
         {code:'RE-B.2',name:'Silos Informacionais e Ruptura de Coordenação Local'},
         {code:'RE-B.3',name:'Latência de Visibilidade Operacional Local'},
       ]},
-      {key:'C',label:'C) Vulnerabilidades de Design Tecnológico e Lógico da Função',items:[
+      {key:'C',label:'C) Vulnerabilidades de Design Tecnológico da Função',items:[
         {code:'RE-C.1',name:'Rigidez Semântica de Validação'},
         {code:'RE-C.2',name:'Bloqueio de Concorrência Transacional Local (Data Locking)'},
         {code:'RE-C.3',name:'Tomada de Decisão sobre Replicação Defasada'},
@@ -421,16 +476,15 @@ const TAXO={
   RX:{
     label:'Ressonância por Perturbações Exógenas',color:'#c0392b',bg:'#fdecea',
     groups:[
-      {key:'A',label:'A) Choques de Demanda e Volatilidade Institucional (Fronteira com Sociedade e Estado)',items:[
+      {key:'A',label:'A) Choques de Demanda e Volatilidade Institucional',items:[
         {code:'RX-A.1',name:'Ressonância por Pico de Demanda Coletiva'},
         {code:'RX-A.2',name:'Instabilidade por Atuação Regulatório-Legal Súbita'},
         {code:'RX-A.3',name:'Contaminação de Entrada por Inconsistência na Origem'},
       ]},
-      {key:'B',label:'B) Instabilidade de Interoperabilidade e Dependências Críticas (Fronteira com Ecossistema de TI)',items:[
+      {key:'B',label:'B) Instabilidade de Interoperabilidade e Dependências Críticas',items:[
         {code:'RX-B.1',name:'Quebra de Acoplamento por Alteração Unilateral de Interface'},
         {code:'RX-B.2',name:'Paralisia por Conflito Interpretativo Multi-Ator'},
-        {code:'RX-B.3',name:'Interrupção por Falha em Cascata de Utilidades Básicas'},
-        {code:'RX-B.5',name:'Força Maior e Distúrbios Ambientais/Físicos de Fronteira'},
+        {code:'RX-B.3',name:'Interrupção por Falha em Cascata de Utilidades Bás'},
       ]},
     ],
     get items(){return this.groups.flatMap(g=>g.items);}
@@ -438,1192 +492,1134 @@ const TAXO={
   MR:{
     label:'Mecanismos de Resiliência (Amortecimento e Adaptação)',color:'#0f6e56',bg:'#e8f8f0',
     groups:[
-      {key:'A',label:'A) Amortecimento por Infraestrutura Informacional (Monitorar e Responder)',items:[
+      {key:'A',label:'A) Amortecimento por Infraestrutura Informacional',items:[
         {code:'MR-A.1',name:'Ativação Dinâmica de Barreiras (Fail-Safe Data)'},
         {code:'MR-A.2',name:'Consciência Situacional Preemptiva'},
         {code:'MR-A.3',name:'Orquestração Ágil de Recursos Informacionais'},
       ]},
-      {key:'B',label:'B) Extensibilidade Graciosa através de Governança Emergente (Responder)',items:[
+      {key:'B',label:'B) Extensibilidade Graciosa através de Governança Emergente',items:[
         {code:'MR-B.1',name:'Autonomia de Coordenação Interequipes'},
         {code:'MR-B.2',name:'Degradação Graciosa do Serviço Informacional'},
         {code:'MR-B.3',name:'Improvisação Técnico-Estruturada (Coping)'},
-      ]},
-      {key:'C',label:'C) Realimentação de Memória Organizacional e Aprendizagem (Aprender e Antecipar)',items:[
-        {code:'MR-C.1',name:'Institucionalização do Conhecimento Tácito'},
-        {code:'MR-C.2',name:'Retroalimentação Pós-Incidente'},
-        {code:'MR-C.3',name:'Longevidade de Hábitos Técnicos Resilientes'},
       ]},
     ],
     get items(){return this.groups.flatMap(g=>g.items);}
   }
 };
-const TIPOS_ENDO=['Indisponibilidade de Informação','Inconsistência de Dados','Sobrecarga Operacional','Falha de Comunicação Interna','Erro de Configuração','Obsolescência Tecnológica','Desvio Procedimental','Saturação Cognitiva','Metadados Obsoletos','Fadiga de Alertas','Silos Informacionais','Latência de Visibilidade','Rigidez Semântica','Data Locking','Replicação Defasada','Outro'];
-const CATS_ENDO=['Informacional','Tecnológica','Humana','Processual','Infraestrutura'];
-const TIPOS_EXO=['Pico de Demanda Externa','Mudança Regulatória Súbita','Contaminação de Dados na Origem','Quebra de Interface/API','Conflito Interpretativo Multi-Ator','Falha em Cascata de Fornecedor','Força Maior / Desastre','Pressão Política/Institucional','Outro'];
-const TIPOS_MR=['Barreira Técnica (Fail-Safe)','Protocolo de Resposta','Capacidade de Monitoramento','Plano de Contingência','Mecanismo de Aprendizagem','Procedimento de Degradação Graciosa','Memória Organizacional','Coordenação Emergente','Coping Estruturado','Outro'];
 
 // ══════════════════════════════════════════
-// STATE
+// GERENCIADOR DE ESTADO ENCAPSULADO (DGRState)
 // ══════════════════════════════════════════
-let fns=[], coups=[], vars=[], mechs=[], resEvs=[];
-let params={}, subs={}, mcRes={};
-// Undo/redo history
-let _history=[], _future=[], _pauseHistory=false;
-function _snapshot(){if(_pauseHistory)return;_history.push(JSON.stringify({fns,coups,vars,mechs,resEvs,params,subs}));if(_history.length>50)_history.shift();_future=[];}
-function doUndo(){if(!_history.length)return;_future.push(JSON.stringify({fns,coups,vars,mechs,resEvs,params,subs}));const s=JSON.parse(_history.pop());_pauseHistory=true;({fns,coups,vars,mechs,resEvs,params,subs}=s);_pauseHistory=false;draw();if(curPage==='mc')renderMC();}
-function doRedo(){if(!_future.length)return;_history.push(JSON.stringify({fns,coups,vars,mechs,resEvs,params,subs}));const s=JSON.parse(_future.pop());_pauseHistory=true;({fns,coups,vars,mechs,resEvs,params,subs}=s);_pauseHistory=false;draw();if(curPage==='mc')renderMC();}
-// Keyboard shortcuts
-document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='z'&&!e.shiftKey){e.preventDefault();doUndo();}if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.key==='z'&&e.shiftKey))){e.preventDefault();doRedo();}});
-let mcN=5000, rankBy='p95', mcActiveFn=null;
-let mode='select', selFn=null;
-let dragFn=null,dragOX=0,dragOY=0;
-let panX=0,panY=0,scale=1,isPan=false,pSX=0,pSY=0;
-let connSrc=null,connPend=null,connSrcFn=null,connTgtFn=null;
-let hovFn=null,hovCoup=null,animT=0,animOn=false;
-let curPage='mc';
-// editing ids
-let editVarId=null, editMechId=null;
-let _vxExtra=[];
+const DGRState = {
+  fns: [],
+  coups: [],
+  vars: [],
+  mechs: [],
+  resEvs: [],
+  params: {},
+  subs: {},
+  mcRes: {},
+  mcN: 5000,
+  curPage: 'mc',
 
-// ══════════════════════════════════════════
-// NAV
-// ══════════════════════════════════════════
-function goTo(page){
-  curPage=page;
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('act'));
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('act'));
-  document.getElementById('ni-'+page).classList.add('act');
-  document.getElementById('s-'+page).classList.add('act');
-  document.getElementById('frambar').style.display=page==='fram'?'flex':'none';
-  if(page==='fram'){setTimeout(resize,10);}
-  // painel removed
-  if(page==='endo'){editVarId=null;renderSubcatSelector('RE','endo-subcat-sel');renderEndoForm();renderEndoList();}
-  if(page==='exo'){editVarId=null;renderSubcatSelector('RX','exo-subcat-sel');renderExoForm();renderExoList();}
-  if(page==='mr'){editMechId=null;renderSubcatSelector('MR','mr-subcat-sel');renderMrForm();renderMrList();}
-  if(page==='mc') renderMC();
-}
-
-// ══════════════════════════════════════════
-// CANVAS
-// ══════════════════════════════════════════
-const C=document.getElementById('c');
-const ctx=C.getContext('2d');
-const CW=document.getElementById('s-fram');
-const tip=document.getElementById('tip');
-function resize(){C.width=CW.offsetWidth;C.height=CW.offsetHeight;draw();}
-window.addEventListener('resize',()=>{if(curPage==='fram')resize();});
-
-// ══════════════════════════════════════════
-// HEX GEOMETRY
-// ══════════════════════════════════════════
-const HR=46;
-const AV={O:0,R:1,T:2,I:3,C:4,P:5};
-const AC={I:'#185fa5',O:'#0f6e56',P:'#b07a10',R:'#5f5e5a',C:'#c0392b',T:'#534AB7'};
-function hexV(cx,cy,r){const v=[];for(let i=0;i<6;i++){const a=i*Math.PI/3;v.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]);}return v;}
-function aspS(wx,wy,asp){const a=(AV[asp]??0)*Math.PI/3;return[(wx+HR*Math.cos(a))*scale+panX,(wy+HR*Math.sin(a))*scale+panY];}
-function inHex(px,py,cx,cy){return Math.hypot(px-cx,py-cy)<HR*0.92;}
-function w2s(wx,wy){return[wx*scale+panX,wy*scale+panY];}
-function s2w(sx,sy){return[(sx-panX)/scale,(sy-panY)/scale];}
-
-// ══════════════════════════════════════════
-// COLORS
-// ══════════════════════════════════════════
-const FC={red:{fill:'#fff0ee',stroke:'#c0392b',text:'#7a1a10',badge:'ORG'},green:{fill:'#e8f8f0',stroke:'#0f6e56',text:'#074030',badge:'BKG'},grey:{fill:'#f4f4f8',stroke:'#6a6a88',text:'#3a3a55',badge:'HUM'},white:{fill:'#f8f8fc',stroke:'#9090b8',text:'#3a3a60',badge:'TEC'}};
-function fnCol(fn){
-  if(connSrc&&fn.id===connSrc.id)return{fill:'#e1f5ee',stroke:'#0f6e56',text:'#074030',badge:(FC[fn.style||'red']||FC.red).badge};
-  if(selFn&&fn.id===selFn.id)return{fill:'#eeedfe',stroke:'#534AB7',text:'#26215c',badge:(FC[fn.style||'red']||FC.red).badge};
-  return FC[fn.style||'red']||FC.red;
-}
-
-// ══════════════════════════════════════════
-// DRAW
-// ══════════════════════════════════════════
-function resonantIds(){
-  const s=new Set();
-  vars.forEach(v=>{if(v.affected_function_id)s.add(v.affected_function_id);});
-  resEvs.forEach(r=>{if(r.initial_function_id)s.add(r.initial_function_id);(r.affected_function_ids||[]).forEach(id=>s.add(id));});
-  return s;
-}
-function draw(){
-  if(curPage!=='fram')return;
-  const W=C.width,H=C.height;
-  ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
-  ctx.save();ctx.strokeStyle='rgba(0,0,0,0.04)';ctx.lineWidth=1;
-  const gs=50*scale,ox=panX%gs,oy=panY%gs;
-  for(let x=ox;x<W;x+=gs){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-  for(let y=oy;y<H;y+=gs){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-  ctx.restore();
-  const rids=resonantIds();
-  coups.forEach(c=>drawCoup(c));
-  if(mode==='connect'&&connSrc&&connPend){
-    const[sx,sy]=w2s(connSrc.x,connSrc.y);
-    ctx.save();ctx.strokeStyle='#0f6e56';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
-    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(connPend.x,connPend.y);ctx.stroke();ctx.setLineDash([]);ctx.restore();
-  }
-  fns.forEach(fn=>drawFn(fn,rids.has(fn.id)));
-  if(rids.size>0&&!animOn){animOn=true;animLoop();}
-  else if(rids.size===0)animOn=false;
-}
-function animLoop(){if(!animOn||curPage!=='fram')return;animT++;draw();requestAnimationFrame(animLoop);}
-
-function drawFn(fn,hasRes){
-  const[cx,cy]=w2s(fn.x,fn.y),r=HR*scale;
-  const col=fnCol(fn);const isSel=selFn&&fn.id===selFn.id;const isConnSrc=connSrc&&fn.id===connSrc.id;const isHov=hovFn&&fn.id===hovFn.id;const isEra=mode==='erase';
-  const verts=hexV(cx,cy,r);
-  ctx.save();ctx.beginPath();ctx.moveTo(verts[0][0],verts[0][1]);for(let i=1;i<6;i++)ctx.lineTo(verts[i][0],verts[i][1]);ctx.closePath();
-  ctx.fillStyle=col.fill;ctx.fill();
-  if(isConnSrc){ctx.strokeStyle='#0f6e56';ctx.lineWidth=3;}
-  else{ctx.strokeStyle=isEra&&isHov?'#c0392b':col.stroke;ctx.lineWidth=isSel||isHov?2.5:1.5;if(isEra&&isHov)ctx.setLineDash([4,3]);}
-  ctx.stroke();ctx.setLineDash([]);
-  if(hasRes){
-    ctx.save();ctx.strokeStyle='#c0392b';ctx.lineWidth=1.6;
-    ctx.beginPath();ctx.moveTo(verts[0][0],verts[0][1]);for(let i=1;i<6;i++)ctx.lineTo(verts[i][0],verts[i][1]);ctx.closePath();ctx.clip();
-    const amp=r*0.14,freq=3.8,bw=r*0.7;ctx.beginPath();
-    for(let x=-bw;x<=bw;x+=1){const yy=cy+amp*Math.sin(freq*(x/bw)*Math.PI+animT*0.08);if(x===-bw)ctx.moveTo(cx+x,yy);else ctx.lineTo(cx+x,yy);}
-    ctx.stroke();ctx.restore();
-  }
-  ctx.fillStyle=col.text;const fs=Math.max(9,11*Math.min(scale,1));ctx.font=`500 ${fs}px "Segoe UI",system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';
-  const words=(fn.name||'').split(' ');const lines=[];let cur='';
-  words.forEach(w=>{const t=cur?cur+' '+w:w;if(ctx.measureText(t).width>r*1.42){if(cur)lines.push(cur);cur=w;}else cur=t;});lines.push(cur);
-  const lh=Math.max(12,fs*1.3),tot=(lines.length-1)*lh,yOff=hasRes?-r*0.2:0;
-  lines.forEach((l,i)=>ctx.fillText(l,cx,cy+yOff-tot/2+i*lh));
-  ctx.font=`600 ${Math.max(8,9*Math.min(scale,1))}px "Segoe UI",system-ui`;ctx.fillStyle=col.stroke;ctx.fillText(col.badge,cx,cy+r*0.56);
-  ctx.restore();
-  const used=new Set();coups.forEach(c=>{if(c.source_function_id===fn.id)used.add(c.source_aspect||'O');if(c.target_function_id===fn.id)used.add(c.target_aspect||'I');});
-  const showAll=isSel||isHov||isConnSrc||mode==='connect';
-  if(showAll){
-    ['I','O','P','R','C','T'].forEach(asp=>{
-      const[ax,ay]=aspS(fn.x,fn.y,asp),rs=Math.max(5,6*scale);
-      ctx.save();ctx.beginPath();ctx.arc(ax,ay,rs,0,Math.PI*2);ctx.fillStyle=AC[asp];ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.2;ctx.stroke();
-      ctx.fillStyle='#fff';ctx.font=`700 ${Math.max(6,7*scale)}px monospace`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(asp,ax,ay);ctx.restore();
+  serialize() {
+    return JSON.stringify({
+      fns: this.fns, coups: this.coups, vars: this.vars, mechs: this.mechs,
+      resEvs: this.resEvs, params: this.params, subs: this.subs, mcRes: this.mcRes, mcN: this.mcN
     });
-  } else {
-    used.forEach(asp=>{const[ax,ay]=aspS(fn.x,fn.y,asp);ctx.save();ctx.beginPath();ctx.arc(ax,ay,Math.max(3.5,4.5*scale),0,Math.PI*2);ctx.fillStyle=AC[asp];ctx.fill();ctx.restore();});
-  }
-}
-
-function drawCoup(c){
-  const src=fns.find(f=>f.id===c.source_function_id),tgt=fns.find(f=>f.id===c.target_function_id);if(!src||!tgt)return;
-  const[sx,sy]=aspS(src.x,src.y,c.source_aspect||'O'),[tx,ty]=aspS(tgt.x,tgt.y,c.target_aspect||'I');
-  const dx=tx-sx,dy=ty-sy,len=Math.hypot(dx,dy)||1,off=Math.min(60*scale,len*0.30);
-  const cpx=(sx+tx)/2-(dy/len)*off,cpy=(sy+ty)/2+(dx/len)*off,lt=c.line_type||'normal';
-  const isHovC=hovCoup&&hovCoup.id===c.id&&mode==='erase';
-  ctx.save();ctx.beginPath();ctx.moveTo(sx,sy);ctx.quadraticCurveTo(cpx,cpy,tx,ty);
-  if(lt==='variable')ctx.setLineDash([6,4]);
-  ctx.strokeStyle=isHovC?'#c0392b':lt==='critical'?'#c0392b':'rgba(80,80,140,0.5)';ctx.lineWidth=isHovC?2.2:lt==='critical'?1.8:1.1;ctx.stroke();ctx.setLineDash([]);
-  const t2=0.97,ax=(1-t2)**2*sx+2*(1-t2)*t2*cpx+t2**2*tx,ay2=(1-t2)**2*sy+2*(1-t2)*t2*cpy+t2**2*ty;
-  const t1=0.91,bx=(1-t1)**2*sx+2*(1-t1)*t1*cpx+t1**2*tx,by=(1-t1)**2*sy+2*(1-t1)*t1*cpy+t1**2*ty;
-  const ang=Math.atan2(ay2-by,ax-bx),al=8*Math.min(scale,1.2);
-  ctx.beginPath();ctx.moveTo(ax,ay2);ctx.lineTo(ax-al*Math.cos(ang-.45),ay2-al*Math.sin(ang-.45));ctx.lineTo(ax-al*Math.cos(ang+.45),ay2-al*Math.sin(ang+.45));ctx.closePath();
-  ctx.fillStyle=isHovC?'#c0392b':lt==='critical'?'#c0392b':'rgba(80,80,140,0.6)';ctx.fill();
-  if(c.label){const lx=(sx+tx)/2-(dy/len)*off*0.5,ly=(sy+ty)/2+(dx/len)*off*0.5-10*Math.min(scale,1);ctx.font='10px "Segoe UI",system-ui';ctx.fillStyle='rgba(60,60,110,0.7)';ctx.textAlign='center';ctx.fillText(c.label,lx,ly);}
-  ctx.restore();
-}
-
-// ══════════════════════════════════════════
-// HIT TEST
-// ══════════════════════════════════════════
-function hitCoup(mx,my){
-  for(const c of coups){
-    const src=fns.find(f=>f.id===c.source_function_id),tgt=fns.find(f=>f.id===c.target_function_id);if(!src||!tgt)continue;
-    const[sx,sy]=aspS(src.x,src.y,c.source_aspect||'O'),[tx,ty]=aspS(tgt.x,tgt.y,c.target_aspect||'I');
-    const dx=tx-sx,dy=ty-sy,len=Math.hypot(dx,dy)||1,off=Math.min(60*scale,len*0.30);
-    const cpx=(sx+tx)/2-(dy/len)*off,cpy=(sy+ty)/2+(dx/len)*off;
-    for(let t=0;t<=1;t+=0.035){const bx=(1-t)**2*sx+2*(1-t)*t*cpx+t**2*tx,by=(1-t)**2*sy+2*(1-t)*t*cpy+t**2*ty;if(Math.hypot(mx-bx,my-by)<9)return c;}
-  }
-  return null;
-}
-
-// ══════════════════════════════════════════
-// MOUSE
-// ══════════════════════════════════════════
-C.addEventListener('mousedown',onDown);
-C.addEventListener('mousemove',onMove);
-C.addEventListener('mouseup',()=>{if(dragFn)_snapshot();dragFn=null;isPan=false;});
-C.addEventListener('wheel',e=>{e.preventDefault();const d=e.deltaY>0?.88:1.14;panX=(panX-e.offsetX)*d+e.offsetX;panY=(panY-e.offsetY)*d+e.offsetY;scale=Math.max(0.2,Math.min(3,scale*d));draw();},{passive:false});
-C.addEventListener('dblclick',e=>{const[wx,wy]=s2w(e.offsetX,e.offsetY);const fn=fns.find(f=>inHex(wx,wy,f.x,f.y));if(fn)openFnPanel(fn);});
-
-function onDown(e){
-  if(document.getElementById('ov').classList.contains('show'))return;
-  const[wx,wy]=s2w(e.offsetX,e.offsetY);const fn=fns.find(f=>inHex(wx,wy,f.x,f.y));
-  if(mode==='erase'){
-    if(fn){delFn(fn.id);return;}
-    const c=hitCoup(e.offsetX,e.offsetY);if(c){coups=coups.filter(x=>x.id!==c.id);draw();return;}return;
-  }
-  if(mode==='select'){
-    if(fn){dragFn=fn;dragOX=wx-fn.x;dragOY=wy-fn.y;selFn=fn;openFnPanel(fn);draw();}
-    else{dragFn=null;selFn=null;document.getElementById('fnpanel').style.display='none';isPan=true;pSX=e.offsetX-panX;pSY=e.offsetY-panY;draw();}
-  } else if(mode==='connect'){
-    if(fn){if(!connSrc){connSrc=fn;connPend=null;document.getElementById('fnpanel').style.display='none';draw();}else if(fn.id!==connSrc.id){openConnModal(connSrc,fn);}else{connSrc=null;connPend=null;draw();}}
-    else{connSrc=null;connPend=null;draw();}
-  }
-}
-function onMove(e){
-  const[wx,wy]=s2w(e.offsetX,e.offsetY);
-  if(isPan){panX=e.offsetX-pSX;panY=e.offsetY-pSY;draw();return;}
-  if(dragFn&&mode==='select'){dragFn.x=wx-dragOX;dragFn.y=wy-dragOY;draw();return;}
-  if(mode==='connect'&&connSrc)connPend={x:e.offsetX,y:e.offsetY};
-  const fn=fns.find(f=>inHex(wx,wy,f.x,f.y));if(fn!==hovFn){hovFn=fn;draw();}
-  const c=mode==='erase'?hitCoup(e.offsetX,e.offsetY):null;if(c!==hovCoup){hovCoup=c;draw();}
-  if(fn){
-    tip.style.display='block';tip.style.left=(e.offsetX+14)+'px';tip.style.top=(e.offsetY-10)+'px';
-    const hasV=vars.some(v=>v.affected_function_id===fn.id);
-    tip.innerHTML=`<b>${esc(fn.name)}</b>${hasV?'<br>⚡ Tem variabilidades':''}${mode==='connect'?(connSrc?'<br><span style="color:#0f6e56">Clique → destino</span>':'<br><span style="color:#0f6e56">Clique → origem</span>'):''}${mode==='erase'?'<br><span style="color:#c0392b">Clique para apagar</span>':''}`;
-  } else if(c&&mode==='erase'){
-    const s=fns.find(f=>f.id===c.source_function_id),t=fns.find(f=>f.id===c.target_function_id);
-    tip.style.display='block';tip.style.left=(e.offsetX+14)+'px';tip.style.top=(e.offsetY-10)+'px';
-    tip.innerHTML=`${esc(s?.name||'?')} → ${esc(t?.name||'?')}<br><span style="color:#c0392b">Clique para apagar</span>`;
-  } else tip.style.display='none';
-  C.style.cursor=mode==='erase'?(fn||c?'crosshair':'default'):mode==='connect'?'crosshair':'default';
-}
-
-// ══════════════════════════════════════════
-// MODE
-// ══════════════════════════════════════════
-function setMode(m){
-  mode=m;connSrc=null;connPend=null;hovCoup=null;dragFn=null;isPan=false;
-  if(m==='connect'){
-    document.getElementById('fnpanel').style.display='none';
-    // If not already on FRAM, navigate there
-    if(curPage!=='fram') goTo('fram');
-  }
-  ['bsel','bera'].forEach(id=>document.getElementById(id)&&document.getElementById(id).classList.remove('on'));
-  const mapBtn={select:'bsel',connect:'bsel',erase:'bera'};
-  if(document.getElementById(mapBtn[m]))document.getElementById(mapBtn[m]).classList.add('on');
-  const ms=document.getElementById('mstat');
-  if(ms)ms.textContent=m==='connect'?'Modo conectar — clique na origem e depois no destino':m==='erase'?'Clique para apagar':'';
-  draw();
-}
-
-// ══════════════════════════════════════════
-// FUNCTIONS
-// ══════════════════════════════════════════
-function uid(){return 'id'+Math.random().toString(36).slice(2,8)+Date.now().toString(36);}
-function initP(id){if(!params[id])params[id]={ve:{mn:0.1,mp:0.3,mx:0.6},vx:{mn:0.1,mp:0.3,mx:0.6},ar:{mn:0.2,mp:0.4,mx:0.7}};}
-function initSubs(id){if(!subs[id])subs[id]={};[...TAXO.RE.items,...TAXO.RX.items,...TAXO.MR.items].forEach(i=>{if(!subs[id][i.code])subs[id][i.code]={sel:false,mn:0,mp:0.3,mx:0.6};});}
-
-function addFn(){
-  const cx=(CW.offsetWidth/2-panX)/scale,cy=(CW.offsetHeight/2-panY)/scale;
-  const fn={id:uid(),name:'Nova função',description:'',input:'',output:'',precondition:'',resource:'',control:'',time:'',criticality:3,coupling_degree:3,style:'red',x:cx+(Math.random()-.5)*120,y:cy+(Math.random()-.5)*80};
-  fns.push(fn);_snapshot();initP(fn.id);initSubs(fn.id);selFn=fn;openFnPanel(fn);draw();
-}
-
-function openFnPanel(fn){
-  document.getElementById('fnpanel').style.display='block';
-  document.getElementById('fnptitle').textContent=fn.name;
-  document.getElementById('fnpbody').innerHTML=`
-<label class="fl">Nome</label><input class="fi" id="fpn" value="${esc(fn.name)}">
-<label class="fl">Descrição</label><textarea class="fi" id="fpd">${esc(fn.description||'')}</textarea>
-<label class="fl">Tipo</label>
-<div class="tgrd">
-  <button class="ftb${fn.style==='red'?' sr':''}" onclick="setStl('${fn.id}','red',this)"><span style="width:10px;height:10px;border-radius:50%;background:#c0392b;display:inline-block;flex-shrink:0"></span>Organizacional</button>
-  <button class="ftb${fn.style==='green'?' sg':''}" onclick="setStl('${fn.id}','green',this)"><span style="width:10px;height:10px;border-radius:50%;background:#0f6e56;display:inline-block;flex-shrink:0"></span>Background</button>
-  <button class="ftb${fn.style==='grey'?' sh':''}" onclick="setStl('${fn.id}','grey',this)"><span style="width:10px;height:10px;border-radius:3px;background:#6a6a88;display:inline-block;flex-shrink:0"></span>Humana</button>
-  <button class="ftb${fn.style==='white'?' st2':''}" onclick="setStl('${fn.id}','white',this)"><span style="width:10px;height:10px;transform:rotate(45deg);background:#534AB7;display:inline-block;flex-shrink:0"></span>Tecnológica</button>
-</div>
-<div class="dv"></div>
-<label class="fl">Criticidade</label>
-<div class="cgrd">
-  <button class="cb${fn.criticality===1?' c1':''}" onclick="setC2('${fn.id}',1,this)">1 Baixa</button>
-  <button class="cb${fn.criticality===2?' c2':''}" onclick="setC2('${fn.id}',2,this)">2 Média</button>
-  <button class="cb${fn.criticality===3?' c3':''}" onclick="setC2('${fn.id}',3,this)">3 Alta</button>
-  <button class="cb${fn.criticality>=4?' c4':''}" onclick="setC2('${fn.id}',4,this)">4 Crítica</button>
-</div><input type="hidden" id="fpcrit" value="${fn.criticality||3}">
-<label class="fl">Grau de acoplamento</label>
-<div class="cgrd">
-  ${[1,2,3,4,5].map(v=>`<button class="cb${fn.coupling_degree===v?' c'+(v<2?1:v<3?2:v<4?3:4):''}" onclick="setD2('${fn.id}',${v},this)">${v}</button>`).join('')}
-</div><input type="hidden" id="fpcoup" value="${fn.coupling_degree||3}">
-<div class="brow">
-  <button class="bsav" onclick="saveFn('${fn.id}')">Salvar</button>
-  <button class="tbtn" onclick="setMode('connect')" title="Clique neste botão e depois em outra função no diagrama para criar acoplamento" style="background:#e1f5ee;color:#0f6e56;border-color:#0f6e56">⟿ Conectar</button>
-  <button class="bdel" onclick="delFn('${fn.id}')">Excluir</button>
-</div>`;
-}
-function setStl(id,s,btn){const fn=fns.find(f=>f.id===id);if(!fn)return;fn.style=s;const m={red:'sr',green:'sg',grey:'sh',white:'st2'};btn.closest('.tgrd').querySelectorAll('.ftb').forEach(b=>b.className='ftb');btn.className='ftb '+m[s];draw();}
-function setC2(id,v,btn){const fn=fns.find(f=>f.id===id);if(!fn)return;fn.criticality=v;document.getElementById('fpcrit').value=v;btn.closest('.cgrd').querySelectorAll('.cb').forEach(b=>b.classList.remove('c1','c2','c3','c4'));btn.classList.add('c'+v);}
-function setD2(id,v,btn){const fn=fns.find(f=>f.id===id);if(!fn)return;fn.coupling_degree=v;document.getElementById('fpcoup').value=v;const m=['','c1','c2','c3','c4','c4'];btn.closest('.cgrd').querySelectorAll('.cb').forEach(b=>b.classList.remove('c1','c2','c3','c4'));btn.classList.add(m[v]||'c3');}
-function saveFn(id){
-  const fn=fns.find(f=>f.id===id);if(!fn)return;
-  fn.name=document.getElementById('fpn').value||fn.name;fn.description=document.getElementById('fpd').value;
-  fn.criticality=+document.getElementById('fpcrit').value||3;fn.coupling_degree=+document.getElementById('fpcoup').value||3;
-  _snapshot();
-  document.getElementById('fnptitle').textContent=fn.name;draw();
-}
-function delFn(id){
-  _snapshot();
-  fns=fns.filter(f=>f.id!==id);coups=coups.filter(c=>c.source_function_id!==id&&c.target_function_id!==id);
-  vars=vars.filter(v=>v.affected_function_id!==id);
-  if(selFn&&selFn.id===id){selFn=null;document.getElementById('fnpanel').style.display='none';}
-  delete params[id];delete subs[id];delete mcRes[id];draw();
-}
-
-// ══════════════════════════════════════════
-// COUPLINGS
-// ══════════════════════════════════════════
-function openConnModal(src,tgt){
-  connSrcFn=src;connTgtFn=tgt;
-  document.getElementById('cinfo').textContent='De: '+src.name+' → Para: '+tgt.name;
-  document.getElementById('clbl').value='';document.getElementById('csrc').value='O';document.getElementById('ctgt').value='I';document.getElementById('ctype').value='normal';
-  document.getElementById('ov').classList.add('show');
-}
-function confirmConn(){
-  if(!connSrcFn||!connTgtFn)return;
-  _snapshot();
-  coups.push({id:uid(),source_function_id:connSrcFn.id,target_function_id:connTgtFn.id,source_aspect:document.getElementById('csrc').value,target_aspect:document.getElementById('ctgt').value,label:document.getElementById('clbl').value,line_type:document.getElementById('ctype').value,created_date:new Date().toISOString()});
-  document.getElementById('ov').classList.remove('show');connSrcFn=null;connTgtFn=null;connSrc=null;connPend=null;draw();
-}
-function cancelConn(){document.getElementById('ov').classList.remove('show');connSrcFn=null;connTgtFn=null;connSrc=null;connPend=null;draw();}
-
-// ══════════════════════════════════════════
-// RESONANCE
-// ══════════════════════════════════════════
-function addResFromBar(){
-  if(!selFn){alert('Selecione uma função no diagrama (clique nela).');return;}
-  const fn=selFn,others=fns.filter(f=>f.id!==fn.id);
-  const html=`<h3>∿ Evento de Ressonância — ${esc(fn.name)}</h3>
-<label class="fl">Título</label><input class="fi" id="res-t" placeholder="Ex: Pico Auxílio Emergencial">
-<label class="fl">Funções afetadas</label>
-${others.map(f=>`<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:#5a5a7a;margin-bottom:5px;cursor:pointer"><input type="checkbox" id="rfc${f.id}" style="width:auto;accent-color:#534AB7"> ${esc(f.name)}</label>`).join('')}
-<div class="fir" style="margin-top:8px"><div><label class="fl">Impacto</label><select class="fi" id="res-imp"><option value="baixo">Baixo</option><option value="moderado" selected>Moderado</option><option value="alto">Alto</option><option value="critico">Crítico</option></select></div></div>
-<div class="brow"><button class="bsav" onclick="saveResEvent('${fn.id}')">Registrar</button><button class="bdel" onclick="document.getElementById('fnpanel').style.display='none'">Cancelar</button></div>`;
-  document.getElementById('fnptitle').textContent='Ressonância';
-  document.getElementById('fnpbody').innerHTML=html;
-  document.getElementById('fnpanel').style.display='block';
-}
-function saveResEvent(fnId){
-  const aff=fns.filter(f=>f.id!==fnId&&document.getElementById('rfc'+f.id)?.checked).map(f=>f.id);
-  resEvs.push({id:uid(),initial_function_id:fnId,title:document.getElementById('res-t').value||'Evento',affected_function_ids:aff,operational_impact:document.getElementById('res-imp').value,status:'identificado',created_date:new Date().toISOString()});
-  document.getElementById('fnpanel').style.display='none';draw();if(!animOn){animOn=true;animLoop();}
-}
-
-// ══════════════════════════════════════════
-// PAINEL
-// ══════════════════════════════════════════
-function renderPainel(){
-  // KPI cards
-  const hasMC=Object.keys(mcRes).length>0;
-  const vfrVals=fns.filter(f=>mcRes[f.id]).map(f=>mcRes[f.id].p95);
-  const avgVFR=vfrVals.length?vfrVals.reduce((a,b)=>a+b,0)/vfrVals.length:null;
-  const crit=vfrVals.filter(v=>v>=0.70).length;
-  const stats=[
-    {val:fns.length,lbl:'Funções FRAM',color:'#534AB7'},
-    {val:coups.length,lbl:'Acoplamentos',color:'#185fa5'},
-    {val:vars.filter(v=>v.category==='endogena').length,lbl:'Variab. Endógenas',color:'#854f0b'},
-    {val:vars.filter(v=>v.category==='exogena').length,lbl:'Variab. Exógenas',color:'#c0392b'},
-    {val:mechs.length,lbl:'Mecanismos MR',color:'#0f6e56'},
-    {val:hasMC?pct(avgVFR)+' VFR médio':'-',lbl:'VFR médio (MC)',color:hasMC?vColor(avgVFR):'#9898b0'},
-  ];
-  document.getElementById('dash-stats').innerHTML=stats.map(s=>`<div class="dash-card"><div class="dash-card-val" style="color:${s.color};font-size:${typeof s.val==='string'?'20px':'32px'}">${s.val}</div><div class="dash-card-lbl">${s.lbl}</div></div>`).join('');
-
-  // helper: show/hide empty state
-  function showEmpty(canvasId,emptyId,show){
-    document.getElementById(canvasId).style.display=show?'none':'block';
-    document.getElementById(emptyId).style.display=show?'block':'none';
-  }
-
-  // ── Chart 1: VFR bar chart by function (P95) ──────────────
-  const sorted=fns.filter(f=>mcRes[f.id]).sort((a,b)=>mcRes[b.id].p95-mcRes[a.id].p95);
-  showEmpty('ch-vfr','ch-vfr-empty',!sorted.length);
-  if(sorted.length){
-    const cv=document.getElementById('ch-vfr');
-    const g=cv.getContext('2d');
-    cv.width=cv.parentElement.offsetWidth-40;
-    const W=cv.width,H=cv.height;
-    g.clearRect(0,0,W,H);
-    const pad={l:8,r:80,t:10,b:60};
-    const barH=Math.min(28,(H-pad.t-pad.b)/sorted.length-4);
-    const chartW=W-pad.l-pad.r,chartH=H-pad.t-pad.b;
-    const barGap=(chartH/sorted.length-barH)/2;
-    // Grid lines
-    [0,0.25,0.5,0.75,1.0].forEach(v=>{
-      const x=pad.l+v*chartW;
-      g.save();g.strokeStyle='rgba(0,0,0,0.06)';g.lineWidth=1;
-      g.beginPath();g.moveTo(x,pad.t);g.lineTo(x,H-pad.b);g.stroke();
-      g.fillStyle='#9898b0';g.font='10px "Segoe UI",system-ui';g.textAlign='center';
-      g.fillText((v*100).toFixed(0)+'%',x,H-pad.b+14);g.restore();
-    });
-    // LC reference line at 0.70
-    const lcX=pad.l+0.70*chartW;
-    g.save();g.strokeStyle='#c0392b';g.lineWidth=1.5;g.setLineDash([4,3]);
-    g.beginPath();g.moveTo(lcX,pad.t);g.lineTo(lcX,H-pad.b);g.stroke();
-    g.setLineDash([]);g.fillStyle='#c0392b';g.font='10px "Segoe UI",system-ui';g.textAlign='center';
-    g.fillText('LC',lcX,pad.t+8);g.restore();
-    // Bars
-    sorted.forEach((fn,i)=>{
-      const r=mcRes[fn.id];
-      const y=pad.t+i*(chartH/sorted.length)+barGap;
-      const bw=r.p95*chartW;
-      // Background bar
-      g.fillStyle='#f0f0f5';g.beginPath();g.roundRect(pad.l,y,chartW,barH,3);g.fill();
-      // P90-P99 range
-      const x90=pad.l+r.p90*chartW,x99=pad.l+Math.min(r.p99,1)*chartW;
-      g.fillStyle='rgba(200,200,220,0.4)';g.fillRect(x90,y,x99-x90,barH);
-      // P95 bar
-      const col=vColor(r.p95);
-      g.fillStyle=col+'33';g.beginPath();g.roundRect(pad.l,y,bw,barH,3);g.fill();
-      g.fillStyle=col;g.beginPath();g.roundRect(pad.l,y,bw,barH,3);g.fill();
-      // Stripe pattern for critical
-      if(r.p95>=0.70){
-        g.save();g.clip();g.strokeStyle='rgba(255,255,255,0.3)';g.lineWidth=6;
-        for(let sx=-barH;sx<bw+barH;sx+=12){g.beginPath();g.moveTo(pad.l+sx,y+barH);g.lineTo(pad.l+sx+barH,y);g.stroke();}
-        g.restore();
-      }
-      // Mean dot
-      const mx=pad.l+r.mean*chartW;
-      g.save();g.beginPath();g.arc(mx,y+barH/2,3.5,0,Math.PI*2);g.fillStyle='#fff';g.fill();g.strokeStyle=col;g.lineWidth=1.5;g.stroke();g.restore();
-      // Label left
-      const label=fn.name.length>18?fn.name.slice(0,18)+'…':fn.name;
-      g.fillStyle='#1a1a2e';g.font=`500 ${Math.min(11,12)}px "Segoe UI",system-ui`;g.textAlign='left';
-      // only left label if bar is short
-      if(bw<40){g.fillStyle='#5a5a7a';g.fillText(label,pad.l+bw+4,y+barH/2+4);}
-      else{g.fillStyle=r.p95>=0.50?'#fff':'#1a1a2e';g.fillText(label,pad.l+4,y+barH/2+4);}
-      // value right
-      g.fillStyle=col;g.font=`700 11px "Segoe UI",system-ui`;g.textAlign='left';
-      g.fillText(pct(r.p95),pad.l+chartW+4,y+barH/2+4);
-    });
-    // X axis label
-    g.fillStyle='#9898b0';g.font='10px "Segoe UI",system-ui';g.textAlign='center';g.fillText('P95 (Limite Crítico)',W/2,H-2);
-  }
-
-  // ── Chart 2: Donut criticality ─────────────────────────────
-  showEmpty('ch-donut','ch-donut-empty',!sorted.length);
-  if(sorted.length){
-    const cd=document.getElementById('ch-donut');
-    const g=cd.getContext('2d');
-    cd.width=cd.parentElement.offsetWidth-40;
-    const W=cd.width,H=cd.height;
-    g.clearRect(0,0,W,H);
-    const cats=[
-      {lbl:'Crítica (≥70%)',col:'#c0392b',count:vfrVals.filter(v=>v>=0.70).length},
-      {lbl:'Alta (50–70%)',col:'#e8a83a',count:vfrVals.filter(v=>v>=0.50&&v<0.70).length},
-      {lbl:'Moderada (30–50%)',col:'#534AB7',count:vfrVals.filter(v=>v>=0.30&&v<0.50).length},
-      {lbl:'Baixa (<30%)',col:'#0f6e56',count:vfrVals.filter(v=>v<0.30).length},
-    ];
-    const total=vfrVals.length||1;
-    const cx=W/2-60,cy=H/2,r=Math.min(cx,cy)-20,ri=r*0.55;
-    let startA=-Math.PI/2;
-    cats.forEach(cat=>{
-      if(!cat.count)return;
-      const sweep=(cat.count/total)*2*Math.PI;
-      g.beginPath();g.moveTo(cx,cy);g.arc(cx,cy,r,startA,startA+sweep);g.closePath();
-      g.fillStyle=cat.col;g.fill();g.strokeStyle='#fff';g.lineWidth=2;g.stroke();
-      // inner label
-      if(cat.count>0&&sweep>0.3){
-        const midA=startA+sweep/2;
-        const lx=cx+Math.cos(midA)*(ri+r)/2,ly=cy+Math.sin(midA)*(ri+r)/2;
-        g.fillStyle='#fff';g.font='bold 13px "Segoe UI",system-ui';g.textAlign='center';g.textBaseline='middle';
-        g.fillText(cat.count,lx,ly);
-      }
-      startA+=sweep;
-    });
-    // donut hole
-    g.beginPath();g.arc(cx,cy,ri,0,Math.PI*2);g.fillStyle='#fff';g.fill();
-    // center text
-    g.fillStyle='#1a1a2e';g.font='bold 22px "Segoe UI",system-ui';g.textAlign='center';g.textBaseline='middle';
-    g.fillText(vfrVals.length,cx,cy-8);g.font='11px "Segoe UI",system-ui';g.fillStyle='#9898b0';g.fillText('funções',cx,cy+12);
-    // Legend
-    const lx=W/2+20,ly0=H/2-cats.length*18/2;
-    cats.forEach((cat,i)=>{
-      const y=ly0+i*22;
-      g.fillStyle=cat.col;g.beginPath();g.roundRect(lx,y,12,12,2);g.fill();
-      g.fillStyle='#1a1a2e';g.font='12px "Segoe UI",system-ui';g.textAlign='left';g.textBaseline='top';
-      g.fillText(cat.lbl+' ('+cat.count+')',lx+16,y);
-    });
-  }
-
-  // ── Chart 3: Histograma acumulado ──────────────────────────
-  showEmpty('ch-hist','ch-hist-empty',!sorted.length);
-  if(sorted.length){
-    const ch=document.getElementById('ch-hist');
-    const g=ch.getContext('2d');
-    ch.width=ch.parentElement.offsetWidth-40;
-    const W=ch.width,H=ch.height;
-    g.clearRect(0,0,W,H);
-    // Aggregate all hist arrays
-    const bins=Array(20).fill(0);
-    sorted.forEach(fn=>{const r=mcRes[fn.id];r.hist.forEach((v,i)=>bins[i]+=v);});
-    const maxB=Math.max(...bins)||1;
-    const pad={l:30,r:16,t:12,b:30};
-    const bw=(W-pad.l-pad.r)/20;
-    const colors=['#0f6e56','#0f6e56','#0f6e56','#0f6e56','#0f6e56','#0f6e56','#534AB7','#534AB7','#534AB7','#534AB7','#e8a83a','#e8a83a','#e8a83a','#e8a83a','#c0392b','#c0392b','#c0392b','#c0392b','#7c0000','#7c0000'];
-    bins.forEach((v,i)=>{
-      const x=pad.l+i*bw;const bh=(v/maxB)*(H-pad.t-pad.b);const y=H-pad.b-bh;
-      g.fillStyle=colors[i]+'cc';g.beginPath();g.roundRect(x+1,y,bw-2,bh,2);g.fill();
-    });
-    // Y axis
-    g.strokeStyle='rgba(0,0,0,0.08)';g.lineWidth=1;
-    [0,0.25,0.5,0.75,1].forEach(v=>{
-      const y=H-pad.b-v*(H-pad.t-pad.b);
-      g.beginPath();g.moveTo(pad.l,y);g.lineTo(W-pad.r,y);g.stroke();
-      g.fillStyle='#9898b0';g.font='9px "Segoe UI",system-ui';g.textAlign='right';g.textBaseline='middle';
-      g.fillText((v*100).toFixed(0)+'%',pad.l-4,y);
-    });
-    // X axis labels
-    [0,0.25,0.5,0.75,1.0].forEach(v=>{
-      const x=pad.l+v*20*bw;g.fillStyle='#9898b0';g.font='10px "Segoe UI",system-ui';g.textAlign='center';g.textBaseline='top';
-      g.fillText((v*100).toFixed(0)+'%',x,H-pad.b+4);
-    });
-    // LC line
-    const lcX=pad.l+0.70*20*bw;
-    g.save();g.strokeStyle='#c0392b';g.lineWidth=1.5;g.setLineDash([4,3]);
-    g.beginPath();g.moveTo(lcX,pad.t);g.lineTo(lcX,H-pad.b);g.stroke();g.setLineDash([]);
-    g.fillStyle='#c0392b';g.font='10px "Segoe UI",system-ui';g.textAlign='center';g.fillText('LC=70%',lcX,pad.t);g.restore();
-  }
-
-  // ── Chart 4: Heat map VFR × IP ────────────────────────────
-  showEmpty('ch-heat','ch-heat-empty',!sorted.length);
-  if(sorted.length){
-    const cv=document.getElementById('ch-heat');
-    const g=cv.getContext('2d');
-    cv.width=cv.parentElement.offsetWidth-40;
-    const W=cv.width,H=cv.height;
-    g.clearRect(0,0,W,H);
-    const pad={l:36,r:16,t:24,b:36};
-    const chartW=W-pad.l-pad.r,chartH=H-pad.t-pad.b;
-    // Grid
-    [0,0.25,0.5,0.75,1].forEach(v=>{
-      const x=pad.l+v*chartW,y=H-pad.b-v*chartH;
-      g.save();g.strokeStyle='rgba(0,0,0,0.07)';g.lineWidth=1;
-      g.beginPath();g.moveTo(x,pad.t);g.lineTo(x,H-pad.b);g.stroke();
-      g.beginPath();g.moveTo(pad.l,y);g.lineTo(W-pad.r,y);g.stroke();
-      g.fillStyle='#9898b0';g.font='9px "Segoe UI",system-ui';g.textAlign='center';g.fillText((v*100).toFixed(0)+'%',x,H-pad.b+12);
-      g.textAlign='right';g.fillText((v*100).toFixed(0)+'%',pad.l-4,y+3);g.restore();
-    });
-    // Axis labels
-    g.fillStyle='#5a5a7a';g.font='10px "Segoe UI",system-ui';g.textAlign='center';
-    g.fillText('IP (Índice de Propagação)',pad.l+chartW/2,H-2);
-    g.save();g.translate(10,pad.t+chartH/2);g.rotate(-Math.PI/2);g.textAlign='center';g.fillText('VFR médio',0,0);g.restore();
-    // Quadrant labels
-    g.fillStyle='rgba(0,0,0,0.07)';
-    g.font='11px "Segoe UI",system-ui';g.textAlign='center';
-    g.fillText('BAIXO RISCO',pad.l+chartW*0.15,pad.t+chartH*0.85);
-    g.fillText('ALTO IMPACTO',pad.l+chartW*0.85,pad.t+chartH*0.85);
-    g.fillText('CRÍTICO',pad.l+chartW*0.85,pad.t+chartH*0.1);
-    // Dots
-    sorted.forEach(fn=>{
-      const r=mcRes[fn.id];
-      const x=pad.l+r.ip*chartW;
-      const y=H-pad.b-r.mean*chartH;
-      const col=vColor(r.p95);
-      const rad=Math.max(8,Math.min(20,r.iis*60+8));
-      // Glow
-      g.save();g.globalAlpha=0.2;g.beginPath();g.arc(x,y,rad*1.8,0,Math.PI*2);g.fillStyle=col;g.fill();g.restore();
-      // Dot
-      g.beginPath();g.arc(x,y,rad,0,Math.PI*2);g.fillStyle=col;g.fill();g.strokeStyle='#fff';g.lineWidth=2;g.stroke();
-      // Label
-      const label=fn.name.split(' ').slice(0,2).join(' ');
-      g.fillStyle='#1a1a2e';g.font='10px "Segoe UI",system-ui';g.textAlign='center';g.textBaseline='top';
-      g.fillText(label,x,y+rad+2);
-    });
-  }
-
-  // ── Chart 5: IIS horizontal bars ──────────────────────────
-  showEmpty('ch-iis','ch-iis-empty',!sorted.length);
-  if(sorted.length){
-    const cv=document.getElementById('ch-iis');
-    const g=cv.getContext('2d');
-    cv.width=cv.parentElement.offsetWidth-40;
-    const W=cv.width,H=cv.height;
-    g.clearRect(0,0,W,H);
-    const iisSorted=[...sorted].sort((a,b)=>mcRes[b.id].iis-mcRes[a.id].iis);
-    const maxIIS=Math.max(...iisSorted.map(f=>mcRes[f.id].iis),0.001);
-    const pad={l:8,r:56,t:10,b:24};
-    const barH=Math.min(24,(H-pad.t-pad.b)/iisSorted.length-4);
-    const chartW=W-pad.l-pad.r,chartH=H-pad.t-pad.b;
-    // grid
-    [0,0.25,0.5,0.75,1].forEach(v=>{
-      const x=pad.l+v*chartW;
-      g.save();g.strokeStyle='rgba(0,0,0,0.06)';g.lineWidth=1;g.beginPath();g.moveTo(x,pad.t);g.lineTo(x,H-pad.b);g.stroke();
-      g.fillStyle='#9898b0';g.font='9px "Segoe UI",system-ui';g.textAlign='center';g.fillText((v*maxIIS*100).toFixed(0)+'%',x,H-pad.b+12);g.restore();
-    });
-    iisSorted.forEach((fn,i)=>{
-      const r=mcRes[fn.id];
-      const y=pad.t+i*(chartH/iisSorted.length)+(chartH/iisSorted.length-barH)/2;
-      const bw=(r.iis/maxIIS)*chartW;
-      const col=vColor(r.p95);
-      g.fillStyle='#f0f0f5';g.beginPath();g.roundRect(pad.l,y,chartW,barH,3);g.fill();
-      g.fillStyle=col+'55';g.beginPath();g.roundRect(pad.l,y,bw,barH,3);g.fill();
-      g.fillStyle=col;g.lineWidth=0;
-      // Thin accent bar top
-      g.fillRect(pad.l,y,bw,3);
-      const label=fn.name.length>20?fn.name.slice(0,20)+'…':fn.name;
-      g.fillStyle='#1a1a2e';g.font=`500 10px "Segoe UI",system-ui`;g.textAlign='left';g.textBaseline='middle';
-      g.fillText(label,pad.l+4,y+barH/2);
-      g.fillStyle=col;g.font='700 11px "Segoe UI",system-ui';g.textAlign='left';
-      g.fillText(pct(r.iis),pad.l+chartW+4,y+barH/2);
-    });
-    g.fillStyle='#9898b0';g.font='10px "Segoe UI",system-ui';g.textAlign='center';g.textBaseline='alphabetic';
-    g.fillText('IIS = VFR × IP',W/2,H);
-  }
-
-  // ── Chart 6: Variabilidades por categoria (stacked bar) ───
-  {
-    const cv=document.getElementById('ch-vars');
-    const g=cv.getContext('2d');
-    cv.width=cv.parentElement.offsetWidth-40;
-    const W=cv.width,H=cv.height;
-    g.clearRect(0,0,W,H);
-    const eCount=vars.filter(v=>v.category==='endogena').length;
-    const xCount=vars.filter(v=>v.category==='exogena').length;
-    const mCount=mechs.length;
-    const resCount=resEvs.length;
-    const items=[
-      {lbl:'Variab. Endógenas',val:eCount,col:'#854f0b',bg:'#faeeda'},
-      {lbl:'Variab. Exógenas',val:xCount,col:'#c0392b',bg:'#fdecea'},
-      {lbl:'Mecanismos MR',val:mCount,col:'#0f6e56',bg:'#e8f8f0'},
-      {lbl:'Eventos Ressonância',val:resCount,col:'#534AB7',bg:'#eeedfe'},
-    ];
-    const maxVal=Math.max(...items.map(i=>i.val),1);
-    const pad={l:130,r:60,t:10,b:10};
-    const barH=20;const gap=(H-pad.t-pad.b)/items.length;
-    items.forEach((item,i)=>{
-      const y=pad.t+i*gap+(gap-barH)/2;
-      const chartW=W-pad.l-pad.r;
-      // bg
-      g.fillStyle='#f0f0f5';g.beginPath();g.roundRect(pad.l,y,chartW,barH,4);g.fill();
-      // bar
-      const bw=(item.val/maxVal)*chartW;
-      if(bw>0){g.fillStyle=item.bg;g.beginPath();g.roundRect(pad.l,y,bw,barH,4);g.fill();g.fillStyle=item.col;g.beginPath();g.roundRect(pad.l,y,bw,barH,4);g.fill();g.globalAlpha=0.25;g.fillStyle='#fff';g.beginPath();g.roundRect(pad.l,y,bw,barH/2,4);g.fill();g.globalAlpha=1;}
-      // label
-      g.fillStyle='#1a1a2e';g.font='12px "Segoe UI",system-ui';g.textAlign='right';g.textBaseline='middle';
-      g.fillText(item.lbl,pad.l-8,y+barH/2);
-      // value
-      g.fillStyle=item.col;g.font='bold 12px "Segoe UI",system-ui';g.textAlign='left';
-      g.fillText(item.val,pad.l+bw+(bw>0?6:4),y+barH/2);
-    });
-  }
-}
-
-// ══════════════════════════════════════════
-// ══════════════════════════════════════════
-// SUBCATEGORY SELECTOR (shared for RE/RX/MR)
-// ══════════════════════════════════════════
-let openSubcatFn={}; // which fn is expanded per page
-
-function renderSubcatSelector(taxoKey,containerId){
-  if(!fns.length){
-    document.getElementById(containerId).innerHTML='<div style="color:#9898b0;font-size:13px;padding:8px 0">Adicione funções no Diagrama FRAM primeiro.</div>';
-    return;
-  }
-  const T=TAXO[taxoKey];
-  const paramKey={RE:'ve',RX:'vx',MR:'ar'}[taxoKey];
-  const color=T.color;
-
-  let h='';
-  fns.forEach(fn=>{
-    initP(fn.id);initSubs(fn.id);
-    const isOpen=openSubcatFn[containerId]===fn.id;
-    const selCount=T.items.filter(i=>subs[fn.id][i.code]?.sel).length;
-    const total=T.items.length;
-    const p=params[fn.id][paramKey];
-
-    h+=`<div class="subcat-fn-block" style="--sc-color:${color}">
-<div class="subcat-fn-hdr" onclick="openSubcatFn['${containerId}']=openSubcatFn['${containerId}']==='${fn.id}'?null:'${fn.id}';renderSubcatSelector('${taxoKey}','${containerId}')">
-  <span style="width:10px;height:10px;border-radius:2px;background:${(FC[fn.style||'red']||FC.red).fill};border:2px solid ${(FC[fn.style||'red']||FC.red).stroke};flex-shrink:0;display:inline-block"></span>
-  <span style="flex:1;font-size:13px;font-weight:600">${esc(fn.name)}</span>
-  ${selCount>0
-    ?`<span class="count-badge" style="background:${color}22;color:${color}">${selCount}/${total} selecionadas</span>`
-    :`<span class="count-badge" style="background:#f0f0f5;color:#9898b0">Nenhuma selecionada</span>`}
-  ${selCount>0?`<span style="font-size:11px;color:#5a5a7a;font-family:monospace">mp=${p.mp.toFixed(2)}</span>`:''}
-  <span style="color:#9898b0;font-size:12px;flex-shrink:0;margin-left:4px">${isOpen?'▲':'▼'}</span>
-</div>
-<div class="subcat-fn-body${isOpen?' open':''}">`;
-
-    T.groups.forEach(grp=>{
-      h+=`<div class="subcat-group">
-<span class="subcat-group-lbl" style="background:${color}18;color:${color}">${grp.label}</span>`;
-      grp.items.forEach(item=>{
-        const sv=subs[fn.id][item.code];const sel=sv?.sel;
-        h+=`<div class="subcat-item${sel?' sel':''}" style="--sc-color:${color}${sel?'':';background:#fff'}">
-<div class="subcat-item-row" onclick="toggleSubOnPage('${taxoKey}','${fn.id}','${item.code}','${containerId}')">
-  <div class="subcat-check${sel?' on':''}">
-    ${sel?`<svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3L9 1" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`:''}
-  </div>
-  <span style="font-size:10px;font-family:monospace;font-weight:700;color:${color};flex-shrink:0">${item.code}</span>
-  <span style="font-size:12px">${esc(item.name)}</span>
-</div>
-${sel?`<div class="subcat-vals">
-  <div class="subcat-val-cell"><label>Mínimo</label><input type="number" class="pinp" min="0" max="1" step="0.01" value="${sv.mn}" oninput="setSubValPage('${taxoKey}','${fn.id}','${item.code}','mn',this.value,'${containerId}')"></div>
-  <div class="subcat-val-cell"><label>Mais provável</label><input type="number" class="pinp" min="0" max="1" step="0.01" value="${sv.mp}" oninput="setSubValPage('${taxoKey}','${fn.id}','${item.code}','mp',this.value,'${containerId}')"></div>
-  <div class="subcat-val-cell"><label>Máximo</label><input type="number" class="pinp" min="0" max="1" step="0.01" value="${sv.mx}" oninput="setSubValPage('${taxoKey}','${fn.id}','${item.code}','mx',this.value,'${containerId}')"></div>
-</div>`:''}
-</div>`;
-      });
-      h+=`</div>`;
-    });
-
-    // Show resulting param for this taxo group
-    if(selCount>0){
-      h+=`<div style="background:#f8f8fc;border:1px solid ${color}33;border-radius:7px;padding:10px 13px;margin-top:4px;display:flex;align-items:center;gap:12px">
-<span style="font-size:11px;font-weight:600;color:${color}">${paramKey.toUpperCase()} calculado:</span>
-<span style="font-size:12px;font-family:monospace">mín <b>${p.mn.toFixed(3)}</b> &nbsp;·&nbsp; mp <b style="color:${color}">${p.mp.toFixed(3)}</b> &nbsp;·&nbsp; máx <b>${p.mx.toFixed(3)}</b></span>
-<span style="font-size:11px;color:#9898b0;margin-left:auto">média das ${selCount} subcategoria${selCount!==1?'s':''} selecionada${selCount!==1?'s':''}</span>
-</div>`;
-    }
-    h+=`</div></div>`;
-  });
-  document.getElementById(containerId).innerHTML=h;
-}
-
-function toggleSubOnPage(taxoKey,fnId,code,containerId){
-  initSubs(fnId);
-  subs[fnId][code].sel=!subs[fnId][code].sel;
-  computeAutoP(fnId);
-  renderSubcatSelector(taxoKey,containerId);
-}
-function setSubValPage(taxoKey,fnId,code,field,val,containerId){
-  initSubs(fnId);
-  subs[fnId][code][field]=Math.max(0,Math.min(1,parseFloat(val)||0));
-  computeAutoP(fnId);
-  // update the param display without full re-render to avoid losing focus
-  const p=params[fnId][{RE:'ve',RX:'vx',MR:'ar'}[taxoKey]];
-  // just recompute; full rerender on blur would be too disruptive
-}
-
-// ══════════════════════════════════════════
-// ENDÓGENA FORM & LIST
-// ══════════════════════════════════════════
-const fnOpts=()=>fns.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
-function renderEndoForm(){
-  const ex=editVarId?vars.find(v=>v.id===editVarId&&v.category==='endogena'):null;
-  document.getElementById('endo-form').innerHTML=`
-<h3>${ex?'Editar':'Nova'} Variabilidade Endógena</h3>
-<div class="fir">
-  <div><label class="fl">Categoria *</label><select class="fi" id="ve-cat">${CATS_ENDO.map(c=>`<option${ex?.cat_label===c?' selected':''}>${c}</option>`).join('')}</select></div>
-  <div><label class="fl">Tipo</label><select class="fi" id="ve-tipo"><option value="">Selecionar tipo</option>${TIPOS_ENDO.map(t=>`<option${ex?.variability_type===t?' selected':''}>${t}</option>`).join('')}</select></div>
-</div>
-<label class="fl">Nome do Fator *</label>
-<input class="fi" id="ve-nome" placeholder="Ex: Indisponibilidade de Informação" value="${esc(ex?.name||'')}">
-<label class="fl">Função Afetada *</label>
-<select class="fi" id="ve-fn"><option value="">Selecionar função</option>${fns.map(f=>`<option value="${f.id}"${ex?.affected_function_id===f.id?' selected':''}>${esc(f.name)}</option>`).join('')}</select>
-<label class="fl">Descrição</label>
-<textarea class="fi" id="ve-desc" placeholder="Descreva a variabilidade endógena...">${esc(ex?.description||'')}</textarea>
-<div class="brow">
-  <button class="bsav" onclick="saveVarEndo(${ex?`'${ex.id}'`:'null'})">Salvar</button>
-  ${ex?`<button class="bdel" onclick="delVar('${ex.id}');editVarId=null;renderEndoForm();renderEndoList()">Excluir</button>`:``}
-  ${ex?`<button class="bdel" onclick="editVarId=null;renderEndoForm()">Cancelar edição</button>`:''}
-</div>`;
-}
-function renderEndoList(){
-  const list=vars.filter(v=>v.category==='endogena');
-  document.getElementById('endo-list').innerHTML=list.length?list.map(v=>{
-    const fn=fns.find(f=>f.id===v.affected_function_id);
-    return`<div class="item-card${editVarId===v.id?' sel':''}">
-<div class="item-card-body">
-  <div class="item-card-title">${esc(v.name)}</div>
-  <div class="item-card-sub">${v.variability_type?esc(v.variability_type)+' · ':''}<span style="color:#534AB7">→ ${esc(fn?.name||'?')}</span></div>
-  ${v.cat_label?`<div class="item-card-sub" style="margin-top:2px">Categoria: ${esc(v.cat_label)}</div>`:''}
-</div>
-<div class="item-card-actions">
-  <button class="ico-btn" onclick="editVarId='${v.id}';renderEndoForm();renderEndoList()" title="Editar">✎</button>
-  <button class="ico-btn" onclick="delVar('${v.id}');renderEndoList()" title="Apagar">×</button>
-</div></div>`;
-  }).join(''):`<div class="empty"><svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg><p>Nenhuma variabilidade endógena registrada</p></div>`;
-}
-function saveVarEndo(editId){
-  const nome=document.getElementById('ve-nome').value.trim();const fnId=document.getElementById('ve-fn').value;
-  if(!nome){alert('Informe o Nome do Fator.');return;}if(!fnId){alert('Selecione a Função Afetada.');return;}
-  const obj={id:editId||uid(),category:'endogena',cat_label:document.getElementById('ve-cat').value,variability_type:document.getElementById('ve-tipo').value||'',name:nome,affected_function_id:fnId,description:document.getElementById('ve-desc').value,created_date:new Date().toISOString()};
-  if(editId){const i=vars.findIndex(v=>v.id===editId);if(i>=0)vars[i]=obj;}else vars.push(obj);
-  editVarId=null;renderEndoForm();renderEndoList();draw();if(!animOn){animOn=true;animLoop();}
-}
-
-// ══════════════════════════════════════════
-// EXÓGENA FORM & LIST
-// ══════════════════════════════════════════
-function renderExoForm(){
-  const ex=editVarId?vars.find(v=>v.id===editVarId&&v.category==='exogena'):null;
-  _vxExtra=ex?.extra_affected?[...ex.extra_affected]:[];
-  document.getElementById('exo-form').innerHTML=`
-<h3>${ex?'Editar':'Nova'} Variabilidade Exógena</h3>
-<div class="fir">
-  <div><label class="fl">Tipo</label><select class="fi" id="vx-tipo"><option value="">Selecionar tipo</option>${TIPOS_EXO.map(t=>`<option${ex?.variability_type===t?' selected':''}>${t}</option>`).join('')}</select></div>
-  <div><label class="fl">Nome do Fator *</label><input class="fi" id="vx-nome" placeholder="Ex: Pico de Demanda Coletiva" value="${esc(ex?.name||'')}"></div>
-</div>
-<div class="fir">
-  <div><label class="fl">Função Origem da Variabilidade</label><select class="fi" id="vx-src"><option value="">Selecionar função de origem</option><option value="_ext"${ex?.source_function_id==='_ext'?' selected':''}>[ Fonte Externa / Ambiente ]</option>${fns.map(f=>`<option value="${f.id}"${ex?.source_function_id===f.id?' selected':''}>${esc(f.name)}</option>`).join('')}</select></div>
-  <div><label class="fl">Função Receptora *</label><select class="fi" id="vx-tgt"><option value="">Selecionar função</option>${fns.map(f=>`<option value="${f.id}"${ex?.affected_function_id===f.id?' selected':''}>${esc(f.name)}</option>`).join('')}</select></div>
-</div>
-<label class="fl">Funções Adicionalmente Afetadas</label>
-<div id="vx-extra-list" style="min-height:32px;background:#f8f8fc;border:1px solid #d0d0da;border-radius:6px;padding:6px 9px;margin-bottom:8px;font-size:11px;color:#9898b0">${renderExtraChips()}</div>
-<select class="fi" id="vx-extra-sel" onchange="addVxExtra(this)"><option value="">Adicionar função afetada…</option>${fns.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('')}</select>
-<label class="fl">Descrição</label><textarea class="fi" id="vx-desc">${esc(ex?.description||'')}</textarea>
-<label class="fl">Efeito Propagado</label><input class="fi" id="vx-ef" placeholder="Ex: Sobrecarga sistêmica, cascata de falhas" value="${esc(ex?.propagated_effect||'')}">
-<div class="brow">
-  <button class="bsav" style="background:#c0392b" onclick="saveVarExo(${ex?`'${ex.id}'`:'null'})">Salvar</button>
-  ${ex?`<button class="bdel" onclick="delVar('${ex.id}');editVarId=null;renderExoForm();renderExoList()">Excluir</button>`:''}
-  ${ex?`<button class="bdel" onclick="editVarId=null;renderExoForm()">Cancelar</button>`:''}
-</div>`;
-}
-function renderExtraChips(){
-  if(!_vxExtra.length)return'<span style="color:#9898b0">Nenhuma função selecionada</span>';
-  return _vxExtra.map(id=>{const f=fns.find(x=>x.id===id);return`<span style="display:inline-flex;align-items:center;gap:4px;background:#eeedfe;border-radius:4px;padding:2px 8px;margin:2px;font-size:11px;color:#534AB7">${esc(f?.name||'?')}<span onclick="removeVxExtra('${id}')" style="cursor:pointer;font-weight:700;margin-left:2px">×</span></span>`;}).join('');
-}
-function addVxExtra(sel){if(!sel.value)return;if(!_vxExtra.includes(sel.value)){_vxExtra.push(sel.value);document.getElementById('vx-extra-list').innerHTML=renderExtraChips();}sel.value='';}
-function removeVxExtra(id){_vxExtra=_vxExtra.filter(x=>x!==id);document.getElementById('vx-extra-list').innerHTML=renderExtraChips();}
-function renderExoList(){
-  const list=vars.filter(v=>v.category==='exogena');
-  document.getElementById('exo-list').innerHTML=list.length?list.map(v=>{
-    const fn=fns.find(f=>f.id===v.affected_function_id);const src=fns.find(f=>f.id===v.source_function_id);
-    return`<div class="item-card${editVarId===v.id?' sel':''}">
-<div class="item-card-body">
-  <div class="item-card-title">${esc(v.name)}</div>
-  <div class="item-card-sub">${v.variability_type?esc(v.variability_type)+' · ':''}<span style="color:#534AB7">→ ${esc(fn?.name||'?')}</span></div>
-  ${src||v.source_function_id==='_ext'?`<div class="item-card-sub" style="margin-top:2px">Origem: ${esc(v.source_function_id==='_ext'?'Fonte Externa':src?.name||'?')}</div>`:''}
-  ${v.propagated_effect?`<div class="item-card-sub">Efeito: ${esc(v.propagated_effect)}</div>`:''}
-</div>
-<div class="item-card-actions">
-  <button class="ico-btn" onclick="editVarId='${v.id}';renderExoForm();renderExoList()" title="Editar">✎</button>
-  <button class="ico-btn" onclick="delVar('${v.id}');renderExoList()" title="Apagar">×</button>
-</div></div>`;
-  }).join(''):`<div class="empty"><svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg><p>Nenhuma variabilidade exógena registrada</p></div>`;
-}
-function saveVarExo(editId){
-  const nome=document.getElementById('vx-nome').value.trim();const tgtId=document.getElementById('vx-tgt').value;
-  if(!nome){alert('Informe o Nome do Fator.');return;}if(!tgtId){alert('Selecione a Função Receptora.');return;}
-  const obj={id:editId||uid(),category:'exogena',variability_type:document.getElementById('vx-tipo').value||'',name:nome,source_function_id:document.getElementById('vx-src').value||null,affected_function_id:tgtId,extra_affected:[..._vxExtra],description:document.getElementById('vx-desc').value,propagated_effect:document.getElementById('vx-ef').value,created_date:new Date().toISOString()};
-  if(editId){const i=vars.findIndex(v=>v.id===editId);if(i>=0)vars[i]=obj;}else vars.push(obj);
-  _vxExtra=[];editVarId=null;renderExoForm();renderExoList();draw();if(!animOn){animOn=true;animLoop();}
-}
-function delVar(id){vars=vars.filter(v=>v.id!==id);draw();}
-
-// ══════════════════════════════════════════
-// MECANISMOS MR FORM & LIST
-// ══════════════════════════════════════════
-function renderMrForm(){
-  const ex=editMechId?mechs.find(m=>m.id===editMechId):null;
-  document.getElementById('mr-form').innerHTML=`
-<h3>${ex?'Editar':'Novo'} Mecanismo de Resiliência</h3>
-<div class="fir">
-  <div><label class="fl">Código MR</label>
-  <select class="fi" id="mr-code"><option value="">Selecionar</option>${TAXO.MR.items.map(i=>`<option value="${i.code}"${ex?.mr_code===i.code?' selected':''}>${i.code} — ${i.name}</option>`).join('')}</select></div>
-  <div><label class="fl">Tipo</label><select class="fi" id="mr-tipo"><option value="">Selecionar tipo</option>${TIPOS_MR.map(t=>`<option${ex?.mechanism_type===t?' selected':''}>${t}</option>`).join('')}</select></div>
-</div>
-<label class="fl">Nome do Mecanismo *</label>
-<input class="fi" id="mr-nome" placeholder="Ex: Protocolo de Degradação Graciosa" value="${esc(ex?.name||'')}">
-<label class="fl">Função Controlada</label>
-<select class="fi" id="mr-fn"><option value="">Selecionar função</option>${fns.map(f=>`<option value="${f.id}"${ex?.controlled_function_id===f.id?' selected':''}>${esc(f.name)}</option>`).join('')}</select>
-<label class="fl">Capacidade Resiliente</label>
-<div class="cgrd" style="margin-bottom:10px">
-  ${['Monitorar','Responder','Aprender','Antecipar'].map(c=>`<button class="cb${ex?.resilience_capacity===c?' c1':''}" onclick="toggleMrCap(this,'${c}')">${c}</button>`).join('')}
-</div><input type="hidden" id="mr-cap" value="${ex?.resilience_capacity||''}">
-<label class="fl">Responsável</label><input class="fi" id="mr-resp" placeholder="Ex: Equipe de Governança" value="${esc(ex?.responsible||'')}">
-<label class="fl">Descrição</label><textarea class="fi" id="mr-desc">${esc(ex?.description||'')}</textarea>
-<div class="brow">
-  <button class="bsav" style="background:#0f6e56" onclick="saveMech(${ex?`'${ex.id}'`:'null'})">Salvar</button>
-  ${ex?`<button class="bdel" onclick="mechs=mechs.filter(m=>m.id!=='${ex.id}');editMechId=null;renderMrForm();renderMrList()">Excluir</button>`:''}
-  ${ex?`<button class="bdel" onclick="editMechId=null;renderMrForm()">Cancelar</button>`:''}
-</div>`;
-}
-function toggleMrCap(btn,cap){
-  const cur=document.getElementById('mr-cap').value;const newVal=cur===cap?'':cap;
-  document.getElementById('mr-cap').value=newVal;
-  btn.closest('.cgrd').querySelectorAll('.cb').forEach(b=>b.classList.remove('c1'));
-  if(newVal)btn.classList.add('c1');
-}
-function renderMrList(){
-  document.getElementById('mr-list').innerHTML=mechs.length?mechs.map(m=>{
-    const fn=fns.find(f=>f.id===m.controlled_function_id);
-    return`<div class="item-card${editMechId===m.id?' sel':''}">
-<div class="item-card-body">
-  <div class="item-card-title">${esc(m.name)}</div>
-  <div class="item-card-sub">${m.mr_code?`<span style="font-family:monospace;color:#0f6e56">${m.mr_code}</span> · `:''}${m.mechanism_type?esc(m.mechanism_type)+' · ':''}${fn?`<span style="color:#534AB7">→ ${esc(fn.name)}</span>`:''}
-  </div>
-  ${m.resilience_capacity?`<div class="item-card-sub" style="margin-top:2px">Capacidade: ${m.resilience_capacity}</div>`:''}
-  ${m.responsible?`<div class="item-card-sub">Responsável: ${esc(m.responsible)}</div>`:''}
-</div>
-<div class="item-card-actions">
-  <button class="ico-btn" onclick="editMechId='${m.id}';renderMrForm();renderMrList()" title="Editar">✎</button>
-  <button class="ico-btn" onclick="mechs=mechs.filter(x=>x.id!=='${m.id}');renderMrList()" title="Apagar">×</button>
-</div></div>`;
-  }).join(''):`<div class="empty"><svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><p>Nenhum mecanismo de resiliência registrado</p></div>`;
-}
-function saveMech(editId){
-  const nome=document.getElementById('mr-nome').value.trim();if(!nome){alert('Informe o Nome do Mecanismo.');return;}
-  const obj={id:editId||uid(),mr_code:document.getElementById('mr-code').value,mechanism_type:document.getElementById('mr-tipo').value,name:nome,controlled_function_id:document.getElementById('mr-fn').value||null,resilience_capacity:document.getElementById('mr-cap').value,responsible:document.getElementById('mr-resp').value,description:document.getElementById('mr-desc').value,created_date:new Date().toISOString()};
-  if(editId){const i=mechs.findIndex(m=>m.id===editId);if(i>=0)mechs[i]=obj;}else mechs.push(obj);
-  editMechId=null;renderMrForm();renderMrList();
-}
-
-// ══════════════════════════════════════════
-// MONTE CARLO
-// ══════════════════════════════════════════
-function tri(mn,mp,mx){mn=Math.max(0,Math.min(1,+mn||0));mp=Math.max(mn,Math.min(1,+mp||0));mx=Math.max(mp,Math.min(1,+mx||1));if(mx===mn)return mp;const u=Math.random(),fc=(mp-mn)/(mx-mn);return u<fc?mn+Math.sqrt(u*(mx-mn)*(mp-mn)):mx-Math.sqrt((1-u)*(mx-mn)*(mx-mp));}
-function outDeg(id){return coups.filter(c=>c.source_function_id===id).length;}
-function maxOutDeg(){return Math.max(1,...fns.map(fn=>outDeg(fn.id)));}
-function toggleSub(fnId,code){initSubs(fnId);subs[fnId][code].sel=!subs[fnId][code].sel;computeAutoP(fnId);renderMC();}
-function setSubVal(fnId,code,field,val){initSubs(fnId);subs[fnId][code][field]=Math.max(0,Math.min(1,parseFloat(val)||0));computeAutoP(fnId);}
-function computeAutoP(fnId){
-  initP(fnId);initSubs(fnId);const s=subs[fnId];
-  const avg=(items,f)=>{const sel=items.filter(i=>s[i.code]?.sel);return sel.length?sel.reduce((a,i)=>a+(s[i.code][f]||0),0)/sel.length:null;};
-  const set=(items,key)=>{const mn=avg(items,'mn'),mp=avg(items,'mp'),mx=avg(items,'mx');if(mn!==null){params[fnId][key].mn=+mn.toFixed(3);params[fnId][key].mp=+mp.toFixed(3);params[fnId][key].mx=+mx.toFixed(3);}};
-  set(TAXO.RE.items,'ve');set(TAXO.RX.items,'vx');set(TAXO.MR.items,'ar');
-}
-function saveP(inp){const id=inp.dataset.fn,v=inp.dataset.v,f=inp.dataset.f;if(!id||!v||!f)return;initP(id);params[id][v][f]=Math.max(0,Math.min(1,parseFloat(inp.value)||0));}
-function doMC(){
-  const N=mcN,maxOD=maxOutDeg();
-  fns.forEach(fn=>{
-    initP(fn.id);const p=params[fn.id];const vfrs=[];
-    for(let i=0;i<N;i++){const VE=tri(p.ve.mn,p.ve.mp,p.ve.mx),VX=tri(p.vx.mn,p.vx.mp,p.vx.mx),AR=tri(p.ar.mn,p.ar.mp,p.ar.mx);vfrs.push(Math.max(0,Math.min(2,(VE+VX)*(1-AR))));}
-    vfrs.sort((a,b)=>a-b);const mean=vfrs.reduce((s,v)=>s+v,0)/N;
-    const p90=vfrs[Math.floor(N*.90)],p95=vfrs[Math.floor(N*.95)],p99=vfrs[Math.floor(N*.99)];
-    const probCrit=vfrs.filter(v=>v>=p95).length/N,ip=outDeg(fn.id)/maxOD;
-    const hist=Array(20).fill(0);vfrs.forEach(v=>hist[Math.min(19,Math.floor(Math.min(v,.9999)*20))]++);const hmax=Math.max(...hist)||1;
-    mcRes[fn.id]={mean,p90,p95,p99,lcrit:p95,probCrit,ip,iis:mean*ip,n:N,min:vfrs[0],max:vfrs[N-1],median:vfrs[Math.floor(N/2)],hist:hist.map(h=>h/hmax)};
-  });
-}
-function critInfo(v){if(v>=.70)return{cls:'cb-c',lbl:'Crítica'};if(v>=.50)return{cls:'cb-a',lbl:'Alta'};if(v>=.30)return{cls:'cb-m',lbl:'Moderada'};return{cls:'cb-b',lbl:'Baixa'};}
-function vColor(v){if(v>=.70)return'#c0392b';if(v>=.50)return'#854f0b';if(v>=.30)return'#534AB7';return'#0f6e56';}
-function pct(v,d=1){return(v*100).toFixed(d)+'%';}
-
-function renderMC(){
-  if(!fns.length){document.getElementById('mc-inner').innerHTML='<div class="empty"><p>Adicione funções no Diagrama FRAM primeiro.</p></div>';return;}
-  const hasRes=fns.some(fn=>mcRes[fn.id]);const maxOD=maxOutDeg();
-  fns.forEach(fn=>{initP(fn.id);initSubs(fn.id);});
-  let h=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-<b>Iterações:</b>${[1000,5000,10000,50000].map(n=>`<button class="itb${mcN===n?' on':''}" onclick="mcN=${n};renderMC()">${n.toLocaleString()}</button>`).join('')}
-<button class="bsav" style="padding:8px 22px;font-size:13px" onclick="doMC();renderMC()">▶ Simular</button>
-${hasRes?`<button class="bdel" style="padding:8px 14px;font-size:12px" onclick="mcRes={};renderMC()">Limpar</button>`:''}
-</div>`;
-
-  fns.forEach(fn=>{
-    initP(fn.id);initSubs(fn.id);const p=params[fn.id];const col=FC[fn.style||'red']||FC.red;
-    const isOpen=mcActiveFn===fn.id;
-    const tot=[...TAXO.RE.items,...TAXO.RX.items,...TAXO.MR.items].filter(i=>subs[fn.id][i.code]?.sel).length;
-    h+=`<div style="border:1px solid #e0e0ea;border-radius:10px;margin-bottom:10px;overflow:hidden;background:#fff">
-<div style="display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;user-select:none" onclick="mcActiveFn=mcActiveFn==='${fn.id}'?null:'${fn.id}';renderMC()">
-  <span style="width:11px;height:11px;border-radius:2px;background:${col.fill};border:2px solid ${col.stroke};flex-shrink:0;display:inline-block"></span>
-  <span style="flex:1;font-size:14px;font-weight:600">${esc(fn.name)}</span>
-  ${tot>0?`<span style="font-size:11px;color:#534AB7;font-weight:600">${tot} subcategoria${tot!==1?'s':''}</span>`:`<span style="font-size:11px;color:#9898b0">Nenhuma selecionada</span>`}
-  ${mcRes[fn.id]?`<span class="cbadge ${critInfo(mcRes[fn.id].p95).cls}">${critInfo(mcRes[fn.id].p95).lbl}</span>`:''}
-  <span style="color:#9898b0;font-size:12px;flex-shrink:0">${isOpen?'▲':'▼'}</span>
-</div>`;
-    if(isOpen){
-      h+=`<div style="padding:16px;border-top:1px solid #f0f0f5">`;
-      Object.entries(TAXO).forEach(([gk,g])=>{
-        h+=`<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:700;color:${g.color};background:${g.bg};padding:4px 10px;border-radius:4px;display:inline-block;margin-bottom:8px">${g.label}</div>`;
-        g.items.forEach(item=>{
-          const sv=subs[fn.id][item.code];const sel=sv?.sel;
-          h+=`<div style="border:1.5px solid ${sel?g.color:'#e0e0ea'};border-radius:7px;overflow:hidden;background:${sel?g.bg:'#fff'};margin-bottom:5px">
-<div style="display:flex;align-items:center;gap:9px;padding:8px 11px;cursor:pointer" onclick="toggleSub('${fn.id}','${item.code}')">
-  <div style="width:17px;height:17px;border-radius:4px;border:2px solid ${sel?g.color:'#c8c8d8'};background:${sel?g.color:'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-    ${sel?`<svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3L9 1" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`:''}
-  </div>
-  <span style="font-size:10px;font-family:monospace;font-weight:700;color:${g.color};flex-shrink:0">${item.code}</span>
-  <span style="font-size:12px">${esc(item.name)}</span>
-</div>
-${sel?`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:0 11px 9px 37px">
-<div><label style="font-size:10px;color:#9898b0;display:block;margin-bottom:2px">Mínimo</label><input type="number" class="pinp" min="0" max="1" step="0.01" value="${sv.mn}" oninput="setSubVal('${fn.id}','${item.code}','mn',this.value)"></div>
-<div><label style="font-size:10px;color:#9898b0;display:block;margin-bottom:2px">Mais provável</label><input type="number" class="pinp" min="0" max="1" step="0.01" value="${sv.mp}" oninput="setSubVal('${fn.id}','${item.code}','mp',this.value)"></div>
-<div><label style="font-size:10px;color:#9898b0;display:block;margin-bottom:2px">Máximo</label><input type="number" class="pinp" min="0" max="1" step="0.01" value="${sv.mx}" oninput="setSubVal('${fn.id}','${item.code}','mx',this.value)"></div>
-</div>`:''}
-</div>`;
-        });
-        h+=`</div>`;
-      });
-      h+=`<div style="background:#f0f0f8;border-radius:8px;padding:12px 14px;margin-top:4px">
-<div style="font-size:11px;font-weight:600;color:#534AB7;margin-bottom:9px">Parâmetros VE / VX / AR (calculados automaticamente ou ajuste manual)</div>
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-${[{k:'ve',l:'VE',c:'#854f0b'},{k:'vx',l:'VX',c:'#c0392b'},{k:'ar',l:'AR',c:'#0f6e56'}].map(({k,l,c})=>`
-<div style="background:#fff;border:1px solid ${c};border-radius:7px;padding:9px;text-align:center">
-  <div style="font-size:12px;font-weight:700;color:${c};margin-bottom:7px">${l}</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px">
-    <div><div style="font-size:9px;color:#9898b0">mín</div><input type="number" class="pinp" style="border-color:${c}" data-fn="${fn.id}" data-v="${k}" data-f="mn" min="0" max="1" step="0.01" value="${p[k].mn}" onchange="saveP(this)"></div>
-    <div><div style="font-size:9px;color:#9898b0">mp</div><input type="number" class="pinp" style="border-color:${c};font-weight:700" data-fn="${fn.id}" data-v="${k}" data-f="mp" min="0" max="1" step="0.01" value="${p[k].mp}" onchange="saveP(this)"></div>
-    <div><div style="font-size:9px;color:#9898b0">máx</div><input type="number" class="pinp" style="border-color:${c}" data-fn="${fn.id}" data-v="${k}" data-f="mx" min="0" max="1" step="0.01" value="${p[k].mx}" onchange="saveP(this)"></div>
-  </div>
-</div>`).join('')}
-</div></div></div>`;
-    }
-    if(mcRes[fn.id]&&!isOpen){
-      const r=mcRes[fn.id];h+=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 16px;border-top:1px solid #f0f0f5;background:#f8f8fc">
-<div class="sbox"><span class="sval" style="color:#534AB7">${pct(r.mean)}</span><span class="slbl">VFR média</span></div>
-<div class="sbox"><span class="sval" style="color:${vColor(r.p95)}">${pct(r.p95)}</span><span class="slbl">P95 / LC</span></div>
-<div class="sbox"><span class="sval" style="color:#c0392b">${pct(r.probCrit)}</span><span class="slbl">Prob. Crit.</span></div>
-<div class="sbox"><span class="sval" style="color:#534AB7">${pct(r.iis)}</span><span class="slbl">IIS</span></div>
-</div>`;
-    }
-    h+=`</div>`;
-  });
-
-  if(hasRes){
-    h+=`<div style="margin-top:24px"><div style="font-size:16px;font-weight:600;margin-bottom:12px">Ranking — </div>
-<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-${Object.entries({mean:'VFR média',p95:'P95',probCrit:'Prob. Criticidade',iis:'IIS'}).map(([k,l])=>`<button class="rtab${rankBy===k?' on':''}" onclick="rankBy='${k}';renderMC()">${l}</button>`).join('')}
-</div>`;
-    const ranked=[...fns].filter(fn=>mcRes[fn.id]).sort((a,b)=>(mcRes[b.id][rankBy]||0)-(mcRes[a.id][rankBy]||0));
-    const maxV=Math.max(...ranked.map(fn=>mcRes[fn.id][rankBy]||0),0.001);
-    ranked.forEach((fn,i)=>{const r=mcRes[fn.id],v=r[rankBy];const ci=critInfo(r.p95);
-      h+=`<div class="rcard"><span class="rnum">${i+1}</span><span class="rname">${esc(fn.name)}</span><span class="cbadge ${ci.cls}">${ci.lbl}</span><div class="rbar"><div class="rbarbg"><div class="rbarfill" style="width:${Math.round(v/maxV*100)}%;background:${vColor(r.p95)}"></div></div></div><span class="rval" style="color:${vColor(r.p95)}">${pct(v)}</span></div>`;
-    });
-    h+=`</div><div style="font-size:16px;font-weight:600;margin:20px 0 12px">Resultados detalhados</div><div class="dgrid">`;
-    fns.filter(fn=>mcRes[fn.id]).forEach(fn=>{const r=mcRes[fn.id];const ci=critInfo(r.p95);
-      h+=`<div class="dc"><div class="dc-head"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(fn.name)}</span><span class="cbadge ${ci.cls}" style="flex-shrink:0">${ci.lbl}</span></div>
-<div class="sgrid">
-<div class="sbox"><span class="sval" style="color:#534AB7">${pct(r.mean)}</span><span class="slbl">VFR média</span></div>
-<div class="sbox"><span class="sval" style="color:#854f0b">${pct(r.p90)}</span><span class="slbl">P90</span></div>
-<div class="sbox"><span class="sval" style="color:${vColor(r.p95)}">${pct(r.p95)}</span><span class="slbl">P95/LC</span></div>
-<div class="sbox"><span class="sval" style="color:#c0392b">${pct(r.p99)}</span><span class="slbl">P99</span></div>
-<div class="sbox"><span class="sval" style="color:#0f6e56">${pct(r.ip)}</span><span class="slbl">IP</span></div>
-<div class="sbox"><span class="sval" style="color:#534AB7">${pct(r.iis)}</span><span class="slbl">IIS</span></div>
-</div>
-<div style="font-size:11px;margin-bottom:8px">Prob. Criticidade: <b style="color:${vColor(r.p95)}">${pct(r.probCrit)}</b> · Min: ${pct(r.min)} · Med: ${pct(r.median)} · Máx: ${pct(r.max)}</div>
-<div style="font-size:10px;color:#9898b0;margin-bottom:4px">Distribuição VFR</div>
-<div class="histbars">${r.hist.map((hv,bi)=>`<div class="hb" style="height:${Math.round(hv*64)}px;background:${vColor(bi/20)};opacity:${0.6+hv*0.4}"></div>`).join('')}</div>
-<div class="histax"><span>0</span><span>0.25</span><span>0.50</span><span>0.75</span><span>1.0</span></div>
-</div>`;
-    });
-    h+=`</div>`;
-  }
-  document.getElementById('mc-inner').innerHTML=h;
-}
-
-// ══════════════════════════════════════════
-// EXPORT / IMPORT
-// ══════════════════════════════════════════
-function expJSON(){
-  const d={meta:{version:'1.5',created:new Date().toISOString(),tool:'DGR-FRAM Modeler'},
-    functions:fns,layouts:fns.map(fn=>({function_id:fn.id,x:Math.round(fn.x),y:Math.round(fn.y),id:uid()})),
-    couplings:coups,variabilities:vars,mechanisms:mechs,resonanceEvents:resEvs,
-    params,subs,monteCarlo:Object.keys(mcRes).length?mcRes:null};
-  dl(JSON.stringify(d,null,2),'application/json','dgr-fram-model.json');
-}
-function expPNG(){
-  let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infinity;
-  fns.forEach(fn=>{mnX=Math.min(mnX,fn.x-HR*1.8);mnY=Math.min(mnY,fn.y-HR*1.8);mxX=Math.max(mxX,fn.x+HR*1.8);mxY=Math.max(mxY,fn.y+HR*1.8);});
-  if(!fns.length){mnX=0;mnY=0;mxX=800;mxY=600;}
-  const M=60,W=(mxX-mnX+M*2)*2,H=(mxY-mnY+M*2)*2;
-  const oc=rOff(W,H,(-mnX+M)*2,(-mnY+M)*2,2);
-  oc.toBlob(b=>{const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='dgr-fram.png';a.click();URL.revokeObjectURL(u);},'image/png');
-}
-function rOff(W,H,px,py,sc){
-  const oc=document.createElement('canvas');oc.width=W;oc.height=H;const g=oc.getContext('2d');
-  g.fillStyle='#fff';g.fillRect(0,0,W,H);
-  const ws=(wx,wy)=>[wx*sc+px,wy*sc+py];
-  const apO=(wx,wy,asp)=>{const a=(AV[asp]??0)*Math.PI/3;return ws(wx+HR*Math.cos(a),wy+HR*Math.sin(a));};
-  const rids=resonantIds();
-  coups.forEach(c=>{
-    const src=fns.find(f=>f.id===c.source_function_id),tgt=fns.find(f=>f.id===c.target_function_id);if(!src||!tgt)return;
-    const[sx,sy]=apO(src.x,src.y,c.source_aspect||'O'),[tx,ty]=apO(tgt.x,tgt.y,c.target_aspect||'I');
-    const dx=tx-sx,dy=ty-sy,len=Math.hypot(dx,dy)||1,off=Math.min(60*sc,len*0.30);
-    const cpx=(sx+tx)/2-(dy/len)*off,cpy=(sy+ty)/2+(dx/len)*off,lt=c.line_type||'normal';
-    g.save();g.beginPath();g.moveTo(sx,sy);g.quadraticCurveTo(cpx,cpy,tx,ty);
-    if(lt==='variable')g.setLineDash([6,4]);g.strokeStyle=lt==='critical'?'#c0392b':'rgba(80,80,140,0.5)';g.lineWidth=lt==='critical'?1.8:1.1;g.stroke();g.setLineDash([]);
-    const t2=0.97,ax=(1-t2)**2*sx+2*(1-t2)*t2*cpx+t2**2*tx,ay2=(1-t2)**2*sy+2*(1-t2)*t2*cpy+t2**2*ty;
-    const t1=0.91,bx=(1-t1)**2*sx+2*(1-t1)*t1*cpx+t1**2*tx,by=(1-t1)**2*sy+2*(1-t1)*t1*cpy+t1**2*ty;
-    const ang=Math.atan2(ay2-by,ax-bx),al=8;g.beginPath();g.moveTo(ax,ay2);g.lineTo(ax-al*Math.cos(ang-.45),ay2-al*Math.sin(ang-.45));g.lineTo(ax-al*Math.cos(ang+.45),ay2-al*Math.sin(ang+.45));g.closePath();g.fillStyle=lt==='critical'?'#c0392b':'rgba(80,80,140,0.6)';g.fill();
-    if(c.label){g.font='10px "Segoe UI",system-ui';g.fillStyle='rgba(60,60,110,0.7)';g.textAlign='center';g.fillText(c.label,(sx+tx)/2-(dy/len)*off*0.5,(sy+ty)/2+(dx/len)*off*0.5-10);}g.restore();
-  });
-  fns.forEach(fn=>{
-    const[cx,cy]=ws(fn.x,fn.y),r=HR*sc,col=FC[fn.style||'red']||FC.red;
-    const verts=[];for(let i=0;i<6;i++){const a=i*Math.PI/3;verts.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]);}
-    g.save();g.beginPath();g.moveTo(verts[0][0],verts[0][1]);for(let i=1;i<6;i++)g.lineTo(verts[i][0],verts[i][1]);g.closePath();g.fillStyle=col.fill;g.fill();g.strokeStyle=col.stroke;g.lineWidth=1.5;g.stroke();
-    if(rids.has(fn.id)){g.save();g.strokeStyle='#c0392b';g.lineWidth=1.6;g.beginPath();g.moveTo(verts[0][0],verts[0][1]);for(let i=1;i<6;i++)g.lineTo(verts[i][0],verts[i][1]);g.closePath();g.clip();const amp=r*0.14,freq=3.8,bw=r*0.7;g.beginPath();for(let x=-bw;x<=bw;x+=1){const yy=cy+amp*Math.sin(freq*(x/bw)*Math.PI);if(x===-bw)g.moveTo(cx+x,yy);else g.lineTo(cx+x,yy);}g.stroke();g.restore();}
-    const fs=11*Math.min(sc,1);g.fillStyle=col.text;g.font=`500 ${Math.max(9,fs)}px "Segoe UI",system-ui`;g.textAlign='center';g.textBaseline='middle';
-    const words=(fn.name||'').split(' ');const lines=[];let cur='';words.forEach(w=>{const t=cur?cur+' '+w:w;if(g.measureText(t).width>r*1.42){if(cur)lines.push(cur);cur=w;}else cur=t;});lines.push(cur);
-    const lh=Math.max(12,fs*1.3),tot=(lines.length-1)*lh,yOff=rids.has(fn.id)?-r*0.2:0;lines.forEach((l,i)=>g.fillText(l,cx,cy+yOff-tot/2+i*lh));
-    g.font=`600 ${Math.max(8,9*Math.min(sc,1))}px "Segoe UI",system-ui`;g.fillStyle=col.stroke;g.fillText(col.badge,cx,cy+r*0.56);
-    const used=new Set();coups.forEach(cc=>{if(cc.source_function_id===fn.id)used.add(cc.source_aspect||'O');if(cc.target_function_id===fn.id)used.add(cc.target_aspect||'I');});
-    used.forEach(asp=>{const[ax,ay]=apO(fn.x,fn.y,asp);g.beginPath();g.arc(ax,ay,4.5*sc,0,Math.PI*2);g.fillStyle=AC[asp];g.fill();});g.restore();
-  });
-  g.fillStyle='rgba(0,0,0,0.15)';g.font='11px "Segoe UI",system-ui';g.textAlign='right';g.fillText('DGR-FRAM Modeler · '+new Date().toLocaleDateString('pt-BR'),W-12,H-9);
-  return oc;
-}
-function expPDF(){
-  if(!window.jspdf){alert('jsPDF carregando…');return;}
-  const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-  const PW=297,PH=210,wbg=()=>{doc.setFillColor(255,255,255);doc.rect(0,0,PW,PH,'F');};
-  wbg();doc.setTextColor(83,74,183);doc.setFontSize(20);doc.setFont('helvetica','bold');
-  doc.text('DGR-FRAM — Modelo de Governança de Dados e Resiliência',PW/2,32,{align:'center'});
-  doc.setTextColor(90,90,120);doc.setFontSize(11);doc.setFont('helvetica','normal');
-  doc.text('Dataprev — '+new Date().toLocaleString('pt-BR'),PW/2,41,{align:'center'});
-  doc.setDrawColor(210,210,225);doc.line(15,48,PW-15,48);
-  [['Funções',fns.length],['Acoplamentos',coups.length],['Variab. Endógenas',vars.filter(v=>v.category==='endogena').length],['Variab. Exógenas',vars.filter(v=>v.category==='exogena').length],['Mecanismos MR',mechs.length]].forEach((s,i)=>{if(i>=5)return;doc.setTextColor(90,90,120);doc.setFontSize(9);doc.text(s[0]+':',15+i*56,58);doc.setTextColor(30,30,60);doc.setFont('helvetica','bold');doc.text(''+s[1],15+i*56+28,58);doc.setFont('helvetica','normal');});
-  doc.addPage();wbg();doc.setTextColor(83,74,183);doc.setFontSize(13);doc.setFont('helvetica','bold');doc.text('Diagrama Funcional FRAM',PW/2,13,{align:'center'});
-  let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infinity;fns.forEach(fn=>{mnX=Math.min(mnX,fn.x-HR*1.8);mnY=Math.min(mnY,fn.y-HR*1.8);mxX=Math.max(mxX,fn.x+HR*1.8);mxY=Math.max(mxY,fn.y+HR*1.8);});if(!fns.length){mnX=0;mnY=0;mxX=1600;mxY=900;}
-  const bW=mxX-mnX,bH=mxY-mnY,sc=Math.min(1700/bW,1000/bH,1.5),oc=rOff(1760,1040,(1760-(bW*sc))/2-mnX*sc,(1040-(bH*sc))/2-mnY*sc,sc);
-  doc.addImage(oc.toDataURL('image/png'),'PNG',5,17,PW-10,PH-22);
-  if(Object.keys(mcRes).length){
-    doc.addPage();wbg();doc.setTextColor(83,74,183);doc.setFontSize(13);doc.setFont('helvetica','bold');doc.text('Simulação Monte Carlo',PW/2,13,{align:'center'});
-    let y=24;[...fns].filter(f=>mcRes[f.id]).sort((a,b)=>mcRes[b.id].p95-mcRes[a.id].p95).forEach(fn=>{
-      if(y>PH-16){doc.addPage();wbg();y=16;}const r=mcRes[fn.id],p=r.p95;
-      const[rc,gc,bc]=p>=.70?[192,57,43]:p>=.50?[133,79,11]:p>=.30?[83,74,183]:[15,110,86];
-      doc.setTextColor(rc,gc,bc);doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text(fn.name,10,y);doc.setFillColor(rc,gc,bc);doc.rect(100,y-3.5,(PW-110)*Math.min(p,1),4,'F');
-      doc.setTextColor(70,70,100);doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text(`VFR=${pct(r.mean)} | P90=${pct(r.p90)} | P95=${pct(r.p95)} | P99=${pct(r.p99)} | Prob.Crit=${pct(r.probCrit)} | IIS=${pct(r.iis)}`,10,y+5);y+=13;
-    });
-  }
-  doc.save('dgr-fram-relatorio.pdf');
-}
-function dl(c,m,f){const b=new Blob([c],{type:m});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=f;a.click();URL.revokeObjectURL(u);}
-function impJSON(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{loadData(JSON.parse(ev.target.result));}catch(err){alert('JSON inválido: '+err.message);}e.target.value='';};r.readAsText(f);}
-function loadData(d){
-  fns=(d.functions||[]).map(fn=>{const l=(d.layouts||[]).find(l=>l.function_id===fn.id)||{x:300,y:300};return{...fn,x:fn.x??l.x??300,y:fn.y??l.y??300,style:fn.style||'red'};});
-  coups=d.couplings||[];vars=d.variabilities||[];mechs=d.mechanisms||[];resEvs=d.resonanceEvents||[];
-  params=d.params||{};subs=d.subs||{};mcRes=d.monteCarlo||{};
-  fns.forEach(fn=>{initP(fn.id);initSubs(fn.id);});selFn=null;connSrc=null;
-  if(fns.length){let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infinity;fns.forEach(fn=>{mnX=Math.min(mnX,fn.x);mnY=Math.min(mnY,fn.y);mxX=Math.max(mxX,fn.x);mxY=Math.max(mxY,fn.y);});const bW=mxX-mnX+HR*4,bH=mxY-mnY+HR*4;scale=Math.min((CW.offsetWidth||800)/bW,(CW.offsetHeight||600)/bH,1.3);panX=(CW.offsetWidth||800)/2-(mnX+(mxX-mnX)/2)*scale;panY=(CW.offsetHeight||600)/2-(mnY+(mxY-mnY)/2)*scale;}
-  goTo('mc');
-}
-function impXFMV(e){
-  const f=e.target.files[0];if(!f)return;
-  const r=new FileReader();r.onload=ev=>{
-    try{const xml=new DOMParser().parseFromString(ev.target.result,'text/xml');const idMap={},nf=[];
-      xml.querySelectorAll('Function').forEach(el=>{const idn=el.querySelector('IDNr')?.textContent||'0';const sa=el.getAttribute('style')||'';const st=sa==='red'?'red':sa==='green'?'green':sa==='grey'?'grey':'white';const id=uid();idMap[idn]=id;nf.push({id,name:el.querySelector('IDName')?.textContent||'Função',description:el.querySelector('Description')?.textContent||'',input:'',output:'',precondition:'',resource:'',control:'',time:'',criticality:3,coupling_degree:3,style:st,x:parseFloat(el.getAttribute('x'))||300,y:parseFloat(el.getAttribute('y'))||300});});
-      const nc=[];xml.querySelectorAll('Aspect').forEach(el=>{const pts=(el.querySelector('Name')?.textContent||'').split('|');if(pts.length>=4){const si=idMap[pts[0]],ti=idMap[pts[2]];if(si&&ti&&si!==ti)nc.push({id:uid(),source_function_id:si,target_function_id:ti,source_aspect:'O',target_aspect:pts[3]||'I',label:pts[1]||'',line_type:'normal',created_date:new Date().toISOString()});}});
-      loadData({functions:nf,couplings:nc,variabilities:[],mechanisms:[],resonanceEvents:[]});
-    }catch(err){alert('Erro XFMV: '+err.message);}e.target.value='';
-  };r.readAsText(f);
-}
-function clearAll(){if(!confirm('Limpar todo o modelo?'))return;fns=[];coups=[];vars=[];mechs=[];resEvs=[];params={};subs={};mcRes={};selFn=null;animOn=false;connSrc=null;goTo('mc');}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-
-// roundRect polyfill for older browsers
-if(!CanvasRenderingContext2D.prototype.roundRect){
-  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
-    r=Math.min(r,w/2,h/2);this.moveTo(x+r,y);this.lineTo(x+w-r,y);this.quadraticCurveTo(x+w,y,x+w,y+r);this.lineTo(x+w,y+h-r);this.quadraticCurveTo(x+w,y+h,x+w-r,y+h);this.lineTo(x+r,y+h);this.quadraticCurveTo(x,y+h,x,y+h-r);this.lineTo(x,y+r);this.quadraticCurveTo(x,y,x+r,y);this.closePath();return this;
-  };
-}
-// Redraw painel on resize if visible
-window.addEventListener('resize',()=>{if(curPage==='mc')renderMC();});
-
-// ══════════════════════════════════════════
-// SAMPLE DATA
-// ══════════════════════════════════════════
-loadData({
-  functions:[
-    {id:'f1',name:'Processar benefícios INSS',input:'Solicitação do cidadão',output:'Concessão / pagamento',precondition:'CNIS atualizado',resource:'Mainframe e cloud Dataprev',control:'Legislação previdenciária',time:'Calendário INSS',criticality:4,coupling_degree:4,style:'red',x:340,y:195},
-    {id:'f2',name:'Validar elegibilidade',input:'Dados brutos de órgãos',output:'Registro validado',precondition:'Catálogo de metadados',resource:'Regras de negócio',control:'LGPD',time:'SLA de lote',criticality:3,coupling_degree:4,style:'red',x:560,y:120},
-    {id:'f3',name:'Integrar órgãos parceiros',input:'Demandas MDS/Receita/INSS',output:'Dados interoperáveis',precondition:'APIs ativas',resource:'Equipe integração',control:'SLAs, ANPD',time:'Janelas de sync',criticality:3,coupling_degree:4,style:'green',x:555,y:330},
-    {id:'f4',name:'Monitorar continuidade',input:'Telemetria e logs',output:'Alertas e dashboards',precondition:'Painéis calibrados',resource:'Infra observabilidade',control:'Planos de continuidade',time:'Tempo real',criticality:2,coupling_degree:3,style:'grey',x:160,y:330},
-    {id:'f5',name:'Responder incidentes',input:'Alertas de degradação',output:'Resolução e comunicado',precondition:'Runbooks atualizados',resource:'Especialistas',control:'Protocolos de crise',time:'RTO definido',criticality:4,coupling_degree:4,style:'red',x:355,y:360},
-    {id:'f6',name:'Governar dados',input:'Ativos informacionais',output:'Políticas e catálogos',precondition:'Comitê de dados',resource:'Equipe governance',control:'LGPD, TCU, Decreto Digital',time:'Ciclos de auditoria',criticality:3,coupling_degree:3,style:'white',x:145,y:165},
-  ],
-  couplings:[
-    {id:'c1',source_function_id:'f3',target_function_id:'f2',source_aspect:'O',target_aspect:'I',label:'alimenta',line_type:'normal'},
-    {id:'c2',source_function_id:'f2',target_function_id:'f1',source_aspect:'O',target_aspect:'P',label:'condiciona',line_type:'normal'},
-    {id:'c3',source_function_id:'f4',target_function_id:'f5',source_aspect:'O',target_aspect:'I',label:'dispara',line_type:'critical'},
-    {id:'c4',source_function_id:'f6',target_function_id:'f1',source_aspect:'O',target_aspect:'C',label:'governa',line_type:'normal'},
-    {id:'c5',source_function_id:'f6',target_function_id:'f2',source_aspect:'O',target_aspect:'C',label:'governa',line_type:'normal'},
-  ],
-  variabilities:[
-    {id:'v1',category:'exogena',variability_type:'Pico de Demanda Externa',name:'Pico — Auxílio Emergencial 2020',affected_function_id:'f5',source_function_id:'_ext',propagated_effect:'Sobrecarga sistêmica em cascata',description:'Saturação de capacidade por demanda massiva'},
-    {id:'v2',category:'endogena',cat_label:'Informacional',variability_type:'Metadados Obsoletos',name:'Metadados obsoletos — DBAs',affected_function_id:'f2',description:'Tabelas divergentes do catálogo corporativo'},
-  ],
-  mechanisms:[
-    {id:'m1',mr_code:'MR-B.2',mechanism_type:'Procedimento de Degradação Graciosa',name:'Protocolo de Degradação de Serviços Não-Essenciais',controlled_function_id:'f5',resilience_capacity:'Responder',responsible:'Equipe de Incidentes',description:'Suspensão de consultas analíticas em picos para proteger processamento core'},
-  ],
-  resonanceEvents:[
-    {id:'re1',initial_function_id:'f5',title:'Ressonância COVID-19 — Auxílio Emergencial',affected_function_ids:['f1','f2','f3'],operational_impact:'critico',status:'identificado'},
-  ],
-  params:{
-    f1:{ve:{mn:0.20,mp:0.40,mx:0.70},vx:{mn:0.30,mp:0.55,mx:0.80},ar:{mn:0.30,mp:0.50,mx:0.70}},
-    f2:{ve:{mn:0.15,mp:0.30,mx:0.55},vx:{mn:0.20,mp:0.40,mx:0.65},ar:{mn:0.35,mp:0.55,mx:0.75}},
-    f3:{ve:{mn:0.10,mp:0.25,mx:0.50},vx:{mn:0.25,mp:0.45,mx:0.70},ar:{mn:0.25,mp:0.45,mx:0.65}},
-    f4:{ve:{mn:0.10,mp:0.20,mx:0.40},vx:{mn:0.10,mp:0.25,mx:0.50},ar:{mn:0.40,mp:0.60,mx:0.80}},
-    f5:{ve:{mn:0.25,mp:0.50,mx:0.80},vx:{mn:0.40,mp:0.65,mx:0.90},ar:{mn:0.20,mp:0.40,mx:0.65}},
-    f6:{ve:{mn:0.10,mp:0.20,mx:0.40},vx:{mn:0.10,mp:0.20,mx:0.40},ar:{mn:0.45,mp:0.65,mx:0.85}},
   },
-});
+
+  deserialize(jsonStr) {
+    const d = JSON.parse(jsonStr);
+    this.fns = d.fns || [];
+    this.coups = d.coups || [];
+    this.vars = d.vars || [];
+    this.mechs = d.mechs || [];
+    this.resEvs = d.resEvs || [];
+    this.params = d.params || {};
+    this.subs = d.subs || {};
+    this.mcRes = d.mcRes || {};
+    this.mcN = d.mcN || 5000;
+  }
+};
+
+// ══════════════════════════════════════════
+// HISTÓRICO DE AÇÕES (DGRHistory)
+// ══════════════════════════════════════════
+const DGRHistory = {
+  undoStack: [],
+  redoStack: [],
+  isRestoring: false,
+
+  push() {
+    if (this.isRestoring) return;
+    const current = DGRState.serialize();
+    if (this.undoStack.length && this.undoStack[this.undoStack.length - 1] === current) return;
+    this.undoStack.push(current);
+    if (this.undoStack.length > 40) this.undoStack.shift();
+    this.redoStack = [];
+  },
+
+  undo() {
+    if (this.undoStack.length < 2) { alert("Nenhuma ação anterior para desfazer."); return; }
+    this.isRestoring = true;
+    const current = this.undoStack.pop();
+    this.redoStack.push(current);
+    DGRState.deserialize(this.undoStack[this.undoStack.length - 1]);
+    this.isRestoring = false;
+    DGRManager.refreshUI();
+  },
+
+  redo() {
+    if (!this.redoStack.length) { alert("Nenhuma ação para refazer."); return; }
+    this.isRestoring = true;
+    const next = this.redoStack.pop();
+    this.undoStack.push(next);
+    DGRState.deserialize(next);
+    this.isRestoring = false;
+    DGRManager.refreshUI();
+  }
+};
+
+// ══════════════════════════════════════════
+// MOTOR ORQUESTRADOR DA INTERFACE (DGRManager)
+// ══════════════════════════════════════════
+const DGRManager = {
+  init() {
+    this.loadData();
+    DGRHistory.push();
+    window.addEventListener('resize', () => { if(DGRState.curPage === 'mc') this.renderCharts(); });
+  },
+
+  switchPage(page) {
+    DGRState.curPage = page;
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('act'));
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('act'));
+    
+    const navItem = document.getElementById('ni-' + page);
+    const screenItem = document.getElementById('s-' + page);
+    if (navItem) navItem.classList.add('act');
+    if (screenItem) screenItem.classList.add('act');
+    
+    this.refreshUI();
+  },
+
+  refreshUI() {
+    this.syncSelectBoxes();
+    this.renderFunctions();
+    this.renderConnections();
+    this.renderResonances();
+    this.renderEndogenous();
+    this.renderExogenous();
+    this.renderMechs();
+    this.renderTaxonomyAccordion('RE', 'endo-subcat-sel');
+    this.renderTaxonomyAccordion('RX', 'exo-subcat-sel');
+    this.renderTaxonomyAccordion('MR', 'mr-subcat-sel');
+    
+    if (DGRState.curPage === 'mc') {
+      const hasRes = DGRState.fns.some(f => DGRState.mcRes[f.id]);
+      this.renderKPIs(hasRes);
+      this.renderCharts(hasRes);
+      this.renderMCPanel(hasRes);
+    }
+  },
+
+  uid() { return 'id' + Math.random().toString(36).slice(2,8) + Date.now().toString(36); },
+  esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); },
+  pct(v, d = 1) { return (v * 100).toFixed(d) + '%'; },
+  vColor(v) { return v >= 0.70 ? '#c0392b' : v >= 0.50 ? '#854f0b' : v >= 0.30 ? '#4778e8' : '#0f6e56'; },
+  critInfo(v) { return v >= 0.70 ? {cls:'cb-c', lbl:'Crítica'} : v >= 0.50 ? {cls:'cb-a', lbl:'Alta'} : v >= 0.30 ? {cls:'cb-m', lbl:'Moderada'} : {cls:'cb-b', lbl:'Baixa'}; },
+  portLabel(p) { return ({input:'Input', output:'Output', precondition:'Precondition', resource:'Resource', control:'Control', time:'Time'})[p] || 'Output'; },
+
+  getCouplingDegree(fnId) {
+    return DGRState.coups.filter(c => c.source_function_id === fnId || c.target_function_id === fnId).length;
+  },
+
+  syncSelectBoxes() {
+    const opts = DGRState.fns.map(f => `<option value="${f.id}">${this.esc(f.name)}</option>`).join('');
+    const defaultOpt = `<option value="">-- Selecione a Função --</option>`;
+    const html = defaultOpt + opts;
+
+    document.getElementById('conn-src').innerHTML = html;
+    document.getElementById('conn-tgt').innerHTML = html;
+    document.getElementById('res-src').innerHTML = html;
+    document.getElementById('endo-fn').innerHTML = html;
+    document.getElementById('exo-fn').innerHTML = html;
+    document.getElementById('mr-fn').innerHTML = html;
+  },
+
+  // ── OPERAÇÕES DE ENTIDADES (CRUD) ──
+  saveFn() {
+    const name = document.getElementById('fn-name').value.trim();
+    const desc = document.getElementById('fn-desc').value.trim();
+    const id = document.getElementById('edit-fn-id').value;
+    if (!name) { alert('Nome obrigatório.'); return; }
+
+    DGRHistory.push();
+    if (id) {
+      const fn = DGRState.fns.find(f => f.id === id);
+      if (fn) { fn.name = name; fn.description = desc; }
+    } else {
+      const nid = this.uid();
+      DGRState.fns.push({ id: nid, name, description: desc });
+      DGRState.params[nid] = { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.2,mp:0.4,mx:0.7} };
+      DGRState.subs[nid] = {};
+      [...TAXO.RE.items, ...TAXO.RX.items, ...TAXO.MR.items].forEach(i => {
+        DGRState.subs[nid][i.code] = { sel: false, mn: 0.1, mp: 0.3, mx: 0.6 };
+      });
+    }
+    this.clearFnForm();
+    DGRHistory.push();
+    this.refreshUI();
+  },
+
+  editFn(id) {
+    const fn = DGRState.fns.find(f => f.id === id);
+    if (!fn) return;
+    document.getElementById('edit-fn-id').value = fn.id;
+    document.getElementById('fn-name').value = fn.name;
+    document.getElementById('fn-desc').value = fn.description || '';
+    document.getElementById('fnh3').textContent = "Editar Função";
+    document.getElementById('btn-cancel-fn').style.display = "inline-block";
+  },
+
+  deleteFn(id) {
+    if (!confirm('Excluir função e dependências lógicas?')) return;
+    DGRHistory.push();
+    DGRState.fns = DGRState.fns.filter(f => f.id !== id);
+    DGRState.coups = DGRState.coups.filter(c => c.source_function_id !== id && c.target_function_id !== id);
+    DGRState.vars = DGRState.vars.filter(v => v.affected_function_id !== id);
+    DGRState.mechs = DGRState.mechs.filter(m => m.controlled_function_id !== id);
+    DGRState.resEvs = DGRState.resEvs.filter(r => r.initial_function_id !== id);
+    delete DGRState.params[id]; delete DGRState.subs[id]; delete DGRState.mcRes[id];
+    DGRHistory.push();
+    this.refreshUI();
+  },
+
+  clearFnForm() {
+    document.getElementById('edit-fn-id').value = '';
+    document.getElementById('fn-name').value = '';
+    document.getElementById('fn-desc').value = '';
+    document.getElementById('fnh3').textContent = "Nova Função";
+    document.getElementById('btn-cancel-fn').style.display = "none";
+  },
+
+  renderFunctions() {
+    const target = document.getElementById('fn-list-target');
+    if (!DGRState.fns.length) { target.innerHTML = `<div class="empty">Nenhuma função.</div>`; return; }
+    
+    let html = '';
+    DGRState.fns.forEach(f => {
+      html += `
+        <div class="item-card">
+          <div class="item-card-body">
+            <div class="item-card-title">${this.esc(f.name)}</div>
+            <div class="item-card-sub">${this.esc(f.description || 'Sem descrição')}</div>
+            <div style="margin-top:4px;"><span class="count-badge" style="background:#eeedfe;color:#4778e8">Acoplamento: ${this.getCouplingDegree(f.id)}</span></div>
+          </div>
+          <div class="item-card-actions">
+            <button class="rtab" onclick="DGRManager.editFn('${f.id}')">✏️ Editar</button>
+            <button class="bdel" onclick="DGRManager.deleteFn('${f.id}')">🗑️ Excluir</button>
+          </div>
+        </div>`;
+    });
+    target.innerHTML = html;
+  },
+
+  saveConn() {
+    const src = document.getElementById('conn-src').value;
+    const tgt = document.getElementById('conn-tgt').value;
+    const type = document.getElementById('conn-type').value;
+    const srcPort = document.getElementById('conn-src-port').value;
+    const tgtPort = document.getElementById('conn-tgt-port').value;
+    const lbl = document.getElementById('conn-lbl').value.trim();
+    const id = document.getElementById('edit-conn-id').value;
+    if (!src || !tgt || src === tgt) { alert('Parâmetros lógicos inválidos.'); return; }
+
+    DGRHistory.push();
+    if (id) {
+      const c = DGRState.coups.find(x => x.id === id);
+      if (c) { c.source_function_id = src; c.target_function_id = tgt; c.line_type = type; c.source_port = srcPort; c.target_port = tgtPort; c.label = lbl; }
+    } else {
+      DGRState.coups.push({ id: this.uid(), source_function_id: src, target_function_id: tgt, source_port: srcPort, target_port: tgtPort, line_type: type, label: lbl });
+    }
+    this.clearConnForm();
+    DGRHistory.push();
+    this.refreshUI();
+  },
+
+  editConn(id) {
+    const c = DGRState.coups.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('edit-conn-id').value = c.id;
+    document.getElementById('conn-src').value = c.source_function_id;
+    document.getElementById('conn-tgt').value = c.target_function_id;
+    document.getElementById('conn-type').value = c.line_type;
+    document.getElementById('conn-src-port').value = c.source_port || 'output';
+    document.getElementById('conn-tgt-port').value = c.target_port || 'input';
+    document.getElementById('conn-lbl').value = c.label || '';
+    document.getElementById('connh3').textContent = "Editar Conexão";
+    document.getElementById('btn-cancel-conn').style.display = "inline-block";
+  },
+
+  deleteConn(id) {
+    DGRHistory.push();
+    DGRState.coups = DGRState.coups.filter(c => c.id !== id);
+    DGRHistory.push();
+    this.refreshUI();
+  },
+
+  clearConnForm() {
+    document.getElementById('edit-conn-id').value = '';
+    document.getElementById('conn-lbl').value = '';
+    document.getElementById('conn-src-port').value = 'output';
+    document.getElementById('conn-tgt-port').value = 'input';
+    document.getElementById('connh3').textContent = "Adicionar Conexão";
+    document.getElementById('btn-cancel-conn').style.display = "none";
+  },
+
+  renderConnections() {
+    const target = document.getElementById('conn-list-target');
+    if (!DGRState.coups.length) { target.innerHTML = `<div class="empty">Nenhuma conexão.</div>`; return; }
+    
+    let html = '';
+    DGRState.coups.forEach(c => {
+      const s = DGRState.fns.find(f => f.id === c.source_function_id)?.name || '?';
+      const t = DGRState.fns.find(f => f.id === c.target_function_id)?.name || '?';
+      html += `
+        <div class="item-card">
+          <div class="item-card-body">
+            <div class="item-card-title">${this.esc(s)} ➔ ${this.esc(t)}</div>
+            <div class="item-card-sub">${this.portLabel(c.source_port || 'output')} ➔ ${this.portLabel(c.target_port || 'input')} | Relação: <b>${c.line_type}</b> | ${this.esc(c.label)}</div>
+          </div>
+          <div class="item-card-actions">
+            <button class="rtab" onclick="DGRManager.editConn('${c.id}')">✏️ Editar</button>
+            <button class="bdel" onclick="DGRManager.deleteConn('${c.id}')">🗑️ Excluir</button>
+          </div>
+        </div>`;
+    });
+    target.innerHTML = html;
+  },
+
+  saveResonanceEvent() {
+    const title = document.getElementById('res-title').value.trim();
+    const src = document.getElementById('res-src').value;
+    const impact = document.getElementById('res-impact').value;
+    const id = document.getElementById('edit-res-id').value;
+    if (!title || !src) return;
+
+    DGRHistory.push();
+    if (id) {
+      const r = DGRState.resEvs.find(x => x.id === id);
+      if (r) { r.title = title; r.initial_function_id = src; r.operational_impact = impact; }
+    } else {
+      DGRState.resEvs.push({ id: this.uid(), title, initial_function_id: src, operational_impact: impact });
+    }
+    this.clearResForm();
+    DGRHistory.push();
+    this.refreshUI();
+  },
+
+  editRes(id) {
+    const r = DGRState.resEvs.find(x => x.id === id);
+    if (!r) return;
+    document.getElementById('edit-res-id').value = r.id;
+    document.getElementById('res-title').value = r.title;
+    document.getElementById('res-src').value = r.initial_function_id;
+    document.getElementById('res-impact').value = r.operational_impact;
+    document.getElementById('resh3').textContent = "Editar Cenário";
+    document.getElementById('btn-cancel-res').style.display = "inline-block";
+  },
+
+  deleteRes(id) {
+    DGRHistory.push();
+    DGRState.resEvs = DGRState.resEvs.filter(r => r.id !== id);
+    DGRHistory.push();
+    this.refreshUI();
+  },
+
+  clearResForm() {
+    document.getElementById('edit-res-id').value = '';
+    document.getElementById('res-title').value = '';
+    document.getElementById('resh3').textContent = "Registrar Cenário de Ressonância";
+    document.getElementById('btn-cancel-res').style.display = "none";
+  },
+
+  renderResonances() {
+    const target = document.getElementById('res-list-target');
+    if (!DGRState.resEvs.length) { target.innerHTML = `<div class="empty">Nenhum cenário de ressonância.</div>`; return; }
+    let html = '';
+    DGRState.resEvs.forEach(r => {
+      const s = DGRState.fns.find(f => f.id === r.initial_function_id)?.name || '?';
+      html += `
+        <div class="item-card">
+          <div class="item-card-body">
+            <div class="item-card-title">${this.esc(r.title)}</div>
+            <div class="item-card-sub">Gatilho: <b>${this.esc(s)}</b> | Impacto: <span class="cbadge cb-a">${r.operational_impact}</span></div>
+          </div>
+          <div class="item-card-actions">
+            <button class="rtab" onclick="DGRManager.editRes('${r.id}')">✏️ Editar</button>
+            <button class="bdel" onclick="DGRManager.deleteRes('${r.id}')">🗑️ Excluir</button>
+          </div>
+        </div>`;
+    });
+    target.innerHTML = html;
+  },
+
+  saveEndoVar() {
+    const name = document.getElementById('endo-name').value.trim();
+    const fn = document.getElementById('endo-fn').value;
+    const desc = document.getElementById('endo-desc').value.trim();
+    const id = document.getElementById('edit-endo-id').value;
+    if (!name || !fn) return;
+
+    DGRHistory.push();
+    if (id) {
+      const v = DGRState.vars.find(x => x.id === id);
+      if (v) { v.name = name; v.affected_function_id = fn; v.description = desc; }
+    } else {
+      DGRState.vars.push({ id: this.uid(), category: 'endogena', name, affected_function_id: fn, description: desc });
+    }
+    this.clearEndoForm(); DGRHistory.push(); this.refreshUI();
+  },
+
+  editEndo(id) {
+    const v = DGRState.vars.find(x => x.id === id);
+    if (!v) return;
+    document.getElementById('edit-endo-id').value = v.id;
+    document.getElementById('endo-name').value = v.name;
+    document.getElementById('endo-fn').value = v.affected_function_id;
+    document.getElementById('endo-desc').value = v.description || '';
+    document.getElementById('endoh3').textContent = "Editar Fator Endógeno";
+    document.getElementById('btn-cancel-endo').style.display = "inline-block";
+  },
+
+  clearEndoForm() {
+    document.getElementById('edit-endo-id').value = '';
+    document.getElementById('endo-name').value = '';
+    document.getElementById('endo-desc').value = '';
+    document.getElementById('endoh3').textContent = "Novo Fator Endógeno";
+    document.getElementById('btn-cancel-endo').style.display = "none";
+  },
+
+  renderEndogenous() {
+    const target = document.getElementById('endo-list-target');
+    const filtered = DGRState.vars.filter(v => v.category === 'endogena');
+    if (!filtered.length) { target.innerHTML = `<div class="empty">Nenhuma perturbação endógena.</div>`; return; }
+    let html = '';
+    filtered.forEach(v => {
+      const fn = DGRState.fns.find(f => f.id === v.affected_function_id)?.name || '?';
+      html += `
+        <div class="item-card">
+          <div class="item-card-body">
+            <div class="item-card-title">${this.esc(v.name)}</div>
+            <div class="item-card-sub">Função Vinculada: <span style="color:#4778e8">${this.esc(fn)}</span></div>
+          </div>
+          <div class="item-card-actions">
+            <button class="rtab" onclick="DGRManager.editEndo('${v.id}')">✏️ Editar</button>
+            <button class="bdel" onclick="DGRManager.deleteVar('${v.id}')">🗑️ Excluir</button>
+          </div>
+        </div>`;
+    });
+    target.innerHTML = html;
+  },
+
+  saveExoVar() {
+    const name = document.getElementById('exo-name').value.trim();
+    const fn = document.getElementById('exo-fn').value;
+    const desc = document.getElementById('exo-desc').value.trim();
+    const id = document.getElementById('edit-exo-id').value;
+    if (!name || !fn) return;
+
+    DGRHistory.push();
+    if (id) {
+      const v = DGRState.vars.find(x => x.id === id);
+      if (v) { v.name = name; v.affected_function_id = fn; v.description = desc; }
+    } else {
+      DGRState.vars.push({ id: this.uid(), category: 'exogena', name, affected_function_id: fn, description: desc });
+    }
+    this.clearExoForm(); DGRHistory.push(); this.refreshUI();
+  },
+
+  editExo(id) {
+    const v = DGRState.vars.find(x => x.id === id);
+    if (!v) return;
+    document.getElementById('edit-exo-id').value = v.id;
+    document.getElementById('exo-name').value = v.name;
+    document.getElementById('exo-fn').value = v.affected_function_id;
+    document.getElementById('exo-desc').value = v.description || '';
+    document.getElementById('exoh3').textContent = "Editar Fator Exógeno";
+    document.getElementById('btn-cancel-exo').style.display = "inline-block";
+  },
+
+  clearExoForm() {
+    document.getElementById('edit-exo-id').value = '';
+    document.getElementById('exo-name').value = '';
+    document.getElementById('exo-desc').value = '';
+    document.getElementById('exoh3').textContent = "Novo Fator Exógeno";
+    document.getElementById('btn-cancel-exo').style.display = "none";
+  },
+
+  renderExogenous() {
+    const target = document.getElementById('exo-list-target');
+    const filtered = DGRState.vars.filter(v => v.category === 'exogena');
+    if (!filtered.length) { target.innerHTML = `<div class="empty">Nenhuma perturbação exógena.</div>`; return; }
+    let html = '';
+    filtered.forEach(v => {
+      const fn = DGRState.fns.find(f => f.id === v.affected_function_id)?.name || '?';
+      html += `
+        <div class="item-card">
+          <div class="item-card-body">
+            <div class="item-card-title">${this.esc(v.name)}</div>
+            <div class="item-card-sub">Receptor do Choque: <span style="color:#c0392b">${this.esc(fn)}</span></div>
+          </div>
+          <div class="item-card-actions">
+            <button class="rtab" onclick="DGRManager.editExo('${v.id}')">✏️ Editar</button>
+            <button class="bdel" onclick="DGRManager.deleteVar('${v.id}')">🗑️ Excluir</button>
+          </div>
+        </div>`;
+    });
+    target.innerHTML = html;
+  },
+
+  deleteVar(id) {
+    DGRHistory.push();
+    DGRState.vars = DGRState.vars.filter(v => v.id !== id);
+    DGRHistory.push();
+    this.refreshUI();
+  },
+
+  saveMrMech() {
+    const name = document.getElementById('mr-name').value.trim();
+    const fn = document.getElementById('mr-fn').value;
+    const desc = document.getElementById('mr-desc').value.trim();
+    const id = document.getElementById('edit-mr-id').value;
+    if (!name || !fn) return;
+
+    DGRHistory.push();
+    if (id) {
+      const m = DGRState.mechs.find(x => x.id === id);
+      if (m) { m.name = name; m.controlled_function_id = fn; m.description = desc; }
+    } else {
+      DGRState.mechs.push({ id: this.uid(), name, controlled_function_id: fn, description: desc });
+    }
+    this.clearMrForm(); DGRHistory.push(); this.refreshUI();
+  },
+
+  editMr(id) {
+    const m = DGRState.mechs.find(x => x.id === id);
+    if (!m) return;
+    document.getElementById('edit-mr-id').value = m.id;
+    document.getElementById('mr-name').value = m.name;
+    document.getElementById('mr-fn').value = m.controlled_function_id;
+    document.getElementById('mr-desc').value = m.description || '';
+    document.getElementById('mrh3').textContent = "Editar Mecanismo";
+    document.getElementById('btn-cancel-mr').style.display = "inline-block";
+  },
+
+  clearMrForm() {
+    document.getElementById('edit-mr-id').value = '';
+    document.getElementById('mr-name').value = '';
+    document.getElementById('mr-desc').value = '';
+    document.getElementById('mrh3').textContent = "Novo Mecanismo de Resiliência";
+    document.getElementById('btn-cancel-mr').style.display = "none";
+  },
+
+  renderMechs() {
+    const target = document.getElementById('mr-list-target');
+    if (!DGRState.mechs.length) { target.innerHTML = `<div class="empty">Nenhum mecanismo.</div>`; return; }
+    let html = '';
+    DGRState.mechs.forEach(m => {
+      const fn = DGRState.fns.find(f => f.id === m.controlled_function_id)?.name || '?';
+      html += `
+        <div class="item-card">
+          <div class="item-card-body">
+            <div class="item-card-title">${this.esc(m.name)}</div>
+            <div class="item-card-sub">Função Protegida: <span style="color:#0f6e56">${this.esc(fn)}</span></div>
+          </div>
+          <div class="item-card-actions">
+            <button class="rtab" onclick="DGRManager.editMr('${m.id}')">✏️ Editar</button>
+            <button class="bdel" onclick="DGRManager.deleteMr('${m.id}')">🗑️ Excluir</button>
+          </div>
+        </div>`;
+    });
+    target.innerHTML = html;
+  },
+
+  deleteMr(id) {
+    DGRHistory.push();
+    DGRState.mechs = DGRState.mechs.filter(m => m.id !== id);
+    DGRHistory.push();
+    this.refreshUI();
+  },
+
+  // ── TAXONOMIA INTEGRADA COM TEMPLATES SEGUROS ──
+  renderTaxonomyAccordion(taxoKey, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!DGRState.fns.length) { container.innerHTML = ''; return; }
+
+    const T = TAXO[taxoKey];
+    const paramKey = {RE:'ve', RX:'vx', MR:'ar'}[taxoKey];
+    const color = T.color;
+    container.innerHTML = '';
+
+    DGRState.fns.forEach(fn => {
+      const isOpen = openSubcatFn[containerId] === fn.id;
+      const selCount = T.items.filter(i => DGRState.subs[fn.id]?.[i.code]?.sel).length;
+      const p = DGRState.params[fn.id]?.[paramKey] || {mn:0, mp:0, mx:0};
+
+      const block = document.createElement('div');
+      block.className = 'subcat-fn-block';
+      block.style.setProperty('--sc-color', color);
+
+      const hdr = document.createElement('div');
+      hdr.className = 'subcat-fn-hdr';
+      hdr.onclick = () => {
+        openSubcatFn[containerId] = openSubcatFn[containerId] === fn.id ? null : fn.id;
+        this.renderTaxonomyAccordion(taxoKey, containerId);
+      };
+
+      hdr.innerHTML = `
+        <span style="flex:1;font-weight:600">${this.esc(fn.name)}</span>
+        <span class="count-badge" style="background:${selCount > 0 ? color + '22' : '#f0f0f5'};color:${selCount > 0 ? color : '#9898b0'}">
+          ${selCount} selecionadas
+        </span>
+        <span style="font-size:10px;color:#9898b0;margin-left:6px">${isOpen ? '▲' : '▼'}</span>`;
+      block.appendChild(hdr);
+
+      const body = document.createElement('div');
+      body.className = `subcat-fn-body ${isOpen ? 'open' : ''}`;
+
+      T.groups.forEach(grp => {
+        const grpDiv = document.createElement('div');
+        grpDiv.className = 'subcat-group';
+        grpDiv.innerHTML = `<span class="subcat-group-lbl" style="background:${color}15;color:${color}">${grp.label}</span>`;
+
+        grp.items.forEach(item => {
+          const sv = DGRState.subs[fn.id]?.[item.code] || {sel:false, mn:0.1, mp:0.3, mx:0.6};
+          const itemDiv = document.createElement('div');
+          itemDiv.className = `subcat-item ${sv.sel ? 'sel' : ''}`;
+          
+          const row = document.createElement('div');
+          row.className = 'subcat-item-row';
+          row.onclick = () => {
+            DGRState.subs[fn.id][item.code].sel = !DGRState.subs[fn.id][item.code].sel;
+            this.recalcParams(fn.id);
+            this.renderTaxonomyAccordion(taxoKey, containerId);
+          };
+
+          row.innerHTML = `
+            <div class="subcat-check ${sv.sel ? 'on' : ''}">${sv.sel ? '<span style="color:#fff;font-size:10px;">✔</span>' : ''}</div>
+            <span style="font-family:monospace;font-weight:700;color:${color}">${item.code}</span>
+            <span style="font-size:12px;margin-left:4px">${this.esc(item.name)}</span>`;
+          itemDiv.appendChild(row);
+
+          if (sv.sel) {
+            const vals = document.createElement('div');
+            vals.className = 'subcat-vals';
+            vals.innerHTML = `
+              <div class="subcat-val-cell"><label>Mínimo</label><input type="number" class="pinp" step="0.01" value="${sv.mn}"></div>
+              <div class="subcat-val-cell"><label>Provável</label><input type="number" class="pinp" step="0.01" value="${sv.mp}"></div>
+              <div class="subcat-val-cell"><label>Máximo</label><input type="number" class="pinp" step="0.01" value="${sv.mx}"></div>`;
+            
+            const inputs = vals.querySelectorAll('input');
+            inputs[0].oninput = (e) => { DGRState.subs[fn.id][item.code].mn = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)); this.recalcParams(fn.id); };
+            inputs[1].oninput = (e) => { DGRState.subs[fn.id][item.code].mp = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)); this.recalcParams(fn.id); };
+            inputs[2].oninput = (e) => { DGRState.subs[fn.id][item.code].mx = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)); this.recalcParams(fn.id); };
+            itemDiv.appendChild(vals);
+          }
+          grpDiv.appendChild(itemDiv);
+        });
+        body.appendChild(grpDiv);
+      });
+      block.appendChild(body);
+      container.appendChild(block);
+    });
+  } ,
+
+  recalcParams(fnId) {
+    const process = (items, key) => {
+      const sel = items.filter(i => DGRState.subs[fnId]?.[i.code]?.sel);
+      if (sel.length) {
+        let sn = 0, sp = 0, sx = 0;
+        sel.forEach(i => { const s = DGRState.subs[fnId][i.code]; sn += s.mn; sp += s.mp; sx += s.mx; });
+        DGRState.params[fnId][key] = { mn: +(sn/sel.length).toFixed(3), mp: +(sp/sel.length).toFixed(3), mx: +(sx/sel.length).toFixed(3) };
+      }
+    };
+    process(TAXO.RE.items, 've'); process(TAXO.RX.items, 'vx'); process(TAXO.MR.items, 'ar');
+  },
+
+  // ── SIMULAÇÃO MONTE CARLO ──
+  setMcN(n) {
+    DGRState.mcN = n;
+    document.querySelectorAll('.itb').forEach(b => b.classList.remove('on'));
+    document.getElementById('mcn-' + n).classList.add('on');
+  },
+
+  triangularSample(mn, mp, mx) {
+    mn = Math.max(0, Math.min(1, +mn || 0)); mp = Math.max(mn, Math.min(1, +mp || 0)); mx = Math.max(mp, Math.min(1, +mx || 1));
+    if (mx === mn) return mp;
+    const u = Math.random(), fc = (mp - mn) / (mx - mn);
+    return u < fc ? mn + Math.sqrt(u * (mx - mn) * (mp - mn)) : mx - Math.sqrt((1 - u) * (mx - mn) * (mx - mp));
+  },
+
+  runSimulation() {
+    if (!DGRState.fns.length) { alert('Adicione funções.'); return; }
+    const N = DGRState.mcN;
+    const maxOD = Math.max(1, ...DGRState.fns.map(f => DGRState.coups.filter(c => c.source_function_id === f.id).length));
+
+    DGRState.fns.forEach(fn => {
+      const p = DGRState.params[fn.id] || { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.2,mp:0.4,mx:0.7} };
+      const vfrs = [];
+      for (let i = 0; i < N; i++) {
+        const VE = this.triangularSample(p.ve.mn, p.ve.mp, p.ve.mx);
+        const VX = this.triangularSample(p.vx.mn, p.vx.mp, p.vx.mx);
+        const AR = this.triangularSample(p.ar.mn, p.ar.mp, p.ar.mx);
+        vfrs.push(Math.max(0, Math.min(2, (VE + VX) * (1 - AR))));
+      }
+      vfrs.sort((a, b) => a - b);
+      const mean = vfrs.reduce((s, v) => s + v, 0) / N;
+      const p95 = vfrs[Math.floor(N * 0.95)];
+      const probCrit = vfrs.filter(v => v >= 0.70).length / N;
+      const ip = DGRState.coups.filter(c => c.source_function_id === fn.id).length / maxOD;
+
+      const hist = Array(20).fill(0);
+      vfrs.forEach(v => hist[Math.min(19, Math.floor(Math.min(v, 0.9999) * 20))]++);
+      const hmax = Math.max(...hist) || 1;
+
+      DGRState.mcRes[fn.id] = { mean, p90: vfrs[Math.floor(N*0.9)], p95, p99: vfrs[Math.floor(N*0.99)], probCrit, ip, iis: mean * ip, hist: hist.map(h => h / hmax) };
+    });
+    this.refreshUI();
+  },
+
+  renderKPIs(hasRes) {
+    const resFns = DGRState.fns.filter(f => DGRState.mcRes[f.id]);
+    const vfrVals = resFns.map(f => DGRState.mcRes[f.id].p95);
+    const avgVFR = vfrVals.length ? vfrVals.reduce((a, b) => a + b, 0) / vfrVals.length : null;
+    const avgProbCrit = resFns.length ? resFns.reduce((a, f) => a + DGRState.mcRes[f.id].probCrit, 0) / resFns.length : null;
+    const maxLC = vfrVals.length ? Math.max(...vfrVals) : null;
+
+    const stats = [
+      { val: DGRState.fns.length, lbl: 'Funções FRAM', color: '#4778e8' },
+      { val: DGRState.coups.length, lbl: 'Acoplamentos', color: '#185fa5' },
+      { val: DGRState.vars.filter(v => v.category === 'endogena').length, lbl: 'Perturbações RE', color: '#854f0b' },
+      { val: DGRState.vars.filter(v => v.category === 'exogena').length, lbl: 'Perturbações RX', color: '#c0392b' },
+      { val: DGRState.mechs.length, lbl: 'Mecanismos MR', color: '#0f6e56' },
+      { val: hasRes ? this.pct(avgVFR) : '-', lbl: 'VFR Média P95', color: hasRes ? this.vColor(avgVFR) : '#9898b0' },
+      { val: hasRes ? this.pct(maxLC) : '-', lbl: 'Limite Crítico Máx. (P95)', color: hasRes ? this.vColor(maxLC) : '#9898b0' },
+      { val: hasRes ? this.pct(avgProbCrit) : '-', lbl: 'Prob. Criticidade Média', color: hasRes ? this.vColor(avgProbCrit) : '#9898b0' }
+    ];
+    document.getElementById('dash-stats').innerHTML = stats.map(s => `
+      <div class="dash-card">
+        <div class="dash-card-val" style="color:${s.color}">${s.val}</div>
+        <div class="dash-card-lbl">${s.lbl}</div>
+      </div>`).join('');
+  },
+
+  renderCharts(hasRes) {
+    const sorted = DGRState.fns.filter(f => DGRState.mcRes[f.id]).sort((a, b) => DGRState.mcRes[b.id].p95 - DGRState.mcRes[a.id].p95);
+    ['ch-vfr', 'ch-donut', 'ch-hist', 'ch-iis'].forEach(id => {
+      document.getElementById(id).style.display = (hasRes && sorted.length) ? 'block' : 'none';
+      document.getElementById(id + '-empty').style.display = (hasRes && sorted.length) ? 'none' : 'block';
+    });
+    const hasMap = DGRState.fns.length > 0;
+    document.getElementById('ch-heat').style.display = hasMap ? 'block' : 'none';
+    document.getElementById('ch-heat-empty').style.display = hasMap ? 'none' : 'block';
+    if (hasMap) this.drawFramMap();
+
+    this.drawStaticVarsChart();
+    if (!hasRes || !sorted.length) return;
+
+    // CH-VFR
+    {
+      const cv = document.getElementById('ch-vfr'); const g = cv.getContext('2d');
+      cv.width = cv.parentElement.offsetWidth - 40; g.clearRect(0,0,cv.width,cv.height);
+      const bH = Math.min(22, (cv.height-40)/sorted.length - 4);
+      sorted.forEach((fn, i) => {
+        const r = DGRState.mcRes[fn.id]; const cH = (cv.height-40)/sorted.length; const y = 15 + i * cH;
+        g.fillStyle = '#f0f0f5'; g.fillRect(10, y, cv.width-80, bH);
+        g.fillStyle = this.vColor(r.p95); g.fillRect(10, y, (r.p95 / 2) * (cv.width-80), bH);
+        g.fillStyle = '#1a1a2e'; g.font = '10px sans-serif'; g.fillText(fn.name.substring(0,16), 15, y + bH/2 + 3);
+        g.fillStyle = this.vColor(r.p95); g.font = 'bold 10px sans-serif'; g.fillText(this.pct(r.p95), cv.width-65, y + bH/2 + 3);
+      });
+    }
+    // CH-DONUT
+    {
+      const cv = document.getElementById('ch-donut'); const g = cv.getContext('2d');
+      cv.width = cv.parentElement.offsetWidth - 40; g.clearRect(0,0,cv.width,cv.height);
+      const p95s = sorted.map(f => DGRState.mcRes[f.id].p95);
+      const cats = [
+        { col: '#c0392b', n: p95s.filter(v => v >= 0.70).length, l: 'Crítica (≥70%)' },
+        { col: '#854f0b', n: p95s.filter(v => v >= 0.50 && v < 0.70).length, l: 'Alta (50-70%)' },
+        { col: '#4778e8', n: p95s.filter(v => v >= 0.30 && v < 0.50).length, l: 'Mod (30-50%)' },
+        { col: '#0f6e56', n: p95s.filter(v => v < 0.30).length, l: 'Baixa (<30%)' }
+      ];
+      let sA = -Math.PI/2; const cx = cv.width/3, cy = cv.height/2;
+      cats.forEach(c => {
+        if (!c.n) return; const sweep = (c.n / p95s.length) * 2 * Math.PI;
+        g.beginPath(); g.moveTo(cx,cy); g.arc(cx,cy,55,sA,sA+sweep); g.closePath(); g.fillStyle = c.col; g.fill(); sA += sweep;
+      });
+      g.beginPath(); g.arc(cx,cy,32,0,Math.PI*2); g.fillStyle = '#fff'; g.fill();
+      cats.forEach((c, i) => {
+        g.fillStyle = c.col; g.fillRect(cx+80, 35+i*22, 12, 12);
+        g.fillStyle = '#1a1a2e'; g.font = '10px sans-serif'; g.fillText(`${c.l}: ${c.n}`, cx+98, 45+i*22);
+      });
+    }
+    // CH-HIST
+    {
+      const cv = document.getElementById('ch-hist'); const g = cv.getContext('2d');
+      cv.width = cv.parentElement.offsetWidth - 40; g.clearRect(0,0,cv.width,cv.height);
+      const bins = Array(20).fill(0); sorted.forEach(f => DGRState.mcRes[f.id].hist.forEach((v, bi) => bins[bi] += v));
+      const maxB = Math.max(...bins, 1); const bw = cv.width / 20;
+      bins.forEach((v, bi) => {
+        const bh = (v / maxB) * (cv.height - 20); g.fillStyle = this.vColor(bi / 10); g.fillRect(bi * bw, cv.height - bh - 5, bw - 1, bh);
+      });
+    }
+    // MAPA SISTÊMICO FRAM já desenhado por drawFramMap()
+    // CH-IIS
+    {
+      const cv = document.getElementById('ch-iis'); const g = cv.getContext('2d');
+      cv.width = cv.parentElement.offsetWidth - 40; g.clearRect(0,0,cv.width,cv.height);
+      const iisS = [...sorted].sort((a,b) => DGRState.mcRes[b.id].iis - DGRState.mcRes[a.id].iis);
+      const maxI = Math.max(...iisS.map(f => DGRState.mcRes[f.id].iis), 0.001);
+      const bH = Math.min(22, (cv.height-30)/iisS.length - 4);
+      iisS.forEach((fn, i) => {
+        const r = DGRState.mcRes[fn.id]; const y = 15 + i * (bH + 4);
+        g.fillStyle = '#eeedfe'; g.fillRect(10, y, cv.width-80, bH);
+        g.fillStyle = '#4778e8'; g.fillRect(10, y, (r.iis / maxI) * (cv.width-80), bH);
+        g.fillStyle = '#1a1a2e'; g.font = '10px sans-serif'; g.fillText(fn.name.substring(0,18), 15, y + bH/2 + 3);
+      });
+    }
+  },
+
+
+  drawFramMap() {
+    const cv = document.getElementById('ch-heat');
+    if (!cv) return;
+    const g = cv.getContext('2d');
+    cv.width = cv.parentElement.offsetWidth - 40;
+    cv.height = 280;
+    g.clearRect(0, 0, cv.width, cv.height);
+
+    const fns = DGRState.fns;
+    if (!fns.length) return;
+
+    const cols = Math.max(1, Math.ceil(Math.sqrt(fns.length * 1.5)));
+    const rows = Math.ceil(fns.length / cols);
+    const padX = 55, padY = 45;
+    const usableW = Math.max(200, cv.width - padX * 2);
+    const usableH = Math.max(160, cv.height - padY * 2);
+    const cellW = usableW / cols;
+    const cellH = usableH / rows;
+    const rx = Math.min(44, Math.max(30, cellW * 0.30));
+    const ry = Math.min(32, Math.max(24, cellH * 0.28));
+
+    const pos = {};
+    fns.forEach((fn, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = padX + cellW * (col + 0.5) + (row % 2 ? Math.min(18, cellW * .08) : 0);
+      const y = padY + cellH * (row + 0.5);
+      pos[fn.id] = { x, y };
+    });
+
+    const portPoint = (node, port) => {
+      const map = {
+        input: [-rx, 0],
+        output: [rx, 0],
+        precondition: [-rx * 0.50, -ry],
+        control: [rx * 0.50, -ry],
+        resource: [-rx * 0.50, ry],
+        time: [rx * 0.50, ry]
+      };
+      const d = map[port] || map.output;
+      return { x: node.x + d[0], y: node.y + d[1] };
+    };
+
+    const drawArrow = (x1, y1, x2, y2, color, dashed, width, label) => {
+      g.save();
+      g.strokeStyle = color;
+      g.fillStyle = color;
+      g.lineWidth = width;
+      if (dashed) g.setLineDash([6, 4]);
+      const mx = (x1 + x2) / 2;
+      const c1x = mx, c1y = y1;
+      const c2x = mx, c2y = y2;
+      g.beginPath();
+      g.moveTo(x1, y1);
+      g.bezierCurveTo(c1x, c1y, c2x, c2y, x2, y2);
+      g.stroke();
+      g.setLineDash([]);
+      const ang = Math.atan2(y2 - c2y, x2 - c2x);
+      const ah = 8;
+      g.beginPath();
+      g.moveTo(x2, y2);
+      g.lineTo(x2 - ah * Math.cos(ang - Math.PI / 6), y2 - ah * Math.sin(ang - Math.PI / 6));
+      g.lineTo(x2 - ah * Math.cos(ang + Math.PI / 6), y2 - ah * Math.sin(ang + Math.PI / 6));
+      g.closePath();
+      g.fill();
+      if (label) {
+        g.font = '9px sans-serif';
+        g.fillStyle = '#5a5a7a';
+        g.textAlign = 'center';
+        g.fillText(String(label).substring(0, 24), mx, (y1 + y2) / 2 - 5);
+      }
+      g.restore();
+    };
+
+    DGRState.coups.forEach(c => {
+      const a = pos[c.source_function_id], b = pos[c.target_function_id];
+      if (!a || !b) return;
+      const p1 = portPoint(a, c.source_port || 'output');
+      const p2 = portPoint(b, c.target_port || 'input');
+      const color = c.line_type === 'critical' ? '#c0392b' : c.line_type === 'variable' ? '#854f0b' : '#6b7280';
+      drawArrow(p1.x, p1.y, p2.x, p2.y, color, c.line_type === 'variable', c.line_type === 'critical' ? 2.4 : 1.5, c.label || '');
+    });
+
+    const ports = [
+      ['I', 'input'], ['O', 'output'], ['P', 'precondition'], ['C', 'control'], ['R', 'resource'], ['T', 'time']
+    ];
+
+    fns.forEach(fn => {
+      const n = pos[fn.id];
+      const r = DGRState.mcRes[fn.id];
+      const color = r ? this.vColor(r.p95) : '#4778e8';
+      const fill = r ? (r.p95 >= 0.70 ? '#fdecea' : r.p95 >= 0.50 ? '#faeeda' : r.p95 >= 0.30 ? '#eef2ff' : '#e8f8f0') : '#ffffff';
+      const pts = [
+        [n.x-rx*0.5,n.y-ry], [n.x+rx*0.5,n.y-ry], [n.x+rx,n.y],
+        [n.x+rx*0.5,n.y+ry], [n.x-rx*0.5,n.y+ry], [n.x-rx,n.y]
+      ];
+      g.beginPath();
+      pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
+      g.closePath();
+      g.fillStyle = fill;
+      g.strokeStyle = color;
+      g.lineWidth = 2;
+      g.fill();
+      g.stroke();
+
+      ports.forEach(([abbr, port]) => {
+        const pp = portPoint(n, port);
+        g.beginPath();
+        g.arc(pp.x, pp.y, 7, 0, Math.PI * 2);
+        g.fillStyle = '#fff';
+        g.strokeStyle = color;
+        g.lineWidth = 1.3;
+        g.fill(); g.stroke();
+        g.fillStyle = color;
+        g.font = 'bold 8px sans-serif';
+        g.textAlign = 'center';
+        g.fillText(abbr, pp.x, pp.y + 3);
+      });
+
+      g.fillStyle = '#1a1a2e';
+      g.font = 'bold 10px sans-serif';
+      g.textAlign = 'center';
+      const nm = fn.name.length > 24 ? fn.name.substring(0, 22) + '…' : fn.name;
+      g.fillText(nm, n.x, n.y - 2);
+      g.font = '9px sans-serif';
+      g.fillStyle = color;
+      g.fillText(r ? `P95 ${this.pct(r.p95,0)}` : 'sem simulação', n.x, n.y + 12);
+    });
+
+    g.fillStyle = '#5a5a7a';
+    g.font = '9px sans-serif';
+    g.textAlign = 'left';
+    g.fillText('Extremos FRAM: I=Input, O=Output, P=Precondition, R=Resource, C=Control, T=Time', 8, cv.height - 8);
+  },
+
+  drawStaticVarsChart() {
+    const cv = document.getElementById('ch-vars'); const g = cv.getContext('2d');
+    cv.width = cv.parentElement.offsetWidth - 40; g.clearRect(0,0,cv.width,cv.height);
+    const items = [
+      { lbl: 'Perturbações RE', val: DGRState.vars.filter(v => v.category === 'endogena').length, col: '#854f0b' },
+      { lbl: 'Perturbações RX', val: DGRState.vars.filter(v => v.category === 'exogena').length, col: '#c0392b' },
+      { lbl: 'Mecanismos MR', val: DGRState.mechs.length, col: '#0f6e56' }
+    ];
+    const maxV = Math.max(...items.map(i => i.val), 1);
+    items.forEach((item, i) => {
+      const y = 8 + i * 32; const bw = (item.val / maxV) * (cv.width - 150);
+      g.fillStyle = '#f0f0f5'; g.fillRect(130, y, cv.width - 150, 16);
+      g.fillStyle = item.col; g.fillRect(130, y, bw, 16);
+      g.fillStyle = '#1a1a2e'; g.font = '11px sans-serif'; g.textAlign = 'right'; g.fillText(item.lbl, 120, y + 12);
+      g.textAlign = 'left'; g.fillText(item.val, 136 + bw, y + 12);
+    });
+  },
+
+  renderMCPanel(hasRes) {
+    const target = document.getElementById('mc-inner');
+    if (!hasRes) { target.innerHTML = ''; return; }
+
+    const sorted = [...DGRState.fns].filter(f => DGRState.mcRes[f.id]).sort((a,b) => DGRState.mcRes[b.id].p95 - DGRState.mcRes[a.id].p95);
+    const maxP95 = Math.max(...sorted.map(f => DGRState.mcRes[f.id].p95), 0.001);
+
+    let html = `<div style="margin-top:20px"><div style="font-size:14px;font-weight:600;margin-bottom:10px">Ranking por Limite Crítico (P95)</div>`;
+    sorted.forEach((fn, i) => {
+      const r = DGRState.mcRes[fn.id]; const ci = this.critInfo(r.p95);
+      html += `
+        <div class="rcard">
+          <span class="rnum">#${i+1}</span>
+          <span class="rname">${this.esc(fn.name)}</span>
+          <span class="cbadge ${ci.cls}">${ci.lbl}</span>
+          <div class="rbar"><div class="rbarfill" style="width:${Math.round(r.p95/maxP95*100)}%;background:${this.vColor(r.p95)}"></div></div>
+          <span class="rval" style="color:${this.vColor(r.p95)}">${this.pct(r.p95)}</span>
+        </div>`;
+    });
+    html += `</div><div class="dgrid">`;
+
+    DGRState.fns.filter(f => DGRState.mcRes[f.id]).forEach(fn => {
+      const r = DGRState.mcRes[fn.id]; const ci = this.critInfo(r.p95);
+      html += `
+        <div class="dc">
+          <div class="dc-head"><span style="font-weight:700;">${this.esc(fn.name)}</span><span class="cbadge ${ci.cls}">${ci.lbl}</span></div>
+          <div class="sgrid">
+            <div class="sbox"><span class="sval">${this.pct(r.mean)}</span><span class="slbl">Média</span></div>
+            <div class="sbox"><span class="sval">${this.pct(r.p90)}</span><span class="slbl">P90</span></div>
+            <div class="sbox"><span class="sval" style="color:${this.vColor(r.p95)}">${this.pct(r.p95)}</span><span class="slbl">Limite Crítico (P95)</span></div>
+            <div class="sbox"><span class="sval">${this.pct(r.p99)}</span><span class="slbl">P99</span></div>
+            <div class="sbox"><span class="sval">${this.pct(r.ip)}</span><span class="slbl">IP</span></div>
+            <div class="sbox"><span class="sval">${this.pct(r.iis)}</span><span class="slbl">IIS</span></div>
+            <div class="sbox"><span class="sval" style="color:${this.vColor(r.probCrit)}">${this.pct(r.probCrit)}</span><span class="slbl">Prob. Criticidade</span></div>
+          </div>
+          <div class="histbars">${r.hist.map((hv,bi) => `<div class="hb" style="height:${Math.round(hv*50)}px;background:${this.vColor(bi/20)};opacity:${0.4+hv*0.6}"></div>`).join('')}</div>
+        </div>`;
+    });
+    html += `</div>`;
+    target.innerHTML = html;
+  },
+
+  // ── IMPORTAÇÃO / EXPORTAÇÃO CORPORATIVA ──
+  exportProject() {
+    const blob = new Blob([DGRState.serialize()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `dgr-project-${Date.now()}.dgrfram`;
+    a.click(); URL.revokeObjectURL(url);
+  },
+
+  importProject(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        DGRHistory.push();
+        DGRState.deserialize(evt.target.result);
+        DGRHistory.push();
+        this.refreshUI();
+        alert('Projeto integrado com sucesso!');
+      } catch(err) { alert('Falha no arquivo estrutural: ' + err.message); }
+    };
+    reader.readAsText(file); e.target.value = '';
+  },
+
+  saveToLocalStorage() {
+    localStorage.setItem('dgr_autosave', DGRState.serialize());
+    alert('Autosave atualizado localmente!');
+  },
+
+  loadData() {
+    const saved = localStorage.getItem('dgr_autosave');
+    if (saved) { try { DGRState.deserialize(saved); return; } catch(e){} }
+    
+    // Fallback de Amostra Padrão Coesa
+    DGRState.fns = [
+      { id: 'f1', name: 'Processar Benefícios Sociais Core', description: 'Cálculo de elegibilidade de liquidação financeira.' },
+      { id: 'f2', name: 'Validar Concorrência Cadastral Base', description: 'Cruzamento assíncrono de bases públicas contra fraudes.' }
+    ];
+    DGRState.coups = [{ id: 'c1', source_function_id: 'f2', target_function_id: 'f1', line_type: 'normal', label: 'Validações' }];
+    DGRState.fns.forEach(f => {
+      DGRState.params[f.id] = { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.2,mp:0.4,mx:0.7} };
+      DGRState.subs[f.id] = {};
+      [...TAXO.RE.items, ...TAXO.RX.items, ...TAXO.MR.items].forEach(i => { DGRState.subs[f.id][i.code] = { sel: false, mn: 0.1, mp: 0.3, mx: 0.6 }; });
+    });
+    this.refreshUI();
+  },
+
+  clearAll() {
+    if (!confirm('Zerar modelo atual?')) return;
+    DGRState.fns=[]; DGRState.coups=[]; DGRState.vars=[]; DGRState.mechs=[]; DGRState.resEvs=[]; DGRState.params={}; DGRState.subs={}; DGRState.mcRes={};
+    localStorage.removeItem('dgr_autosave');
+    this.refreshUI();
+  },
+
+  exportPDF() {
+    if (!window.jspdf) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4');
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('Relatório DGR-FRAM Analítico', 15, 18);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 15, 25);
+    doc.text('Modelo: VT = VE + VX; VFR = VT × (1 − AR); Limite Crítico = P95.', 15, 31);
+
+    let y = 42;
+    const sorted = DGRState.fns.filter(f => DGRState.mcRes[f.id]).sort((a,b) => DGRState.mcRes[b.id].p95 - DGRState.mcRes[a.id].p95);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('Ranking das funções por P95', 15, y);
+    y += 8;
+    doc.setFontSize(8);
+    doc.text('Função', 15, y);
+    doc.text('VFR média', 112, y);
+    doc.text('P90', 142, y);
+    doc.text('Limite Crítico P95', 165, y);
+    doc.text('P99', 205, y);
+    doc.text('Prob. Criticidade', 230, y);
+    doc.text('IIS', 267, y);
+    y += 4;
+    doc.line(15, y, 285, y);
+    y += 5;
+
+    doc.setFont('helvetica', 'normal');
+    sorted.forEach((f, i) => {
+      if (y > 185) { doc.addPage(); y = 18; }
+      const r = DGRState.mcRes[f.id];
+      const name = `${i+1}. ${f.name}`.slice(0, 58);
+      doc.text(name, 15, y);
+      doc.text(this.pct(r.mean), 112, y);
+      doc.text(this.pct(r.p90), 142, y);
+      doc.text(this.pct(r.p95), 165, y);
+      doc.text(this.pct(r.p99), 205, y);
+      doc.text(this.pct(r.probCrit), 230, y);
+      doc.text(this.pct(r.iis), 267, y);
+      y += 6;
+    });
+
+    const charts = [
+      { id: 'ch-vfr', title: 'VFR por Função (P95 — Limite Crítico)' },
+      { id: 'ch-hist', title: 'Histograma da Distribuição Agregada' },
+      { id: 'ch-heat', title: 'Mapa Sistêmico FRAM — Funções e Acoplamentos' },
+      { id: 'ch-iis', title: 'Índice de Impacto Sistêmico' }
+    ];
+
+    charts.forEach(ch => {
+      const cv = document.getElementById(ch.id);
+      if (!cv || cv.style.display === 'none') return;
+      doc.addPage();
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text(ch.title, 15, 18);
+      try {
+        const img = cv.toDataURL('image/png', 1.0);
+        doc.addImage(img, 'PNG', 15, 28, pageW - 30, Math.min(pageH - 45, 145));
+      } catch(e) {
+        doc.setFont('helvetica', 'normal');
+        doc.text('Não foi possível incorporar este gráfico ao PDF.', 15, 32);
+      }
+    });
+
+    doc.save('dgr-fram-analytics.pdf');
+  }};
+
+window.addEventListener('DOMContentLoaded', () => DGRManager.init());
+let openSubcatFn = {};
 </script>
 </body>
 </html>
