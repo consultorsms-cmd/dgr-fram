@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>DGR-FRAM Modeler & Simulator - v10.8 PDF GRAFICOS VETORIAIS CORRIGIDOS</title>
+<title>DGR-FRAM Modeler & Simulator - v10.9 PDF VETORIAL CORRIGIDO</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -184,7 +184,7 @@ textarea.fi{resize:vertical;min-height:55px}
   <div id="topbar">
     <div class="logo-area">
       <div class="title">DGR-FRAM</div>
-      <div class="sub">Modeler & Simulator • v10.8 • PDF corrigido • gráficos vetoriais • sem variabilidades • Σ • RF Total</div>
+      <div class="sub">Modeler & Simulator • v10.9 • PDF vetorial corrigido • sem painel de variabilidades • Σ • RF Total</div>
     </div>
     <div class="actions">
       <button class="gbtn" onclick="DGRManager.saveToLocalStorage()">💾 Salvar</button>
@@ -2556,135 +2556,144 @@ const DGRManager = {
 
 
 // ─────────────────────────────────────────────
-// v10.8: exportação PDF robusta com gráficos vetoriais em canvas próprio.
-// Não depende de html2canvas, visibilidade da tela, scroll ou canvas exibido.
+// v10.9: exportação PDF 100% vetorial para gráficos do dashboard
+// Não depende de canvas/html2canvas, eliminando páginas em branco.
 // ─────────────────────────────────────────────
 (function(){
-  function pct(v,d=1){ return ((+v||0)*100).toFixed(d)+'%'; }
-  function short(s,n){ s=String(s||''); return s.length>n ? s.slice(0,n-1)+'…' : s; }
-  function colorFor(v){
-    v=+v||0;
-    if(v>=0.70) return '#c0392b';
-    if(v>=0.50) return '#f59e0b';
-    if(v>=0.30) return '#eab308';
-    return '#0f6e56';
-  }
-  function hexToRgb(hex){
-    const m=String(hex||'').match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
-    return m ? {r:parseInt(m[1],16),g:parseInt(m[2],16),b:parseInt(m[3],16)} : {r:80,g:80,b:80};
-  }
-  function setupCanvas(w,h,title){
-    const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
-    const g=cv.getContext('2d');
-    g.fillStyle='#fff'; g.fillRect(0,0,w,h);
-    g.fillStyle='#1a1a2e'; g.font='700 34px Segoe UI, Arial, sans-serif';
-    g.fillText(title,34,48);
-    return {cv,g};
-  }
-  DGRManager.buildPDFChartCanvasV108=function(kind,width=1500,height=760){
-    const rows=(this.resultRows ? this.resultRows() : []).filter(x=>x&&x.fn&&x.r);
-    const titles={vfr:'VFR por Função (P95 — Limite Crítico)',donut:'Distribuição de Criticidade Estrutural',hist:'Histograma de Risco Acumulado — Distribuição Agregada',heat:'Propagação da Variabilidade na Rede FRAM',iis:'IIS = VFR + RF (sem normalização)'};
-    const {cv,g}=setupCanvas(width,height,titles[kind]||'Gráfico DGR-FRAM');
-    if(!rows.length){ g.fillStyle='#6b7280'; g.font='26px Segoe UI, Arial, sans-serif'; g.fillText('Sem dados simulados. Execute a simulação antes de exportar.',34,110); return cv; }
-    const byP95=[...rows].sort((a,b)=>(b.vfr||0)-(a.vfr||0));
-    const byIIS=[...rows].sort((a,b)=>(b.iis||0)-(a.iis||0));
+  function stripAccents(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+  function trunc(s,n){ s=String(s||''); return s.length>n?s.slice(0,n-1)+'…':s; }
+  function pct(v,d=1){ return ((Number(v)||0)*100).toFixed(d)+'%'; }
+  function hexToRgb(hex){ const m=String(hex||'').match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i); return m?{r:parseInt(m[1],16),g:parseInt(m[2],16),b:parseInt(m[3],16)}:{r:80,g:80,b:80}; }
+  function setHex(doc,hex){ const c=hexToRgb(hex); doc.setFillColor(c.r,c.g,c.b); doc.setDrawColor(c.r,c.g,c.b); doc.setTextColor(c.r,c.g,c.b); }
+  function vColor(v){ return DGRManager.vColor ? DGRManager.vColor(Math.min(1,Math.max(0,Number(v)||0))) : ((v>=.7)?'#c0392b':(v>=.5)?'#f59e0b':(v>=.3)?'#eab308':'#0f6e56'); }
+
+  DGRManager.pdfChartPageV109 = function(doc, kind, pageW, pageH){
+    const rows = (this.resultRows ? this.resultRows() : []).filter(x=>x && x.fn && x.r);
+    doc.addPage();
+    doc.setTextColor(0,0,0);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(15);
+    const titles = {
+      vfr:'VFR por Função (P95 — Limite Crítico)',
+      donut:'Distribuição de Criticidade Estrutural',
+      hist:'Histograma da Distribuição Agregada',
+      heat:'Propagação da Variabilidade na Rede FRAM',
+      iis:'IIS = VFR + RF (sem normalização)'
+    };
+    doc.text(titles[kind] || 'Gráfico', 15, 18);
+    if(!rows.length){ doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text('Execute a simulação antes de exportar.',15,32); return; }
+
     if(kind==='vfr' || kind==='iis'){
-      const list=kind==='vfr'?byP95:byIIS;
-      const left=370,right=150,top=95,gap=18;
-      const bh=Math.max(26,Math.min(54,(height-top-45)/Math.max(1,list.length)-gap));
-      const maxVal=Math.max(1,...list.map(x=>kind==='vfr'?(x.vfr||0):(x.iis||0)));
+      const list = [...rows].sort((a,b)=>(kind==='vfr'?b.vfr-a.vfr:b.iis-a.iis));
+      const maxVal = Math.max(1, ...list.map(x=>kind==='vfr'?x.vfr:x.iis));
+      const left=78, top=34, right=32, barH=Math.min(12, Math.max(6, (pageH-top-18)/Math.max(1,list.length)-3));
+      doc.setFont('helvetica','normal'); doc.setFontSize(8);
       list.forEach((x,i)=>{
-        const val=kind==='vfr'?(x.vfr||0):(x.iis||0);
-        const y=top+i*(bh+gap); const bw=(width-left-right)*(val/maxVal);
-        g.fillStyle='#4c5570'; g.font='22px Segoe UI, Arial, sans-serif'; g.textAlign='right';
-        g.fillText(short(x.fn.name,34),left-18,y+bh*.68);
-        g.fillStyle='#eef0f6'; g.fillRect(left,y,width-left-right,bh);
-        g.fillStyle=colorFor(Math.min(1,val)); g.fillRect(left,y,bw,bh);
-        g.fillStyle='#1a1a2e'; g.font='700 22px Segoe UI, Arial, sans-serif'; g.textAlign='left';
-        g.fillText(pct(val),left+bw+12,y+bh*.68);
+        const val = kind==='vfr'?x.vfr:x.iis;
+        const y=top+i*(barH+3);
+        doc.setTextColor(45,52,68); doc.text(trunc(x.fn.name,32), left-3, y+barH*0.68, {align:'right'});
+        doc.setFillColor(238,240,246); doc.rect(left,y,pageW-left-right,barH,'F');
+        const c=hexToRgb(vColor(val)); doc.setFillColor(c.r,c.g,c.b); doc.rect(left,y,(val/maxVal)*(pageW-left-right),barH,'F');
+        doc.setTextColor(20,24,36); doc.setFont('helvetica','bold'); doc.text(pct(val), left+(val/maxVal)*(pageW-left-right)+3, y+barH*0.68);
+        doc.setFont('helvetica','normal');
       });
-      return cv;
+      doc.setTextColor(100,105,115); doc.setFontSize(8);
+      doc.text(kind==='vfr'?'Barras ordenadas por P95/VFR.':'Barras ordenadas pelo Índice Integrado Sistêmico: IIS = VFR + RF.',15,pageH-9);
+      return;
     }
+
     if(kind==='donut'){
-      const vals=rows.map(x=>x.vfr||0);
-      const cats=[
-        {label:'Crítica (≥70%)',color:'#c0392b',n:vals.filter(v=>v>=.70).length},
-        {label:'Alta (50–70%)',color:'#f59e0b',n:vals.filter(v=>v>=.50&&v<.70).length},
-        {label:'Moderada (30–50%)',color:'#eab308',n:vals.filter(v=>v>=.30&&v<.50).length},
-        {label:'Baixa (<30%)',color:'#0f6e56',n:vals.filter(v=>v<.30).length}
+      const vals = rows.map(x=>x.vfr||0);
+      const cats = [
+        {label:'Crítica (≥70%)', col:'#c0392b', n:vals.filter(v=>v>=.70).length},
+        {label:'Alta (50–70%)', col:'#f59e0b', n:vals.filter(v=>v>=.50&&v<.70).length},
+        {label:'Moderada (30–50%)', col:'#eab308', n:vals.filter(v=>v>=.30&&v<.50).length},
+        {label:'Baixa (<30%)', col:'#0f6e56', n:vals.filter(v=>v<.30).length}
       ];
-      const total=Math.max(1,vals.length), cx=width*.34, cy=height*.54, R=Math.min(width,height)*.30;
-      let a=-Math.PI/2;
-      cats.forEach(c=>{ if(c.n<=0)return; const sweep=(c.n/total)*Math.PI*2; g.beginPath(); g.moveTo(cx,cy); g.arc(cx,cy,R,a,a+sweep,false); g.closePath(); g.fillStyle=c.color; g.fill(); a+=sweep; });
-      g.fillStyle='#fff'; g.beginPath(); g.arc(cx,cy,R*.52,0,Math.PI*2); g.fill();
-      g.textAlign='center'; g.fillStyle='#1a1a2e'; g.font='800 66px Segoe UI, Arial, sans-serif'; g.fillText(String(total),cx,cy-4);
-      g.font='24px Segoe UI, Arial, sans-serif'; g.fillStyle='#6b7280'; g.fillText('funções',cx,cy+40);
-      const lx=width*.62, ly=height*.30;
-      cats.forEach((c,i)=>{ const y=ly+i*72; const pc=Math.round(c.n/total*100); g.fillStyle=c.color; g.fillRect(lx,y-24,34,34); g.fillStyle='#1a1a2e'; g.textAlign='left'; g.font='700 28px Segoe UI, Arial, sans-serif'; g.fillText(`${c.label}: ${c.n} (${pc}%)`,lx+52,y+3); });
-      g.fillStyle='#6b7280'; g.font='20px Segoe UI, Arial, sans-serif'; g.fillText('Classificação conforme P95/VFR das funções simuladas.',34,height-30);
-      return cv;
+      const total=Math.max(1, vals.length), x0=35, y0=42, w=195, h=22;
+      let x=x0;
+      cats.forEach(c=>{ const ww=(c.n/total)*w; const rgb=hexToRgb(c.col); doc.setFillColor(rgb.r,rgb.g,rgb.b); if(ww>0) doc.rect(x,y0,ww,h,'F'); x+=ww; });
+      doc.setDrawColor(210,215,225); doc.rect(x0,y0,w,h);
+      doc.setFont('helvetica','bold'); doc.setFontSize(28); doc.setTextColor(20,24,36); doc.text(String(total), 250, 58, {align:'center'});
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(90,95,110); doc.text('funções', 250, 66, {align:'center'});
+      let yy=88; cats.forEach(c=>{ const rgb=hexToRgb(c.col); doc.setFillColor(rgb.r,rgb.g,rgb.b); doc.rect(60,yy-5,7,7,'F'); doc.setTextColor(20,24,36); doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.text(`${c.label}: ${c.n} (${Math.round(c.n/total*100)}%)`,72,yy+1); yy+=14; });
+      doc.setTextColor(100,105,115); doc.setFontSize(8); doc.text('Classificação conforme P95/VFR das funções simuladas.',15,pageH-9);
+      return;
     }
+
     if(kind==='hist'){
       const bins=Array(20).fill(0);
-      rows.forEach(x=>(x.r.hist||[]).forEach((v,i)=>{ if(i<20) bins[i]+= (+v||0); }));
-      if(bins.reduce((a,b)=>a+b,0)<=0) rows.forEach(x=>{ const bi=Math.max(0,Math.min(19,Math.floor((x.vfr||0)*19))); bins[bi]+=1; });
-      const maxB=Math.max(1,...bins), left=65, top=95, bottom=75, right=45, gap=6, gw=width-left-right, gh=height-top-bottom, bw=gw/bins.length;
-      bins.forEach((v,i)=>{ const h=(v/maxB)*gh, x=left+i*bw, y=top+gh-h; g.fillStyle=colorFor(i/19); g.fillRect(x,y,Math.max(4,bw-gap),h); });
-      g.strokeStyle='#d9dde8'; g.lineWidth=2; g.beginPath(); g.moveTo(left,top+gh); g.lineTo(left+gw,top+gh); g.stroke();
-      g.fillStyle='#6b7280'; g.font='20px Segoe UI, Arial, sans-serif'; g.textAlign='left'; g.fillText('Baixa',left,height-30); g.textAlign='right'; g.fillText('Crítica',left+gw,height-30);
-      return cv;
+      rows.forEach(x=>{ const hist=x.r.hist||[]; hist.forEach((v,i)=>{ if(i<20) bins[i]+=Number(v)||0; }); });
+      if(bins.reduce((a,b)=>a+b,0)<=0){ rows.forEach(x=>{ const bi=Math.max(0,Math.min(19,Math.floor((x.vfr||0)*19))); bins[bi]+=1; }); }
+      const maxB=Math.max(1,...bins), left=22, top=34, base=165, barW=(pageW-left-18)/bins.length;
+      bins.forEach((v,i)=>{ const bh=(v/maxB)*(base-top); const c=hexToRgb(vColor(i/19)); doc.setFillColor(c.r,c.g,c.b); doc.rect(left+i*barW, base-bh, Math.max(1,barW-1.6), bh, 'F'); });
+      doc.setDrawColor(210,215,225); doc.line(left,base,pageW-18,base);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(100,105,115); doc.text('Baixa',left,pageH-18); doc.text('Crítica',pageW-35,pageH-18);
+      return;
     }
+
     if(kind==='heat'){
-      const nodes=byIIS.slice(0,Math.max(1,Math.min(byIIS.length,10))).map(x=>x.fn);
-      const n=nodes.length, matrix=this.computePropagationMatrix(nodes,5), maxVal=Math.max(.0001,...matrix.flat());
-      const left=335, top=155, right=65, bottom=75, gw=width-left-right, gh=height-top-bottom, cw=gw/n, ch=gh/n;
-      g.fillStyle='#4c5570'; g.font='700 20px Segoe UI, Arial, sans-serif'; g.textAlign='left'; g.fillText('Destino \\ Origem',34,104);
-      nodes.forEach((fn,j)=>{ const x=left+j*cw+cw/2; g.save(); g.translate(x,top-18); g.rotate(-.62); g.font='18px Segoe UI, Arial, sans-serif'; g.fillStyle='#4c5570'; g.textAlign='left'; g.fillText(short(fn.name,18),0,0); g.restore(); });
-      nodes.forEach((fn,i)=>{ const y=top+i*ch; g.fillStyle='#4c5570'; g.font='18px Segoe UI, Arial, sans-serif'; g.textAlign='right'; g.fillText(short(fn.name,27),left-12,y+ch/2+6); nodes.forEach((_,j)=>{ const x=left+j*cw, val=matrix[i][j]||0, norm=val/maxVal; const col=norm>.66?'#c0392b':norm>.33?'#f59e0b':'#0f6e56'; const rgb=hexToRgb(col); g.fillStyle=val>0?`rgba(${rgb.r},${rgb.g},${rgb.b},${.16+norm*.82})`:'#f5f6fa'; g.fillRect(x,y,Math.max(2,cw-4),Math.max(2,ch-4)); if(val>0&&cw>42&&ch>28){ g.fillStyle=norm>.56?'#fff':'#1a1a2e'; g.font='700 18px Segoe UI, Arial, sans-serif'; g.textAlign='center'; g.fillText(Math.round(val*100),x+cw/2,y+ch/2+6); } }); });
-      g.fillStyle='#6b7280'; g.font='18px Segoe UI, Arial, sans-serif'; g.textAlign='left'; g.fillText('Células = influência acumulada direta + indireta em cascata.',34,height-30);
-      return cv;
+      const list=[...rows].sort((a,b)=>b.iis-a.iis).slice(0,Math.min(10, rows.length));
+      const nodes=list.map(x=>x.fn), n=nodes.length;
+      const matrix=this.computePropagationMatrix(nodes,5);
+      const maxVal=Math.max(0.0001, ...matrix.flat());
+      const left=70, top=42, gridW=190, gridH=130, cellW=gridW/n, cellH=gridH/n;
+      doc.setFont('helvetica','normal'); doc.setFontSize(6.8); doc.setTextColor(65,70,85);
+      nodes.forEach((fn,j)=>{ doc.text(trunc(fn.name,12), left+j*cellW+cellW/2, top-3, {align:'center', angle:25}); });
+      nodes.forEach((fn,i)=>{
+        const y=top+i*cellH;
+        doc.setTextColor(65,70,85); doc.text(trunc(fn.name,22), left-3, y+cellH/2+2, {align:'right'});
+        nodes.forEach((_,j)=>{
+          const x=left+j*cellW, val=matrix[i][j]||0, norm=val/maxVal;
+          if(val>0){ const col = norm>.66?hexToRgb('#c0392b'):norm>.33?hexToRgb('#f59e0b'):hexToRgb('#0f6e56'); const blend=0.18+norm*0.82; doc.setFillColor(255-(255-col.r)*blend,255-(255-col.g)*blend,255-(255-col.b)*blend); }
+          else doc.setFillColor(245,246,250);
+          doc.rect(x,y,Math.max(1,cellW-1),Math.max(1,cellH-1),'F');
+          if(val>0 && cellW>10 && cellH>7){ doc.setFont('helvetica','bold'); doc.setFontSize(6); doc.setTextColor(norm>.55?255:20,norm>.55?255:20,norm>.55?255:35); doc.text(String(Math.round(val*100)), x+cellW/2, y+cellH/2+2, {align:'center'}); }
+        });
+      });
+      doc.setTextColor(100,105,115); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('Influência acumulada direta + indireta em cascata.',15,pageH-9);
     }
-    return cv;
   };
 
   DGRManager.exportPDF = async function(){
     if(!window.jspdf) return;
-    const hasRes=DGRState.fns.some(f=>DGRState.mcRes[f.id]);
-    if(hasRes){ this.calculateNetworkResonance(); }
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF('l','mm','a4');
-    const pageW=doc.internal.pageSize.getWidth(), pageH=doc.internal.pageSize.getHeight();
-    const rows=this.resultRows(), sortedIIS=[...rows].sort((a,b)=>(b.iis||0)-(a.iis||0));
-    const d=this.networkDiagnostics ? this.networkDiagnostics() : {igr:0};
-    let y=16;
-    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Relatório DGR-FRAM Analítico',15,y); y+=8;
-    doc.setFont('helvetica','normal'); doc.setFontSize(9);
-    doc.text('Modelo: Beta-PERT; VT = VE + VX; VFR = VT × (1 − AR); IIS = VFR + RF; Limite Crítico = P95.',15,y); y+=6;
-    doc.text(`IGR do Sistema: ${pct(d.igr||this.calcIGR())}`,15,y); y+=8;
-    doc.setFont('helvetica','bold'); doc.text('Ranking por IIS',15,y); y+=7;
-    doc.setFontSize(7.5); doc.text('Função',15,y); doc.text('VFR/P95',108,y); doc.text('RF Rec.',135,y); doc.text('RF Emit.',162,y); doc.text('RF Total',190,y); doc.text('IIS',220,y); doc.text('Estado',242,y); y+=5;
-    doc.setFont('helvetica','normal');
-    sortedIIS.forEach((x,i)=>{ if(y>190){doc.addPage(); y=16;} const rfTot=(x.rf||0)+(x.r.emittedResonance||0); doc.text(`${i+1}. ${x.fn.name}`.slice(0,48),15,y); doc.text(pct(x.vfr),108,y); doc.text(pct(x.rf),135,y); doc.text(pct(x.r.emittedResonance||0),162,y); doc.text(pct(rfTot),190,y); doc.text(pct(x.iis),220,y); doc.text(String(x.state||'Normal').normalize('NFD').replace(/[\u0300-\u036f]/g,''),242,y); y+=6; });
-    y+=5; if(y>150){doc.addPage(); y=16;}
-    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text('Critério matemático de Saturação Sistêmica',15,y); y+=7;
-    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-    doc.text('IISᵢ = VFRᵢ + RFᵢ',15,y); y+=6;
-    doc.text('Normal: IISᵢ < 1,00; Saturado: 1,00 ≤ IISᵢ < 1,20; Colapso Potencial: IISᵢ ≥ 1,20.',15,y); y+=10;
-    doc.setFont('helvetica','bold'); doc.text('Rotas críticas de ressonância',15,y); y+=6; doc.setFont('helvetica','normal');
-    (this.findCriticalRoutes?this.findCriticalRoutes(3):[]).forEach((r,i)=>{ if(y>190){doc.addPage(); y=16;} doc.text(`Rota ${i+1}: ${r.names.join(' → ')} | Intensidade: ${pct(Math.min(1,r.score))}`.slice(0,155),15,y); y+=6; });
-    // Matriz
-    doc.addPage(); y=16; doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text('Matriz de Propagação em Cascata (direta + indireta)',15,y); y+=8;
-    const pm=this.computePropagationMatrix(DGRState.fns,5), maxPM=Math.max(.0001,...pm.flat());
-    const n=DGRState.fns.length, startX=82, startY=42, cellW=Math.min(26,(pageW-startX-12)/Math.max(1,n)), cellH=10;
-    doc.setFontSize(6.5); doc.text('Destino \\ Origem',15,34); DGRState.fns.forEach((f,j)=>doc.text(f.name.slice(0,15),startX+j*cellW,34,{angle:25}));
-    doc.setFont('helvetica','normal');
-    DGRState.fns.forEach((f,i)=>{ const yy=startY+i*cellH; doc.text(f.name.slice(0,26),15,yy+6); DGRState.fns.forEach((_,j)=>{ const val=pm[i][j]||0, norm=val/maxPM; const c=norm>.66?[192,57,43]:norm>.33?[245,158,11]:[15,110,86]; if(val>0) doc.setFillColor(c[0],c[1],c[2]); else doc.setFillColor(245,246,250); doc.rect(startX+j*cellW,yy,cellW-1,cellH-1,'F'); if(val>0){ doc.setTextColor(norm>.55?255:0,norm>.55?255:0,norm>.55?255:0); doc.text(String(Math.round(val*100)),startX+j*cellW+cellW/2,yy+6,{align:'center'}); doc.setTextColor(0,0,0); } }); });
-    // Mapa FRAM
-    if(this.drawFramMapPDF){ this.drawFramMapPDF(doc,pageW,pageH); }
-    // Páginas de gráficos, todas por canvas próprio
-    const charts=[['vfr','VFR por Função (P95 — Limite Crítico)'],['donut','Distribuição de Criticidade Estrutural'],['hist','Histograma de Risco Acumulado — Distribuição Agregada'],['heat','Propagação da Variabilidade na Rede FRAM'],['iis','IIS = VFR + RF (sem normalização)']];
-    charts.forEach(([kind,title])=>{ doc.addPage(); const cv=this.buildPDFChartCanvasV108(kind,1500,760); const img=cv.toDataURL('image/png',1); doc.addImage(img,'PNG',10,10,pageW-20,pageH-20); });
-    doc.save('dgr-fram-analytics-v10-8-pdf-corrigido.pdf');
+    if(DGRState.fns.some(f=>DGRState.mcRes[f.id])) this.calculateNetworkResonance();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l','mm','a4');
+    const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
+    const rows=this.resultRows(), sortedP95=[...rows].sort((a,b)=>b.vfr-a.vfr), sortedIIS=[...rows].sort((a,b)=>b.iis-a.iis);
+    const d=this.networkDiagnostics(), igrInfo=this.igrClass(d.igr);
+    let y=18;
+    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Relatório DGR-FRAM Analítico',15,y); y+=7;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`,15,y); y+=6;
+    doc.text('Modelo: Beta-PERT; VT = VE + VX; VFR = VT x (1 - AR); IIS = VFR + RF; Limite Critico = P95.',15,y); y+=6;
+    this.pdfCanvasText(doc,'Fórmula do IGR: IGR = Σ IISᵢ / N; IISᵢ = VFRᵢ + RFᵢ. Sem normalização oculta.',15,y,260,9); y+=8;
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(`IGR do Sistema: ${pct(d.igr)} (${igrInfo.lbl})`,15,y); y+=8;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(doc.splitTextToSize(stripAccents(this.autoInterpretationText().replace(/Σ/g,'Soma')),260),15,y); y+=17;
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Ranking por IIS',15,y); y+=7; doc.setFontSize(8);
+    ['Função','VFR/P95','RF Rec.','RF Emit.','RF Total','IIS','Criticidade','Estado'].forEach((h,i)=>doc.text(h,[15,108,132,156,180,204,226,252][i],y)); y+=3; doc.line(15,y,285,y); y+=5; doc.setFont('helvetica','normal');
+    sortedIIS.forEach((x,i)=>{ if(y>188){doc.addPage(); y=18;} const rfTotal=(x.rf||0)+(x.r.emittedResonance||0); doc.text(`${i+1}. ${x.fn.name}`.slice(0,48),15,y); doc.text(pct(x.vfr),108,y); doc.text(pct(x.rf),132,y); doc.text(pct(x.r.emittedResonance||0),156,y); doc.text(pct(rfTotal),180,y); doc.text(pct(x.iis),204,y); this.pdfCritLabel(doc,226,y,x.crit); doc.text(stripAccents(x.state||'Normal'),252,y); y+=6; });
+    y+=5; if(y>160){doc.addPage(); y=18;} doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Ranking das funções por P95',15,y); y+=7; doc.setFontSize(8);
+    ['Função','VFR média','P90','P95','RF','P99','Prob. Crit.','IIS'].forEach((h,i)=>doc.text(h,[15,108,136,160,184,207,232,262][i],y)); y+=3; doc.line(15,y,285,y); y+=5; doc.setFont('helvetica','normal');
+    sortedP95.forEach((x,i)=>{ if(y>188){doc.addPage(); y=18;} const r=x.r; doc.text(`${i+1}. ${x.fn.name}`.slice(0,56),15,y); doc.text(pct(r.mean),108,y); doc.text(pct(r.p90),136,y); doc.text(pct(r.p95),160,y); doc.text(pct(x.rf),184,y); doc.text(pct(r.p99),207,y); doc.text(pct(r.probCrit),232,y); doc.text(pct(x.iis),262,y); y+=6; });
+
+    doc.addPage(); y=18; doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text('Diagnóstico Automático da Rede FRAM',15,y); y+=8; doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    [`Maior IIS: ${d.maiorIIS?.fn.name || '-'} (${d.maiorIIS?pct(d.maiorIIS.iis):'-'})`,`Maior RF recebido: ${d.maiorRF?.fn.name||'-'} (${d.maiorRF?pct(d.maiorRF.rf):'-'})`,`Maior P95: ${d.maiorP95?.fn.name||'-'} (${d.maiorP95?pct(d.maiorP95.vfr):'-'})`,`Maior emissor de variabilidade: ${d.emissor.name} (${pct(d.emissor.value)})`,`Maior receptor de variabilidade: ${d.receptor.name} (${pct(d.receptor.value)})`,`Maior centralidade FRAM: ${d.maiorCentralidade?.fn.name||'-'} (${d.maiorCentralidade?pct(d.maiorCentralidade.r.centrality||0):'-'})`].forEach(line=>{doc.text(stripAccents(line),15,y); y+=6;});
+    y+=5; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Rotas críticas de ressonância',15,y); y+=7; doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    const routes=this.findCriticalRoutes(3); if(!routes.length){doc.text('Nenhuma rota crítica identificada.',15,y); y+=6;} routes.forEach((r,i)=>{ const t=`Rota ${i+1}: ${r.names.join(' → ')} | Intensidade: ${pct(Math.min(1,r.score))}`; doc.text(doc.splitTextToSize(stripAccents(t),260),15,y); y+=8;});
+    y+=4; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Critério matemático de Saturação Sistêmica',15,y); y+=7; this.pdfCanvasText(doc,'Saturação Sistêmica: Normal se IISᵢ < 1,00; Saturado se 1,00 ≤ IISᵢ < 1,20; Colapso Potencial se IISᵢ ≥ 1,20.',15,y,260,8.5); y+=10;
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('RF recebida e emitida por função',15,y); y+=7; doc.setFontSize(8); ['Função','RF Direta','RF Indireta','RF Recebida','RF Emitida','RF Total','IIS','Classe'].forEach((h,i)=>doc.text(h,[15,82,110,140,170,198,224,248][i],y)); y+=3; doc.line(15,y,285,y); y+=5; doc.setFont('helvetica','normal');
+    sortedIIS.forEach(x=>{ if(y>188){doc.addPage(); y=18;} const rfTotal=(x.rf||0)+(x.r.emittedResonance||0); doc.text(x.fn.name.slice(0,32),15,y); doc.text(pct(x.r.directResonance||0),82,y); doc.text(pct(x.r.indirectResonance||0),110,y); doc.text(pct(x.rf),140,y); doc.text(pct(x.r.emittedResonance||0),170,y); doc.text(pct(rfTotal),198,y); doc.text(pct(x.iis),224,y); this.pdfCritLabel(doc,248,y,x.crit); y+=6; });
+
+    // Mapa e matriz
+    doc.addPage(); y=18; doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text('Matriz de Propagacao em Cascata (direta + indireta)',15,y); y+=8; doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('Cada celula representa a influencia acumulada da origem sobre o destino em multiplas camadas da rede FRAM.',15,y); y+=8;
+    const pm=this.computePropagationMatrix(DGRState.fns,5), maxPM=Math.max(0.0001,...pm.flat()), startX=52,startY=y+8,cellW=Math.min(34,210/Math.max(1,DGRState.fns.length)),cellH=9;
+    doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.text('Destino \\ Origem',15,y+5); DGRState.fns.forEach((f,i)=>doc.text(f.name.slice(0,18),startX+i*cellW,y+5,{angle:25})); doc.setFont('helvetica','normal');
+    DGRState.fns.forEach((fn,i)=>{ const yy=startY+i*cellH; doc.text(fn.name.slice(0,24),15,yy+5); DGRState.fns.forEach((_,j)=>{ const val=pm[i][j]||0,norm=val/maxPM; if(val>0) doc.setFillColor(230-Math.round(norm*90),245-Math.round(norm*160),240-Math.round(norm*190)); else doc.setFillColor(245,246,250); doc.rect(startX+j*cellW,yy,cellW-1,cellH-1,'F'); if(val>0) doc.text(String(Math.round(val*100)),startX+j*cellW+cellW/2,yy+5.7,{align:'center'}); }); });
+    this.drawFramMapPDF(doc,pageW,pageH);
+
+    ['vfr','donut','hist','heat','iis'].forEach(k=>this.pdfChartPageV109(doc,k,pageW,pageH));
+    doc.save('dgr-fram-analytics-v10-9-pdf-vetorial.pdf');
   };
 })();
 
