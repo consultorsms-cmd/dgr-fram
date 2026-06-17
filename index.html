@@ -126,6 +126,18 @@ textarea.fi{resize:vertical;min-height:55px}
 .hb{border-radius:1px 1px 0 0;flex:1;min-width:0}
 .histax{display:flex;justify-content:space-between;font-size:8px;color:#9898b0;margin-top:2px}
 
+/* ── FRAM MAP WORKSPACE ── */
+.fram-workspace{background:#fff;border:1px solid #d8dbe8;border-radius:10px;margin:14px 0 16px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.fram-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid #edf0f7;background:#fff;position:sticky;top:0;z-index:2}
+.ftbtn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid #d0d5e2;border-radius:6px;background:#fff;color:#1a1a2e;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.ftbtn:hover{border-color:#4778e8;background:#f7f9ff}
+.ftbtn.primary{background:#4778e8;color:#fff;border-color:#4778e8}
+.fram-map-wrap{height:560px;position:relative;background:radial-gradient(#eef1f7 1px,transparent 1px);background-size:16px 16px}
+#fram-map{width:100%;height:100%;display:block}
+.fram-legend{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:10px 14px;border-top:1px solid #edf0f7;background:#fbfcff;font-size:11px;color:#5a5a7a}
+.legend-dot{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1.5px solid #4778e8;background:#fff;font-weight:700;font-size:10px;margin-right:5px}
+.form-anchor{scroll-margin-top:80px}
+
 .empty{text-align:center;padding:32px 16px;color:#9898b0}
 </style>
 </head>
@@ -237,12 +249,33 @@ textarea.fi{resize:vertical;min-height:55px}
 
       <div class="screen scroll-screen" id="s-fram">
         <div class="form-wrap">
-          <div class="page-title">Funções e Acoplamentos Estruturais</div>
-          <div class="page-sub">Cadastro simplificado de funções e definição analítica das conexões matriciais.</div>
+          <div class="page-title">Mapa de Funções (FRAM)</div>
+          <div class="page-sub">Visualização sistêmica das funções, conexões e extremos FRAM. As conexões partem e chegam pelos extremos escolhidos: Input, Output, Precondition, Resource, Control e Time.</div>
+
+          <div class="fram-workspace">
+            <div class="fram-toolbar">
+              <button class="ftbtn primary" onclick="document.getElementById('fn-form-card').scrollIntoView({behavior:'smooth',block:'start'})">＋ Nova Função</button>
+              <button class="ftbtn" onclick="document.getElementById('conn-form-card').scrollIntoView({behavior:'smooth',block:'start'})">🔗 Nova Conexão</button>
+              <button class="ftbtn" onclick="document.getElementById('res-form-card').scrollIntoView({behavior:'smooth',block:'start'})">〽 Cenário de Ressonância</button>
+              <button class="ftbtn" onclick="DGRManager.drawFramMap('fram-map',560)">⤢ Ajustar Layout</button>
+              <button class="ftbtn" onclick="DGRManager.runSimulation()">▶ Rodar Simulação</button>
+              <span style="margin-left:auto;font-size:11px;color:#6b7280">Mapa FRAM com extremos I/O/P/R/C/T</span>
+            </div>
+            <div class="fram-map-wrap"><canvas id="fram-map" height="560"></canvas></div>
+            <div class="fram-legend">
+              <span><span class="legend-dot">I</span>Input</span>
+              <span><span class="legend-dot">O</span>Output</span>
+              <span><span class="legend-dot">P</span>Precondition</span>
+              <span><span class="legend-dot">R</span>Resource</span>
+              <span><span class="legend-dot">C</span>Control</span>
+              <span><span class="legend-dot">T</span>Time</span>
+              <span style="margin-left:auto">Cores: verde/azul/amarelo/vermelho conforme P95 ou estado simulado.</span>
+            </div>
+          </div>
           
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
             <div>
-              <div class="form-card">
+              <div class="form-card form-anchor" id="fn-form-card">
                 <h3 id="fnh3">Nova Função</h3>
                 <input type="hidden" id="edit-fn-id">
                 <label class="fl">Nome da Função *</label>
@@ -258,7 +291,7 @@ textarea.fi{resize:vertical;min-height:55px}
             </div>
 
             <div>
-              <div class="form-card">
+              <div class="form-card form-anchor" id="conn-form-card">
                 <h3 id="connh3">Adicionar Conexão</h3>
                 <input type="hidden" id="edit-conn-id">
                 <div class="fir">
@@ -312,7 +345,7 @@ textarea.fi{resize:vertical;min-height:55px}
             </div>
           </div>
           
-          <div class="form-card" style="margin-top:16px">
+          <div class="form-card form-anchor" id="res-form-card" style="margin-top:16px">
             <h3 id="resh3">Registrar Cenário de Ressonância</h3>
             <input type="hidden" id="edit-res-id">
             <div class="fir">
@@ -588,7 +621,7 @@ const DGRManager = {
   init() {
     this.loadData();
     DGRHistory.push();
-    window.addEventListener('resize', () => { if(DGRState.curPage === 'mc') this.renderCharts(); });
+    window.addEventListener('resize', () => { if(DGRState.curPage === 'mc') this.renderCharts(); if(DGRState.curPage === 'fram') this.drawFramMap('fram-map',560); });
   },
 
   switchPage(page) {
@@ -621,6 +654,9 @@ const DGRManager = {
       this.renderKPIs(hasRes);
       this.renderCharts(hasRes);
       this.renderMCPanel(hasRes);
+    }
+    if (DGRState.curPage === 'fram') {
+      setTimeout(() => this.drawFramMap('fram-map', 560), 0);
     }
   },
 
@@ -1294,12 +1330,12 @@ const DGRManager = {
   },
 
 
-  drawFramMap() {
-    const cv = document.getElementById('ch-heat');
+  drawFramMap(canvasId = 'ch-heat', canvasHeight = 280) {
+    const cv = document.getElementById(canvasId);
     if (!cv) return;
     const g = cv.getContext('2d');
-    cv.width = cv.parentElement.offsetWidth - 40;
-    cv.height = 280;
+    cv.width = Math.max(600, cv.parentElement.offsetWidth || 900);
+    cv.height = canvasHeight;
     g.clearRect(0, 0, cv.width, cv.height);
 
     const fns = DGRState.fns;
