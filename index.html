@@ -34,6 +34,19 @@ html,body{width:100%;height:100%;overflow:hidden;background:#f0f0f5;color:#1a1a2
 .tbtn:hover{background:#ebebef;color:#1a1a2e;border-color:#b0b0c0}
 .tbtn.on{background:#eeedfe;color:#534AB7;border-color:#534AB7;font-weight:600}
 .tbtn.r{color:#c0392b;border-color:#c0392b;background:#fdecea}
+.iconbar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#fff;border-bottom:1px solid #e0e0ea;flex-shrink:0;flex-wrap:wrap}
+.ibtn{width:32px;height:30px;display:flex;align-items:center;justify-content:center;border:none;background:#fff;border-radius:6px;cursor:pointer;color:#3f3f5f;font-size:17px;transition:all .12s}
+.ibtn:hover{background:#f0f0f5;color:#534AB7}
+.ibtn.on{background:#eeedfe;color:#534AB7;box-shadow:0 0 0 1px #534AB7 inset}
+.ibtn.sep{border-left:1px solid #e0e0ea;border-radius:0;width:1px;padding:0;margin:0 4px;pointer-events:none}
+.tbtn.connect-main{border-color:#534AB7;color:#534AB7;background:#fff;font-weight:600}
+.nav-sec{font-size:10px;color:#5d6475;text-transform:uppercase;letter-spacing:.08em;padding:12px 14px 6px}
+#nav-bottom{padding:8px 0 0;border-top:1px solid #2e3442}
+.nav-tool{display:flex;align-items:center;gap:12px;padding:11px 16px;cursor:pointer;color:#a9afbd;font-size:13px;font-weight:600;transition:all .12s;border-top:1px solid transparent}
+.nav-tool:hover{background:#252b36;color:#fff}
+.nav-tool.r{color:#ff7373}
+.nav-tool.r:hover{background:#2b2228;color:#ff8c8c}
+.nav-tool svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
 .ifl{display:flex;align-items:center;gap:4px;padding:5px 9px;font-size:12px;border:1px solid #d0d0da;border-radius:5px;cursor:pointer;background:#fff;color:#5a5a7a;white-space:nowrap;transition:all .1s}
 .ifl:hover{background:#ebebef}
 #mstat{font-size:11px;color:#5a5a7a;padding:3px 0}
@@ -219,7 +232,13 @@ textarea.fi{resize:vertical;min-height:60px}
       Monte Carlo
     </div>
   </div>
-  <!-- Ferramentas de exportação/importação removidas do menu lateral para manter navegação limpa. -->
+  <div id="nav-bottom">
+    <div class="nav-sec">Dados</div>
+    <div class="nav-tool" onclick="expJSON()"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 19h14"/></svg>Exportar</div>
+    <label class="nav-tool"><svg viewBox="0 0 24 24"><path d="M12 21V9m0 0l-4 4m4-4l4 4"/><path d="M5 5h14"/></svg>Importar<input type="file" accept=".json" onchange="impJSON(event)" style="display:none"></label>
+    <div class="nav-tool r" onclick="clearAll()"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M7 6l1 14h8l1-14"/><path d="M10 10v6M14 10v6"/></svg>Apagar Tudo</div>
+    <div class="nav-tool" onclick="expPDF()"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h6"/></svg>Exportar PDF</div>
+  </div>
 
 </div>
 
@@ -227,9 +246,18 @@ textarea.fi{resize:vertical;min-height:60px}
 <div id="content">
 
   <!-- FRAM toolbar -->
-  <div id="frambar" style="display:none">
+  <div id="frambar" class="iconbar" style="display:none">
+    <button class="ibtn" title="Exportar PNG" onclick="expPNG()">▧</button>
+    <button class="ibtn" title="Exportar PDF" onclick="expPDF()">▤</button>
+    <span class="ibtn sep"></span>
+    <button class="ibtn" title="Ajustar visualização" onclick="fitView()">↙</button>
+    <button class="ibtn" title="Zoom +" onclick="zoomCanvas(1.15)">⊕</button>
+    <span class="ibtn sep"></span>
+    <button class="ibtn" title="Desfazer" onclick="undoLast()">↶</button>
+    <button class="ibtn" title="Refazer" onclick="redoLast()">↷</button>
+    <span class="ibtn sep"></span>
     <button class="tbtn on" id="bsel" onclick="setMode('select')">↖ Selecionar</button>
-    <button class="tbtn" id="bcon" onclick="setMode('connect')">⟿ Conectar</button>
+    <button class="tbtn connect-main" id="bcon" onclick="setMode('connect')">⟿ Conectar</button>
     <button class="tbtn" onclick="openConnectPanel()">＋ Conexão por lista</button>
     <button class="tbtn" id="bera" onclick="setMode('erase')">✕ Apagar</button>
     <span style="width:1px;height:18px;background:#e0e0ea;flex-shrink:0"></span>
@@ -466,7 +494,7 @@ let mcN=5000, rankBy='p95', mcActiveFn=null;
 let mode='select', selFn=null;
 let dragFn=null,dragOX=0,dragOY=0;
 let panX=0,panY=0,scale=1,isPan=false,pSX=0,pSY=0;
-let connSrc=null,connPend=null,connSrcFn=null,connTgtFn=null;
+let connSrc=null,connPend=null,connSrcFn=null,connTgtFn=null,connDrag=false;
 let hovFn=null,hovCoup=null,animT=0,animOn=false;
 let curPage='painel';
 // editing ids
@@ -627,7 +655,7 @@ function hitCoup(mx,my){
 // ══════════════════════════════════════════
 C.addEventListener('mousedown',onDown);
 C.addEventListener('mousemove',onMove);
-C.addEventListener('mouseup',()=>{dragFn=null;isPan=false;});
+C.addEventListener('mouseup',onUp);
 C.addEventListener('wheel',e=>{e.preventDefault();const d=e.deltaY>0?.88:1.14;panX=(panX-e.offsetX)*d+e.offsetX;panY=(panY-e.offsetY)*d+e.offsetY;scale=Math.max(0.2,Math.min(3,scale*d));draw();},{passive:false});
 C.addEventListener('dblclick',e=>{const[wx,wy]=s2w(e.offsetX,e.offsetY);const fn=fns.find(f=>inHex(wx,wy,f.x,f.y));if(fn)openFnPanel(fn);});
 
@@ -642,9 +670,26 @@ function onDown(e){
     if(fn){dragFn=fn;dragOX=wx-fn.x;dragOY=wy-fn.y;selFn=fn;openFnPanel(fn);draw();}
     else{dragFn=null;selFn=null;document.getElementById('fnpanel').style.display='none';isPan=true;pSX=e.offsetX-panX;pSY=e.offsetY-panY;draw();}
   } else if(mode==='connect'){
-    if(fn){if(!connSrc){connSrc=fn;connPend=null;document.getElementById('fnpanel').style.display='none';draw();}else if(fn.id!==connSrc.id){openConnModal(connSrc,fn);}else{connSrc=null;connPend=null;draw();}}
-    else{connSrc=null;connPend=null;draw();}
+    if(fn){
+      connSrc=fn;
+      connPend={x:e.offsetX,y:e.offsetY};
+      connDrag=true;
+      document.getElementById('fnpanel').style.display='none';
+      draw();
+    } else {connSrc=null;connPend=null;connDrag=false;draw();}
   }
+}
+function onUp(e){
+  if(mode==='connect'&&connSrc){
+    const[wx,wy]=s2w(e.offsetX,e.offsetY);
+    const tgt=fns.find(f=>inHex(wx,wy,f.x,f.y));
+    if(tgt&&tgt.id!==connSrc.id){
+      openConnModal(connSrc,tgt);
+    }
+    connDrag=false;connPend=null;draw();
+    return;
+  }
+  dragFn=null;isPan=false;
 }
 function onMove(e){
   const[wx,wy]=s2w(e.offsetX,e.offsetY);
@@ -656,7 +701,7 @@ function onMove(e){
   if(fn){
     tip.style.display='block';tip.style.left=(e.offsetX+14)+'px';tip.style.top=(e.offsetY-10)+'px';
     const hasV=vars.some(v=>v.affected_function_id===fn.id);
-    tip.innerHTML=`<b>${esc(fn.name)}</b>${hasV?'<br>⚡ Tem variabilidades':''}${mode==='connect'?(connSrc?'<br><span style="color:#0f6e56">Clique → destino</span>':'<br><span style="color:#0f6e56">Clique → origem</span>'):''}${mode==='erase'?'<br><span style="color:#c0392b">Clique para apagar</span>':''}`;
+    tip.innerHTML=`<b>${esc(fn.name)}</b>${hasV?'<br>⚡ Tem variabilidades':''}${mode==='connect'?(connSrc?'<br><span style="color:#0f6e56">Arraste até o destino</span>':'<br><span style="color:#0f6e56">Arraste da origem</span>'):''}${mode==='erase'?'<br><span style="color:#c0392b">Clique para apagar</span>':''}`;
   } else if(c&&mode==='erase'){
     const s=fns.find(f=>f.id===c.source_function_id),t=fns.find(f=>f.id===c.target_function_id);
     tip.style.display='block';tip.style.left=(e.offsetX+14)+'px';tip.style.top=(e.offsetY-10)+'px';
@@ -673,7 +718,7 @@ function setMode(m){
   if(m==='connect')document.getElementById('fnpanel').style.display='none';
   ['bsel','bcon','bera'].forEach(id=>document.getElementById(id).classList.remove('on'));
   document.getElementById({select:'bsel',connect:'bcon',erase:'bera'}[m]).classList.add('on');
-  document.getElementById('mstat').textContent=m==='connect'?'1º clique: origem · 2º clique: destino':m==='erase'?'Clique para apagar':'';
+  document.getElementById('mstat').textContent=m==='connect'?'Arraste da função de origem até a função de destino':m==='erase'?'Clique para apagar':'';
   draw();
 }
 
