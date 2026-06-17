@@ -141,18 +141,23 @@ textarea.fi{resize:vertical;min-height:55px}
 .fram-node{position:absolute;width:118px;height:104px;z-index:2;cursor:grab;touch-action:none;overflow:visible}
 .fram-node.dragging{cursor:grabbing;z-index:10;filter:drop-shadow(0 8px 12px rgba(0,0,0,.22))}
 .fram-node-svg{position:absolute;inset:0;width:118px;height:104px;overflow:visible;filter:drop-shadow(0 1px 2px rgba(0,0,0,.10))}
-.fram-node-poly{fill:#fff;stroke:var(--node-color,#6b7280);stroke-width:6;stroke-linejoin:round}
-.fram-node-title{position:absolute;left:18px;right:18px;top:29px;height:46px;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:10.5px;color:#121827;line-height:1.12;word-break:break-word;pointer-events:none}
+.fram-node-poly{fill:#fff;stroke:var(--node-color,#111827);stroke-width:6;stroke-linejoin:round}
+.fram-node-title{position:absolute;left:18px;right:18px;top:24px;height:38px;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:10.5px;color:#121827;line-height:1.12;word-break:break-word;pointer-events:none}
 .fram-node-title.small{font-size:9.4px;line-height:1.08}
-.fram-var-wave{position:absolute;left:50%;top:68px;transform:translateX(-50%);font-size:30px;font-weight:900;line-height:1;color:#e00000;letter-spacing:-2px;pointer-events:none;font-family:Arial,Helvetica,sans-serif}
-.fram-var-wave::before{content:"∿∿"}
+.fram-var-wave{position:absolute;left:50%;top:66px;transform:translateX(-50%);width:70px;height:24px;pointer-events:none}
+.fram-var-wave svg{width:70px;height:24px;overflow:visible}
+.fram-shield{position:absolute;left:50%;top:65px;transform:translateX(-50%);font-size:20px;line-height:1;pointer-events:none;color:#138a2e}
 .fram-node .port{position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;border:1.8px solid #5f6572;color:#111827;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:3;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
-.fram-node .p-i{left:-7px;top:43px}.fram-node .p-o{right:-7px;top:43px}.fram-node .p-p{left:21px;bottom:0}.fram-node .p-r{right:21px;bottom:0}.fram-node .p-c{right:21px;top:0}.fram-node .p-t{left:21px;top:0}
+.fram-node .p-i{left:-7px;top:43px}.fram-node .p-o{right:-7px;top:43px}.fram-node .p-t{left:21px;top:0}.fram-node .p-c{right:21px;top:0}.fram-node .p-p{left:21px;bottom:0}.fram-node .p-r{right:21px;bottom:0}
 .fram-node-actions{position:absolute;left:50%;transform:translateX(-50%);bottom:-22px;display:none;gap:4px;z-index:4;white-space:nowrap}
 .fram-node:hover .fram-node-actions{display:flex}
 .fram-mini-btn{border:1px solid #d0d0da;border-radius:10px;background:#fff;padding:2px 6px;font-size:10px;cursor:pointer;color:#4c5570;box-shadow:0 1px 2px rgba(0,0,0,.10)}
 .fram-mini-btn:hover{border-color:#4778e8;color:#4778e8}
 .fram-edge-label{font:700 10px "Segoe UI",system-ui,sans-serif;fill:#1f2937;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.fram-node.resonant .fram-node-poly{filter:drop-shadow(0 0 6px rgba(204,0,0,.24))}
+.fram-prop-edge{stroke:#cc0000;stroke-opacity:.85}
+.fram-prop-edge.low{stroke:#d97706;stroke-opacity:.55}
+
 .fram-empty-map{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8b91a5;font-size:13px;text-align:center;padding:20px;z-index:3}
 @media(max-width:1100px){.fram-top-tools{grid-template-columns:1fr}.fram-node{width:110px;height:98px}.fram-node-svg{width:110px;height:98px}}
 
@@ -234,12 +239,12 @@ textarea.fi{resize:vertical;min-height:55px}
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
             <div class="dash-section">
-              <h3>Mapa de Calor das Funções (VFR × IP)</h3>
+              <h3>Propagação da Variabilidade na Rede FRAM</h3>
               <canvas id="ch-heat" height="200"></canvas>
-              <div id="ch-heat-empty" class="empty">Execute a simulação para calcular</div>
+              <div id="ch-heat-empty" class="empty">Execute a simulação para visualizar a propagação</div>
             </div>
             <div class="dash-section">
-              <h3>Índice de Impacto Sistêmico (IIS)</h3>
+              <h3>IIS com Ressonância Funcional da Rede</h3>
               <canvas id="ch-iis" height="200"></canvas>
               <div id="ch-iis-empty" class="empty">Execute a simulação para calcular</div>
             </div>
@@ -269,6 +274,7 @@ textarea.fi{resize:vertical;min-height:55px}
           <div class="page-title">Funções e Acoplamentos Estruturais</div>
           <div class="page-sub">Comandos no topo e mapa FRAM arrastável abaixo. Arraste as funções para reorganizar a rede.</div>
 
+
           <div class="fram-map-card">
             <div class="fram-map-toolbar">
               <div>
@@ -276,7 +282,7 @@ textarea.fi{resize:vertical;min-height:55px}
                 <div class="fram-map-help">Clique e arraste os hexágonos. Use ✏️ no nó ou nas listas para editar.</div>
               </div>
               <div style="display:flex;gap:6px;align-items:center">
-                <button class="gbtn" onclick="DGRManager.autoArrangeFramMap()">⟳ Auto-organizar</button>
+                <span style="font-size:11px;color:#555">🔴 Variabilidade&nbsp;&nbsp; 🟢 MR&nbsp;&nbsp; ⚫ Comum</span><button class="gbtn" onclick="DGRManager.autoArrangeFramMap()">⟳ Auto-organizar</button>
               </div>
             </div>
             <div id="fram-map-area">
@@ -371,6 +377,7 @@ textarea.fi{resize:vertical;min-height:55px}
               </div>
             </div>
           </div>
+
 
 
 
@@ -727,14 +734,92 @@ const DGRManager = {
 
   getNodeCenter(fn) { return { x: (fn.x || 0) + 59, y: (fn.y || 0) + 52 }; },
 
+  hasFunctionVariability(fnId) {
+    // Variabilidade visual: qualquer RE ou RX cadastrada manualmente OU selecionada na taxonomia.
+    const hasRegistered = DGRState.vars.some(v =>
+      v.affected_function_id === fnId && ['endogena','exogena','RE','RX'].includes(String(v.category || '').toLowerCase())
+    );
+    const hasTaxonomy = Object.entries(DGRState.subs[fnId] || {}).some(([code, v]) =>
+      v && v.sel === true && (String(code).startsWith('RE-') || String(code).startsWith('RX-'))
+    );
+    return !!(hasRegistered || hasTaxonomy);
+  },
+
+  hasFunctionMR(fnId) {
+    // Controle visual: qualquer MR cadastrado manualmente OU selecionado na taxonomia.
+    const hasRegistered = DGRState.mechs.some(m => m.controlled_function_id === fnId);
+    const hasTaxonomy = Object.entries(DGRState.subs[fnId] || {}).some(([code, v]) =>
+      v && v.sel === true && String(code).startsWith('MR-')
+    );
+    return !!(hasRegistered || hasTaxonomy);
+  },
+
   nodeColor(fn) {
-    const r = DGRState.mcRes?.[fn.id];
-    if (r) return r.p95 >= 0.70 ? '#cc0000' : r.p95 >= 0.40 ? '#f59e0b' : '#138a2e';
-    const hasMR = DGRState.mechs.some(m => m.controlled_function_id === fn.id);
-    const hasVar = DGRState.vars.some(v => v.affected_function_id === fn.id);
-    if (hasVar) return '#cc0000';
-    if (hasMR) return '#138a2e';
-    return '#6b7280';
+    // Prioridade visual: RE/RX > MR > Comum
+    if (this.hasFunctionVariability(fn.id)) return '#cc0000';
+    if (this.hasFunctionMR(fn.id)) return '#138a2e';
+    return '#111827';
+  },
+
+  couplingWeight(c) {
+    if (!c) return 0.35;
+    if (c.line_type === 'critical') return 0.75;
+    if (c.line_type === 'variable') return 0.55;
+    return 0.35;
+  },
+
+  calculateNetworkResonance() {
+    const ids = DGRState.fns.map(f => f.id);
+    if (!ids.length) return;
+    const base = {}, incoming = {}, centrality = {}, rf = {}, iis = {};
+    ids.forEach(id => { const r = DGRState.mcRes[id] || {}; base[id] = +(r.p95 || r.mean || 0); incoming[id] = 0; centrality[id] = 0; });
+
+    // Centralidade FRAM: saída direta + alcance a jusante ponderado por tipo de acoplamento.
+    ids.forEach(id => {
+      const visited = new Set();
+      let score = 0;
+      const walk = (cur, depth, factor) => {
+        if (depth > 4) return;
+        DGRState.coups.filter(c => c.source_function_id === cur).forEach(c => {
+          if (!ids.includes(c.target_function_id)) return;
+          const w = this.couplingWeight(c) * factor;
+          score += w / depth;
+          const key = cur + '>' + c.target_function_id + ':' + depth;
+          if (!visited.has(key)) { visited.add(key); walk(c.target_function_id, depth + 1, w * 0.62); }
+        });
+      };
+      walk(id, 1, 1);
+      centrality[id] = score;
+    });
+    const maxCent = Math.max(1, ...Object.values(centrality));
+
+    // Propagação iterativa: parte da VFR residual passa pelas conexões e se atenua pela rede.
+    let signal = {...base};
+    for (let k = 0; k < 8; k++) {
+      const next = {}; ids.forEach(id => next[id] = 0);
+      DGRState.coups.forEach(c => {
+        if (!ids.includes(c.source_function_id) || !ids.includes(c.target_function_id)) return;
+        const out = DGRState.coups.filter(x => x.source_function_id === c.source_function_id).length || 1;
+        const transfer = (signal[c.source_function_id] || 0) * this.couplingWeight(c) * 0.42 / Math.sqrt(out);
+        next[c.target_function_id] += transfer;
+      });
+      ids.forEach(id => incoming[id] += next[id] / (k + 1));
+      signal = next;
+    }
+
+    const maxIncoming = Math.max(1e-6, ...Object.values(incoming));
+    ids.forEach(id => {
+      rf[id] = Math.max(0, Math.min(2, base[id] + 0.55 * incoming[id]));
+      const r = DGRState.mcRes[id] || {};
+      iis[id] = rf[id] * (0.35 + 0.65 * centrality[id] / maxCent) * (1 + (r.probCrit || 0));
+      DGRState.mcRes[id] = {...r,
+        centrality: centrality[id] / maxCent,
+        incomingResonance: incoming[id],
+        incomingResonanceNorm: incoming[id] / maxIncoming,
+        functionalResonance: rf[id],
+        iis: iis[id]
+      };
+    });
   },
 
   getPortPoint(fn, aspect = 'O') {
@@ -759,7 +844,7 @@ const DGRManager = {
     svg.setAttribute('width', area.clientWidth);
     svg.setAttribute('height', area.clientHeight);
     svg.setAttribute('viewBox', `0 0 ${area.clientWidth} ${area.clientHeight}`);
-    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#8b8f98"></path></marker></defs>`;
+    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"></path></marker></defs>`;
 
     DGRState.coups.forEach(c => {
       const s = DGRState.fns.find(f => f.id === c.source_function_id);
@@ -775,7 +860,7 @@ const DGRManager = {
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', `M ${a.x} ${a.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${b.x} ${b.y}`);
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', c.line_type === 'critical' ? '#c0392b' : c.line_type === 'variable' ? '#8b8f98' : '#a3a7ae');
+      path.setAttribute('stroke', c.line_type === 'critical' ? '#c0392b' : c.line_type === 'variable' ? '#4b5563' : '#6b7280');
       path.setAttribute('stroke-width', c.line_type === 'critical' ? '2.4' : '2');
       if (c.line_type === 'variable') path.setAttribute('stroke-dasharray', '7 5');
       path.setAttribute('marker-end', 'url(#arrow-fram)');
@@ -791,13 +876,17 @@ const DGRManager = {
 
     DGRState.fns.forEach(fn => {
       const div = document.createElement('div');
-      div.className = 'fram-node';
+      div.className = 'fram-node' + (this.hasFunctionVariability(fn.id) ? ' resonant' : '');
       div.style.left = `${fn.x}px`; div.style.top = `${fn.y}px`;
       div.style.setProperty('--node-color', this.nodeColor(fn));
       div.dataset.id = fn.id;
       const titleCls = String(fn.name || '').length > 42 ? 'fram-node-title small' : 'fram-node-title';
-      const hasVariability = DGRState.vars.some(v => v.affected_function_id === fn.id);
-      div.innerHTML = `<svg class="fram-node-svg" viewBox="0 0 118 104" aria-hidden="true"><polygon class="fram-node-poly" points="29,5 89,5 113,52 89,99 29,99 5,52"></polygon></svg><div class="${titleCls}">${this.esc(fn.name)}</div>${hasVariability ? '<div class="fram-var-wave" title="Função com variabilidade cadastrada"></div>' : ''}<div class="port p-i">I</div><div class="port p-o">O</div><div class="port p-p">P</div><div class="port p-r">R</div><div class="port p-c">C</div><div class="port p-t">T</div><div class="fram-node-actions"><button class="fram-mini-btn" type="button">✏️ Editar</button><button class="fram-mini-btn" type="button">🗑️</button></div>`;
+      const hasVariability = this.hasFunctionVariability(fn.id);
+      const hasMR = this.hasFunctionMR(fn.id);
+      const nColor = this.nodeColor(fn);
+      const waveSvg = '<div class="fram-var-wave" title="Função com RE/RX associada"><svg viewBox="0 0 70 24" aria-hidden="true"><path d="M3 12 C10 2 17 22 24 12 S38 2 45 12 S59 22 67 12" stroke="#e00000" stroke-width="4" fill="none" stroke-linecap="round"/></svg></div>';
+      const shield = '<div class="fram-shield" title="Função com mecanismo de resiliência">🛡️</div>';
+      div.innerHTML = `<svg class="fram-node-svg" viewBox="0 0 118 104" aria-hidden="true"><polygon class="fram-node-poly" points="29,5 89,5 113,52 89,99 29,99 5,52" fill="#fff" stroke="${nColor}" stroke-width="7" stroke-linejoin="round"></polygon></svg><div class="${titleCls}">${this.esc(fn.name)}</div>${hasVariability ? waveSvg : (hasMR ? shield : '')}<div class="port p-i">I</div><div class="port p-o">O</div><div class="port p-t">T</div><div class="port p-c">C</div><div class="port p-p">P</div><div class="port p-r">R</div><div class="fram-node-actions"><button class="fram-mini-btn" type="button">✏️ Editar</button><button class="fram-mini-btn" type="button">🗑️</button></div>`;
       div.querySelectorAll('button')[0].onclick = (ev) => { ev.stopPropagation(); this.editFn(fn.id); document.getElementById('fn-name').focus(); };
       div.querySelectorAll('button')[1].onclick = (ev) => { ev.stopPropagation(); this.deleteFn(fn.id); };
       this.bindNodeDrag(div, fn.id);
@@ -849,7 +938,7 @@ const DGRManager = {
     if (!svg || !area) return;
     svg.setAttribute('width', area.clientWidth); svg.setAttribute('height', area.clientHeight);
     svg.setAttribute('viewBox', `0 0 ${area.clientWidth} ${area.clientHeight}`);
-    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#8b8f98"></path></marker></defs>`;
+    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"></path></marker></defs>`;
     DGRState.coups.forEach(c => {
       const s = DGRState.fns.find(f => f.id === c.source_function_id), t = DGRState.fns.find(f => f.id === c.target_function_id);
       if (!s || !t) return;
@@ -858,7 +947,7 @@ const DGRManager = {
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', `M ${a.x} ${a.y} C ${a.x+dx*0.42} ${a.y+curve}, ${a.x+dx*0.58} ${b.y-curve}, ${b.x} ${b.y}`);
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', c.line_type === 'critical' ? '#c0392b' : c.line_type === 'variable' ? '#8b8f98' : '#a3a7ae'); path.setAttribute('stroke-width', c.line_type === 'critical' ? '2.4' : '2');
+      path.setAttribute('stroke', c.line_type === 'critical' ? '#c0392b' : c.line_type === 'variable' ? '#4b5563' : '#6b7280'); path.setAttribute('stroke-width', c.line_type === 'critical' ? '2.4' : '2');
       if (c.line_type === 'variable') path.setAttribute('stroke-dasharray', '7 5');
       path.setAttribute('marker-end', 'url(#arrow-fram)'); svg.appendChild(path);
     });
@@ -1404,8 +1493,9 @@ const DGRManager = {
       vfrs.forEach(v => hist[Math.min(19, Math.floor(Math.min(v, 0.9999) * 20))]++);
       const hmax = Math.max(...hist) || 1;
 
-      DGRState.mcRes[fn.id] = { mean, p90: vfrs[Math.floor(N*0.9)], p95, p99: vfrs[Math.floor(N*0.99)], probCrit, ip, iis: mean * ip, hist: hist.map(h => h / hmax) };
+      DGRState.mcRes[fn.id] = { mean, p90: vfrs[Math.floor(N*0.9)], p95, p99: vfrs[Math.floor(N*0.99)], probCrit, ip, centrality: ip, incomingResonance: 0, incomingResonanceNorm: 0, functionalResonance: p95, iis: p95 * ip, hist: hist.map(h => h / hmax) };
     });
+    this.calculateNetworkResonance();
     this.refreshUI();
   },
 
@@ -1424,7 +1514,8 @@ const DGRManager = {
       { val: DGRState.mechs.length, lbl: 'Mecanismos MR', color: '#0f6e56' },
       { val: hasRes ? this.pct(avgVFR) : '-', lbl: 'VFR Média P95', color: hasRes ? this.vColor(avgVFR) : '#9898b0' },
       { val: hasRes ? this.pct(maxLC) : '-', lbl: 'Limite Crítico Máx. (P95)', color: hasRes ? this.vColor(maxLC) : '#9898b0' },
-      { val: hasRes ? this.pct(avgProbCrit) : '-', lbl: 'Prob. Criticidade Média', color: hasRes ? this.vColor(avgProbCrit) : '#9898b0' }
+      { val: hasRes ? this.pct(avgProbCrit) : '-', lbl: 'Prob. Criticidade Média', color: hasRes ? this.vColor(avgProbCrit) : '#9898b0' },
+      { val: hasRes ? this.pct(Math.max(...resFns.map(f => DGRState.mcRes[f.id].functionalResonance || 0))) : '-', lbl: 'Ressonância Funcional Máx.', color: hasRes ? '#c0392b' : '#9898b0' }
     ];
     document.getElementById('dash-stats').innerHTML = stats.map(s => `
       <div class="dash-card">
@@ -1488,15 +1579,31 @@ const DGRManager = {
         const bh = (v / maxB) * (cv.height - 20); g.fillStyle = this.vColor(bi / 10); g.fillRect(bi * bw, cv.height - bh - 5, bw - 1, bh);
       });
     }
-    // CH-HEATMAP
+    // CH-PROPAGATION: visualização explícita da propagação da variabilidade na rede FRAM
     {
       const cv = document.getElementById('ch-heat'); const g = cv.getContext('2d');
       cv.width = cv.parentElement.offsetWidth - 40; g.clearRect(0,0,cv.width,cv.height);
-      g.strokeStyle = '#e0e0ea'; g.strokeRect(20,20,cv.width-40,cv.height-40);
-      sorted.forEach(f => {
-        const r = DGRState.mcRes[f.id]; const x = 20 + r.ip * (cv.width-50); const y = cv.height - 20 - (r.mean / 2) * (cv.height-50);
-        g.beginPath(); g.arc(x,y,6,0,Math.PI*2); g.fillStyle = this.vColor(r.p95); g.fill();
+      const margin = 26, left = 128, top = 26;
+      const rows = sorted.slice(0, Math.max(1, Math.min(sorted.length, 10)));
+      const rowH = Math.max(14, (cv.height - 52) / Math.max(1, rows.length));
+      g.fillStyle = '#1a1a2e'; g.font = 'bold 10px sans-serif';
+      g.fillText('Função receptora', 10, 14);
+      g.fillText('Ressonância recebida pela rede', left, 14);
+      rows.forEach((fn, i) => {
+        const r = DGRState.mcRes[fn.id]; const y = top + i * rowH;
+        const w = (r.incomingResonanceNorm || 0) * (cv.width - left - 62);
+        g.fillStyle = '#1a1a2e'; g.font = '10px sans-serif'; g.textAlign = 'right';
+        g.fillText(fn.name.substring(0,18), left - 8, y + 10);
+        g.textAlign = 'left';
+        g.fillStyle = '#f0f0f5'; g.fillRect(left, y, cv.width-left-62, 12);
+        g.fillStyle = this.vColor(r.functionalResonance || r.p95); g.fillRect(left, y, Math.max(2,w), 12);
+        g.fillStyle = '#1a1a2e'; g.font = 'bold 9px sans-serif';
+        g.fillText(this.pct(r.functionalResonance || r.p95), cv.width - 54, y + 10);
       });
+      if (!DGRState.coups.length) {
+        g.fillStyle = '#8b91a5'; g.textAlign = 'center'; g.font = '12px sans-serif';
+        g.fillText('Cadastre conexões para visualizar a propagação em rede.', cv.width/2, cv.height/2);
+      }
     }
     // CH-IIS
     {
@@ -1508,7 +1615,7 @@ const DGRManager = {
       iisS.forEach((fn, i) => {
         const r = DGRState.mcRes[fn.id]; const y = 15 + i * (bH + 4);
         g.fillStyle = '#eeedfe'; g.fillRect(10, y, cv.width-80, bH);
-        g.fillStyle = '#4778e8'; g.fillRect(10, y, (r.iis / maxI) * (cv.width-80), bH);
+        g.fillStyle = this.vColor(r.functionalResonance || r.p95); g.fillRect(10, y, (r.iis / maxI) * (cv.width-80), bH);
         g.fillStyle = '#1a1a2e'; g.font = '10px sans-serif'; g.fillText(fn.name.substring(0,18), 15, y + bH/2 + 3);
       });
     }
@@ -1564,7 +1671,9 @@ const DGRManager = {
             <div class="sbox"><span class="sval" style="color:${this.vColor(r.p95)}">${this.pct(r.p95)}</span><span class="slbl">Limite Crítico (P95)</span></div>
             <div class="sbox"><span class="sval">${this.pct(r.p99)}</span><span class="slbl">P99</span></div>
             <div class="sbox"><span class="sval">${this.pct(r.ip)}</span><span class="slbl">IP</span></div>
-            <div class="sbox"><span class="sval">${this.pct(r.iis)}</span><span class="slbl">IIS</span></div>
+            <div class="sbox"><span class="sval">${this.pct(r.iis)}</span><span class="slbl">IIS rede</span></div>
+            <div class="sbox"><span class="sval" style="color:${this.vColor(r.functionalResonance || r.p95)}">${this.pct(r.functionalResonance || r.p95)}</span><span class="slbl">Ressonância Funcional</span></div>
+            <div class="sbox"><span class="sval">${this.pct(r.incomingResonanceNorm || 0)}</span><span class="slbl">Propagação Recebida</span></div>
             <div class="sbox"><span class="sval" style="color:${this.vColor(r.probCrit)}">${this.pct(r.probCrit)}</span><span class="slbl">Prob. Criticidade</span></div>
           </div>
           <div class="histbars">${r.hist.map((hv,bi) => `<div class="hb" style="height:${Math.round(hv*50)}px;background:${this.vColor(bi/20)};opacity:${0.4+hv*0.6}"></div>`).join('')}</div>
@@ -1657,7 +1766,7 @@ const DGRManager = {
     doc.text('Limite Crítico P95', 165, y);
     doc.text('P99', 205, y);
     doc.text('Prob. Criticidade', 230, y);
-    doc.text('IIS', 267, y);
+    doc.text('IIS rede', 267, y);
     y += 4;
     doc.line(15, y, 285, y);
     y += 5;
@@ -1680,8 +1789,8 @@ const DGRManager = {
     const charts = [
       { id: 'ch-vfr', title: 'VFR por Função (P95 — Limite Crítico)' },
       { id: 'ch-hist', title: 'Histograma da Distribuição Agregada' },
-      { id: 'ch-heat', title: 'Mapa de Calor das Funções' },
-      { id: 'ch-iis', title: 'Índice de Impacto Sistêmico' }
+      { id: 'ch-heat', title: 'Propagação da Variabilidade na Rede FRAM' },
+      { id: 'ch-iis', title: 'IIS com Ressonância Funcional da Rede' }
     ];
 
     charts.forEach(ch => {
