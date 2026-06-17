@@ -976,7 +976,7 @@ const DGRManager = {
     svg.setAttribute('width', area.clientWidth);
     svg.setAttribute('height', area.clientHeight);
     svg.setAttribute('viewBox', `0 0 ${area.clientWidth} ${area.clientHeight}`);
-    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"></path></marker><marker id="arrow-critical" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#cc0000"></path></marker></defs>`;
+    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"></path></marker><marker id="arrow-critical" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#cc0000"></path></marker></defs>`;
 
     DGRState.coups.forEach(c => {
       const s = DGRState.fns.find(f => f.id === c.source_function_id);
@@ -993,7 +993,7 @@ const DGRManager = {
       path.setAttribute('d', `M ${a.x} ${a.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${b.x} ${b.y}`);
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', c.line_type === 'critical' ? '#c0392b' : c.line_type === 'variable' ? '#4b5563' : '#6b7280');
-      path.setAttribute('stroke-width', c.line_type === 'critical' ? '2.4' : '2');
+      path.setAttribute('stroke-width', c.line_type === 'critical' ? '1.45' : '1.05');
       if (c.line_type === 'variable') path.setAttribute('stroke-dasharray', '7 5');
       path.setAttribute('marker-end', 'url(#arrow-fram)');
       svg.appendChild(path);
@@ -1030,7 +1030,7 @@ const DGRManager = {
       path.setAttribute('d', `M ${a.x} ${a.y} C ${a.x+dx*0.42} ${a.y+curve}, ${a.x+dx*0.58} ${b.y-curve}, ${b.x} ${b.y}`);
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', '#cc0000');
-      path.setAttribute('stroke-width', '4.2');
+      path.setAttribute('stroke-width', '2.25');
       path.setAttribute('stroke-opacity', '0.78');
       path.setAttribute('marker-end', 'url(#arrow-critical)');
       svg.appendChild(path);
@@ -1104,7 +1104,7 @@ const DGRManager = {
     if (!svg || !area) return;
     svg.setAttribute('width', area.clientWidth); svg.setAttribute('height', area.clientHeight);
     svg.setAttribute('viewBox', `0 0 ${area.clientWidth} ${area.clientHeight}`);
-    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"></path></marker><marker id="arrow-critical" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#cc0000"></path></marker></defs>`;
+    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"></path></marker><marker id="arrow-critical" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#cc0000"></path></marker></defs>`;
     DGRState.coups.forEach(c => {
       const s = DGRState.fns.find(f => f.id === c.source_function_id), t = DGRState.fns.find(f => f.id === c.target_function_id);
       if (!s || !t) return;
@@ -1113,7 +1113,7 @@ const DGRManager = {
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', `M ${a.x} ${a.y} C ${a.x+dx*0.42} ${a.y+curve}, ${a.x+dx*0.58} ${b.y-curve}, ${b.x} ${b.y}`);
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', c.line_type === 'critical' ? '#c0392b' : c.line_type === 'variable' ? '#4b5563' : '#6b7280'); path.setAttribute('stroke-width', c.line_type === 'critical' ? '2.4' : '2');
+      path.setAttribute('stroke', c.line_type === 'critical' ? '#c0392b' : c.line_type === 'variable' ? '#4b5563' : '#6b7280'); path.setAttribute('stroke-width', c.line_type === 'critical' ? '1.45' : '1.05');
       if (c.line_type === 'variable') path.setAttribute('stroke-dasharray', '7 5');
       path.setAttribute('marker-end', 'url(#arrow-fram)'); svg.appendChild(path);
     });
@@ -1813,7 +1813,7 @@ const DGRManager = {
     const rows = effects.slice(0, 8).map(e => `<tr><td>${this.esc(e.fn.name)}</td><td>${this.pct(e.withoutMR)}</td><td>${this.pct(e.withMR)}</td><td><b>${this.pct(e.reduction)}</b></td></tr>`).join('');
     const critCount = d.rows.filter(x => x.iis >= 0.70).length;
     const resilientCount = DGRState.fns.filter(f => this.hasFunctionMR(f.id)).length;
-    resEl.innerHTML = `<div class="adv-grid"><div class="adv-card"><div class="adv-title">Efeito da Resiliência</div><div style="font-size:22px;font-weight:800;color:#0f6e56">${this.pct(avgRed)}</div><div class="adv-text">Redução média estimada obtida pelos MR</div></div><div class="adv-card"><div class="adv-title">Resumo executivo</div><div class="adv-text"><b>Funções críticas:</b> ${critCount}<br><b>Funções resilientes:</b> ${resilientCount}<br><b>Principal rota crítica:</b> ${routes[0] ? routes[0].names.map(n=>this.esc(n)).join(' → ') : '-'}</div></div><div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Fórmula do IGR e Saturação Sistêmica</div><div class="adv-text"><b>IGR = Σ IISᵢ / N</b>, sem normalização oculta.<br><b>IISᵢ = VFRᵢ + RFᵢ</b>.<br><b>Sᵢ = IISᵢ − 1</b>: Sᵢ ≤ 0 = Normal; 0 &lt; Sᵢ ≤ 0,20 = Saturação Sistêmica; Sᵢ &gt; 0,20 = Colapso Potencial.</div></div><div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Efeito estimado dos MR (antes/depois)</div><table class="adv-table"><thead><tr><th>Função</th><th>Sem MR</th><th>Com MR</th><th>Redução</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    resEl.innerHTML = `<div class="adv-grid"><div class="adv-card"><div class="adv-title">Efeito da Resiliência</div><div style="font-size:22px;font-weight:800;color:#0f6e56">${this.pct(avgRed)}</div><div class="adv-text">Redução média estimada obtida pelos MR</div></div><div class="adv-card"><div class="adv-title">Resumo executivo</div><div class="adv-text"><b>Funções críticas:</b> ${critCount}<br><b>Funções resilientes:</b> ${resilientCount}<br><b>Principal rota crítica:</b> ${routes[0] ? routes[0].names.map(n=>this.esc(n)).join(' → ') : '-'}</div></div><div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Fórmula do IGR e Saturação Sistêmica</div><div class="adv-text"><b>IGR = Σ IISᵢ / N</b>, sem normalização oculta.<br><b>IISᵢ = VFRᵢ + RFᵢ</b>.<br><b>Saturação Sistêmica</b>: Normal se IISᵢ &lt; 1,00; Saturado se 1,00 ≤ IISᵢ &lt; 1,20; Colapso Potencial se IISᵢ ≥ 1,20.</div></div><div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Efeito estimado dos MR (antes/depois)</div><table class="adv-table"><thead><tr><th>Função</th><th>Sem MR</th><th>Com MR</th><th>Redução</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   },
 
 
@@ -2001,6 +2001,95 @@ const DGRManager = {
     });
   },
 
+
+  buildPDFChartCanvas(kind, width = 1500, height = 760) {
+    // Gera gráficos em canvas próprio, sem depender da visibilidade/estado da tela.
+    const canvas = document.createElement('canvas');
+    canvas.width = width; canvas.height = height;
+    const g = canvas.getContext('2d');
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, width, height);
+    const rows = this.resultRows().filter(x => x && x.fn && x.r);
+    const byP95 = [...rows].sort((a,b)=>b.vfr-a.vfr);
+    const byIIS = [...rows].sort((a,b)=>b.iis-a.iis);
+    const title = (t) => { g.fillStyle = '#1a1a2e'; g.font = '700 34px Segoe UI, Arial, sans-serif'; g.fillText(t, 34, 48); };
+    const short = (s, n=36) => String(s||'').length > n ? String(s||'').slice(0,n-1)+'…' : String(s||'');
+    if (!rows.length) {
+      title('Sem dados simulados');
+      g.fillStyle = '#8b91a5'; g.font = '28px Segoe UI, Arial, sans-serif';
+      g.fillText('Execute a simulação antes de exportar.', 34, 110);
+      return canvas;
+    }
+    if (kind === 'vfr' || kind === 'iis') {
+      const list = kind === 'vfr' ? byP95 : byIIS;
+      title(kind === 'vfr' ? 'VFR por Função (P95 — Limite Crítico)' : 'IIS = VFR + RF (sem normalização)');
+      const left = 360, right = 130, top = 92, rowGap = 18;
+      const barH = Math.max(22, Math.min(52, (height-top-40)/Math.max(1,list.length)-rowGap));
+      const maxVal = Math.max(1, ...list.map(x => kind === 'vfr' ? x.vfr : x.iis));
+      g.font = '22px Segoe UI, Arial, sans-serif';
+      list.forEach((x,i)=>{
+        const val = kind === 'vfr' ? x.vfr : x.iis;
+        const y = top + i*(barH+rowGap);
+        g.fillStyle = '#4c5570'; g.textAlign = 'right';
+        g.fillText(short(x.fn.name, 34), left-18, y+barH*0.68);
+        g.fillStyle = '#eef0f6'; g.fillRect(left, y, width-left-right, barH);
+        g.fillStyle = this.vColor(Math.min(1,val)); g.fillRect(left, y, (val/maxVal)*(width-left-right), barH);
+        g.fillStyle = '#1a1a2e'; g.textAlign = 'left'; g.font = '700 22px Segoe UI, Arial, sans-serif';
+        g.fillText(this.pct(val), left + (val/maxVal)*(width-left-right) + 12, y+barH*0.68);
+        g.font = '22px Segoe UI, Arial, sans-serif';
+      });
+      return canvas;
+    }
+    if (kind === 'heat') {
+      title('Propagação da Variabilidade na Rede FRAM');
+      const nodes = byIIS.slice(0, Math.max(1, Math.min(byIIS.length, 10))).map(x=>x.fn);
+      const n = nodes.length;
+      const matrix = this.computePropagationMatrix(nodes, 5);
+      const maxVal = Math.max(0.0001, ...matrix.flat());
+      const left = 330, top = 150, right = 60, bottom = 70;
+      const gridW = width-left-right, gridH = height-top-bottom;
+      const cellW = gridW/n, cellH = gridH/n;
+      g.fillStyle = '#4c5570'; g.font = '700 20px Segoe UI, Arial, sans-serif';
+      g.fillText('Destino \\ Origem', 34, 104);
+      nodes.forEach((fn,j)=>{
+        const x = left + j*cellW + cellW/2;
+        g.save(); g.translate(x, top-18); g.rotate(-0.62);
+        g.fillStyle = '#4c5570'; g.font = '18px Segoe UI, Arial, sans-serif'; g.textAlign = 'left';
+        g.fillText(short(fn.name, 18), 0, 0); g.restore();
+      });
+      nodes.forEach((fn,i)=>{
+        const y = top + i*cellH;
+        g.fillStyle = '#4c5570'; g.font = '18px Segoe UI, Arial, sans-serif'; g.textAlign = 'right';
+        g.fillText(short(fn.name, 26), left-12, y+cellH/2+6);
+        nodes.forEach((_,j)=>{
+          const x = left + j*cellW, val = matrix[i][j] || 0, norm = val/maxVal;
+          const alpha = val > 0 ? 0.16 + norm*0.82 : 1;
+          g.fillStyle = val > 0 ? (norm > .66 ? `rgba(192,57,43,${alpha})` : norm > .33 ? `rgba(245,158,11,${alpha})` : `rgba(15,110,86,${alpha})`) : '#f5f6fa';
+          g.fillRect(x, y, Math.max(2, cellW-4), Math.max(2, cellH-4));
+          if (val > 0 && cellW > 42 && cellH > 28) {
+            g.fillStyle = norm > .56 ? '#fff' : '#1a1a2e'; g.font = '700 18px Segoe UI, Arial, sans-serif'; g.textAlign = 'center';
+            g.fillText(Math.round(val*100), x+cellW/2, y+cellH/2+6);
+          }
+        });
+      });
+      g.fillStyle = '#6b7280'; g.font = '18px Segoe UI, Arial, sans-serif'; g.textAlign = 'left';
+      g.fillText('Células = influência acumulada direta + indireta em cascata.', 34, height-28);
+      return canvas;
+    }
+    if (kind === 'hist') {
+      title('Histograma da Distribuição Agregada');
+      const bins = Array(20).fill(0); rows.forEach(x => (x.r.hist || []).forEach((v,i)=>{ if(i<20) bins[i]+=v; }));
+      const maxB = Math.max(1, ...bins); const left=60, top=90, bottom=70, gap=6, barW=(width-left-40)/bins.length;
+      bins.forEach((v,i)=>{
+        const bh = (v/maxB)*(height-top-bottom); const x=left+i*barW, y=height-bottom-bh;
+        g.fillStyle = this.vColor(i/19); g.fillRect(x, y, Math.max(4, barW-gap), bh);
+      });
+      g.fillStyle = '#6b7280'; g.font = '18px Segoe UI, Arial, sans-serif';
+      g.fillText('Baixa', left, height-28); g.fillText('Crítica', width-120, height-28);
+      return canvas;
+    }
+    return canvas;
+  },
+
   renderMCPanel(hasRes) {
     const target = document.getElementById('mc-inner');
     if (!hasRes) { target.innerHTML = ''; return; }
@@ -2094,7 +2183,7 @@ const DGRManager = {
 
 
   pdfCanvasText(doc, text, x, y, maxW = 260, fontSize = 9, bold = false) {
-    // Usa canvas para preservar símbolos matemáticos como Σ, evitando o problema de codificação £ no PDF.
+    // Usa canvas para preservar símbolos matemáticos como Σ, evitando o problema de codificação Σ no PDF.
     const scale = 3;
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -2158,7 +2247,7 @@ const DGRManager = {
     const scale = Math.min(areaW / Math.max(1, maxX - minX), areaH / Math.max(1, maxY - minY), 0.42);
     const mapX = x => areaX + (x - minX) * scale, mapY = y => areaY + (y - minY) * scale;
     const center = f => ({ x: mapX((f.x || 0) + 59), y: mapY((f.y || 0) + 52) });
-    doc.setLineWidth(0.4);
+    doc.setLineWidth(0.22);
     DGRState.coups.forEach(c => {
       const s = DGRState.fns.find(f => f.id === c.source_function_id), t = DGRState.fns.find(f => f.id === c.target_function_id);
       if (!s || !t) return;
@@ -2190,7 +2279,7 @@ const DGRManager = {
       const s = DGRState.fns.find(f => f.id === c.source_function_id), t = DGRState.fns.find(f => f.id === c.target_function_id);
       if (!s || !t) return;
       const a = center(s), b = center(t);
-      doc.setDrawColor(204,0,0); doc.setLineWidth(1.4);
+      doc.setDrawColor(204,0,0); doc.setLineWidth(0.75);
       doc.line(a.x, a.y, b.x, b.y);
       const ang = Math.atan2(b.y-a.y, b.x-a.x), ah = 4.0;
       doc.line(b.x, b.y, b.x - ah*Math.cos(ang-.45), b.y - ah*Math.sin(ang-.45));
@@ -2205,7 +2294,7 @@ const DGRManager = {
       const col = this.nodeColor(f);
       const rgb = this.hexToRgb ? this.hexToRgb(col) : null;
       if (rgb) doc.setDrawColor(rgb.r, rgb.g, rgb.b); else doc.setDrawColor(17,24,39);
-      doc.setFillColor(255,255,255); doc.setLineWidth(1.2);
+      doc.setFillColor(255,255,255); doc.setLineWidth(0.9);
       doc.lines(pts.slice(1).map((p,i)=>[p[0]-pts[i][0],p[1]-pts[i][1]]).concat([[pts[0][0]-pts[5][0], pts[0][1]-pts[5][1]]]), pts[0][0], pts[0][1], [1,1], 'FD');
       this.drawPDFPorts(doc, x, y, w, h);
       doc.setFont('helvetica','bold'); doc.setFontSize(Math.max(5, 8*scale)); doc.setTextColor(20,20,35);
@@ -2270,7 +2359,7 @@ const DGRManager = {
     routes.forEach((r,i) => { const t = `Rota ${i+1}: ${r.names.join(' → ')} | Intensidade: ${this.pct(Math.min(1,r.score))}`; doc.text(doc.splitTextToSize(t, 260), 15, y); y += 8; });
     y += 4; if (y > 135) { doc.addPage(); y = 18; }
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Critério matemático de Saturação Sistêmica', 15, y); y += 7;
-    this.pdfCanvasText(doc, 'Sᵢ = IISᵢ − 1; Sᵢ ≤ 0: Normal; 0 < Sᵢ ≤ 0,20: Saturação Sistêmica; Sᵢ > 0,20: Colapso Potencial.', 15, y, 260, 8.5);
+    this.pdfCanvasText(doc, 'Saturação Sistêmica: Normal se IISᵢ < 1,00; Saturado se 1,00 ≤ IISᵢ < 1,20; Colapso Potencial se IISᵢ ≥ 1,20.', 15, y, 260, 8.5);
     y += 9; if (y > 145) { doc.addPage(); y = 18; }
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('RF recebida e emitida por função', 15, y); y += 7; doc.setFontSize(8);
     ['Função','RF Direta','RF Indireta','RF Recebida','RF Emitida','RF Total','IIS','Classe'].forEach((h,i)=> doc.text(h, [15,82,110,140,170,198,224,248][i], y));
@@ -2331,8 +2420,23 @@ const DGRManager = {
     this.switchPage('mc');
     await new Promise(res => requestAnimationFrame(() => { this.renderCharts(true); res(); }));
     await new Promise(res => setTimeout(res, 80));
-    const charts = [{ id: 'ch-vfr', title: 'VFR por Função (P95 — Limite Crítico)' },{ id: 'ch-hist', title: 'Histograma da Distribuição Agregada' },{ id: 'ch-heat', title: 'Propagação da Variabilidade na Rede FRAM' },{ id: 'ch-iis', title: 'IIS = VFR + RF (sem normalização)' }];
-    charts.forEach(ch => { const cv = document.getElementById(ch.id); if (!cv) return; doc.addPage(); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text(ch.title, 15, 18); try { const img = cv.toDataURL('image/png', 1.0); doc.addImage(img, 'PNG', 15, 28, pageW - 30, Math.min(pageH - 45, 145)); } catch(e) { doc.setFont('helvetica', 'normal'); doc.text('Não foi possível incorporar este gráfico ao PDF.', 15, 32); } });
+    const charts = [
+      { kind: 'vfr', title: 'VFR por Função (P95 — Limite Crítico)' },
+      { kind: 'hist', title: 'Histograma da Distribuição Agregada' },
+      { kind: 'heat', title: 'Propagação da Variabilidade na Rede FRAM' },
+      { kind: 'iis', title: 'IIS = VFR + RF (sem normalização)' }
+    ];
+    charts.forEach(ch => {
+      doc.addPage();
+      try {
+        const cv = this.buildPDFChartCanvas(ch.kind, 1500, 760);
+        const img = cv.toDataURL('image/png', 1.0);
+        doc.addImage(img, 'PNG', 12, 14, pageW - 24, pageH - 28);
+      } catch(e) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text(ch.title, 15, 18);
+        doc.setFont('helvetica', 'normal'); doc.text('Não foi possível incorporar este gráfico ao PDF.', 15, 32);
+      }
+    });
     if (oldPageForCharts && oldPageForCharts !== 'mc') this.switchPage(oldPageForCharts);
 
     doc.save('dgr-fram-analytics.pdf');
