@@ -254,7 +254,7 @@ textarea.fi{resize:vertical;min-height:55px}
               <div id="ch-heat-empty" class="empty">Execute a simulação para visualizar a propagação</div>
             </div>
             <div class="dash-section">
-              <h3>IIS = VFR + RF</h3>
+              <h3>IIS = VFR + RF (sem normalização)</h3>
               <canvas id="ch-iis" height="200"></canvas>
               <div id="ch-iis-empty" class="empty">Execute a simulação para calcular</div>
             </div>
@@ -1782,7 +1782,7 @@ const DGRManager = {
     const rows = effects.slice(0, 8).map(e => `<tr><td>${this.esc(e.fn.name)}</td><td>${this.pct(e.withoutMR)}</td><td>${this.pct(e.withMR)}</td><td><b>${this.pct(e.reduction)}</b></td></tr>`).join('');
     const critCount = d.rows.filter(x => x.iis >= 0.70).length;
     const resilientCount = DGRState.fns.filter(f => this.hasFunctionMR(f.id)).length;
-    resEl.innerHTML = `<div class="adv-grid"><div class="adv-card"><div class="adv-title">Efeito da Resiliência</div><div style="font-size:22px;font-weight:800;color:#0f6e56">${this.pct(avgRed)}</div><div class="adv-text">Redução média estimada obtida pelos MR</div></div><div class="adv-card"><div class="adv-title">Resumo executivo</div><div class="adv-text"><b>Funções críticas:</b> ${critCount}<br><b>Funções resilientes:</b> ${resilientCount}<br><b>Principal rota crítica:</b> ${routes[0] ? routes[0].names.map(n=>this.esc(n)).join(' → ') : '-'}</div></div><div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Efeito estimado dos MR (antes/depois)</div><table class="adv-table"><thead><tr><th>Função</th><th>Sem MR</th><th>Com MR</th><th>Redução</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    resEl.innerHTML = `<div class="adv-grid"><div class="adv-card"><div class="adv-title">Efeito da Resiliência</div><div style="font-size:22px;font-weight:800;color:#0f6e56">${this.pct(avgRed)}</div><div class="adv-text">Redução média estimada obtida pelos MR</div></div><div class="adv-card"><div class="adv-title">Resumo executivo</div><div class="adv-text"><b>Funções críticas:</b> ${critCount}<br><b>Funções resilientes:</b> ${resilientCount}<br><b>Principal rota crítica:</b> ${routes[0] ? routes[0].names.map(n=>this.esc(n)).join(' → ') : '-'}</div></div><div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Fórmula do IGR</div><div class="adv-text"><b>IGR = média dos IIS por função</b>, com truncamento individual em 100% apenas para compor o índice global.<br><b>IISᵢ = VFRᵢ + RFᵢ</b>, sem normalização relativa; quando IISᵢ &gt; 100%, a função é marcada como Saturação Sistêmica.</div></div><div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Efeito estimado dos MR (antes/depois)</div><table class="adv-table"><thead><tr><th>Função</th><th>Sem MR</th><th>Com MR</th><th>Redução</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   },
 
 
@@ -1842,10 +1842,10 @@ const DGRManager = {
       cv.width = cv.parentElement.offsetWidth - 40; g.clearRect(0,0,cv.width,cv.height);
       const p95s = sorted.map(f => DGRState.mcRes[f.id].p95);
       const cats = [
-        { col: '#c0392b', n: p95s.filter(v => v >= 0.70).length, l: 'Crítica (≥70%)' },
-        { col: '#854f0b', n: p95s.filter(v => v >= 0.50 && v < 0.70).length, l: 'Alta (50-70%)' },
-        { col: '#4778e8', n: p95s.filter(v => v >= 0.30 && v < 0.50).length, l: 'Mod (30-50%)' },
-        { col: '#0f6e56', n: p95s.filter(v => v < 0.30).length, l: 'Baixa (<30%)' }
+        { col: '#c0392b', n: p95s.filter(v => v >= 0.70).length, l: '🔴 Crítica (≥70%)' },
+        { col: '#f59e0b', n: p95s.filter(v => v >= 0.50 && v < 0.70).length, l: '🟠 Alta (50-70%)' },
+        { col: '#eab308', n: p95s.filter(v => v >= 0.30 && v < 0.50).length, l: '🟡 Moderada (30-50%)' },
+        { col: '#0f6e56', n: p95s.filter(v => v < 0.30).length, l: '🟢 Baixa (<30%)' }
       ];
       let sA = -Math.PI/2; const cx = cv.width/3, cy = cv.height/2;
       cats.forEach(c => {
@@ -2165,9 +2165,10 @@ const DGRManager = {
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 15, 25);
     doc.text('Modelo: Beta-PERT (mínima, média, máxima); VT = VE + VX; VFR = VT × (1 − AR); IIS = VFR + RF sem normalização para 100%; Limite Crítico = P95.', 15, 31);
-    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(`IGR do Sistema: ${this.pct(d.igr)} (${igrInfo.lbl})`, 15, 38);
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(doc.splitTextToSize(this.autoInterpretationText(), 260), 15, 45);
-    let y = 62;
+    doc.text('IGR = média dos IIS por função, com truncamento individual em 100% apenas para compor o índice global.', 15, 36);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(`IGR do Sistema: ${this.pct(d.igr)} (${igrInfo.lbl})`, 15, 42);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(doc.splitTextToSize(this.autoInterpretationText(), 260), 15, 49);
+    let y = 66;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('Ranking por IIS', 15, y); y += 7; doc.setFontSize(8);
     ['Função','VFR/P95','RF Rec.','RF Emit.','IIS','Criticidade','Estado'].forEach((h,i)=> doc.text(h, [15,118,143,168,193,218,250][i], y));
     y += 3; doc.line(15,y,285,y); y += 5; doc.setFont('helvetica','normal');
@@ -2209,7 +2210,7 @@ const DGRManager = {
       `Quantidade de funções resilientes: ${resilientCountPDF}`
     ].forEach(line => { doc.text(doc.splitTextToSize(line, 260), 15, y); y += 8; });
     this.drawFramMapPDF(doc, pageW, pageH);
-    const charts = [{ id: 'ch-vfr', title: 'VFR por Função (P95 — Limite Crítico)' },{ id: 'ch-hist', title: 'Histograma da Distribuição Agregada' },{ id: 'ch-heat', title: 'Propagação da Variabilidade na Rede FRAM' },{ id: 'ch-iis', title: 'IIS = VFR + RF' }];
+    const charts = [{ id: 'ch-vfr', title: 'VFR por Função (P95 — Limite Crítico)' },{ id: 'ch-hist', title: 'Histograma da Distribuição Agregada' },{ id: 'ch-heat', title: 'Propagação da Variabilidade na Rede FRAM' },{ id: 'ch-iis', title: 'IIS = VFR + RF (sem normalização)' }];
     charts.forEach(ch => { const cv = document.getElementById(ch.id); if (!cv || cv.style.display === 'none') return; doc.addPage(); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text(ch.title, 15, 18); try { const img = cv.toDataURL('image/png', 1.0); doc.addImage(img, 'PNG', 15, 28, pageW - 30, Math.min(pageH - 45, 145)); } catch(e) { doc.setFont('helvetica', 'normal'); doc.text('Não foi possível incorporar este gráfico ao PDF.', 15, 32); } });
     doc.save('dgr-fram-analytics.pdf');
   }
