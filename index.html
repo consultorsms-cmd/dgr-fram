@@ -156,7 +156,7 @@ textarea.fi{resize:vertical;min-height:55px}
 .fram-node-title.small{font-size:9.4px;line-height:1.08}
 .fram-var-wave{position:absolute;left:50%;top:66px;transform:translateX(-50%);width:70px;height:24px;pointer-events:none}
 .fram-var-wave svg{width:70px;height:24px;overflow:visible}
-.fram-shield{position:absolute;left:50%;top:65px;transform:translateX(-50%);font-size:20px;line-height:1;pointer-events:none;color:#138a2e}
+.fram-shield{position:absolute;left:50%;top:65px;transform:translateX(-50%);font-size:20px;line-height:1;pointer-events:none;color:#138a2e}.fram-var-wave+.fram-shield{left:77%;top:64px;font-size:16px}
 .fram-node .port{position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;border:1.8px solid #5f6572;color:#111827;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:3;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
 .fram-node .p-i{left:-7px;top:43px}.fram-node .p-o{right:-7px;top:43px}.fram-node .p-t{left:21px;top:0}.fram-node .p-c{right:21px;top:0}.fram-node .p-p{left:21px;bottom:0}.fram-node .p-r{right:21px;bottom:0}
 .fram-node-actions{position:absolute;left:50%;transform:translateX(-50%);bottom:-22px;display:none;gap:4px;z-index:4;white-space:nowrap}
@@ -702,8 +702,8 @@ const DGRManager = {
   uid() { return 'id' + Math.random().toString(36).slice(2,8) + Date.now().toString(36); },
   esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); },
   pct(v, d = 1) { return (v * 100).toFixed(d) + '%'; },
-  vColor(v) { return v >= 0.70 ? '#c0392b' : v >= 0.50 ? '#854f0b' : v >= 0.30 ? '#4778e8' : '#0f6e56'; },
-  critInfo(v) { return v >= 0.70 ? {cls:'cb-c', lbl:'Crítica'} : v >= 0.50 ? {cls:'cb-a', lbl:'Alta'} : v >= 0.30 ? {cls:'cb-m', lbl:'Moderada'} : {cls:'cb-b', lbl:'Baixa'}; },
+  vColor(v) { return v >= 0.70 ? '#c0392b' : v >= 0.50 ? '#f59e0b' : v >= 0.30 ? '#eab308' : '#0f6e56'; },
+  critInfo(v) { return v >= 0.70 ? {cls:'cb-c', lbl:'🔴 Crítica'} : v >= 0.50 ? {cls:'cb-a', lbl:'🟠 Alta'} : v >= 0.30 ? {cls:'cb-m', lbl:'🟡 Moderada'} : {cls:'cb-b', lbl:'🟢 Baixa'}; },
 
   evalPreset(level) {
     // Avaliação simplificada para o usuário; o software converte internamente para Beta-PERT.
@@ -829,7 +829,9 @@ const DGRManager = {
   },
 
   nodeColor(fn) {
-    // Prioridade visual: RE/RX > MR > Comum
+    // Com simulação: cor automática pela criticidade IIS. Sem simulação: prioridade visual RE/RX > MR > Comum.
+    const r = DGRState.mcRes[fn.id];
+    if (r) return this.critClass(+(r.iis || r.rawIIS || r.p95 || 0)).color;
     if (this.hasFunctionVariability(fn.id)) return '#cc0000';
     if (this.hasFunctionMR(fn.id)) return '#138a2e';
     return '#111827';
@@ -845,61 +847,67 @@ const DGRManager = {
   calculateNetworkResonance() {
     const ids = DGRState.fns.map(f => f.id);
     if (!ids.length) return;
-    const base = {}, incoming = {}, centrality = {}, rf = {}, iis = {};
-    ids.forEach(id => { const r = DGRState.mcRes[id] || {}; base[id] = +(r.p95 || r.mean || 0); incoming[id] = 0; centrality[id] = 0; });
+    const base = {}, incoming = {}, emitted = {}, centrality = {}, rf = {};
+    ids.forEach(id => {
+      const r = DGRState.mcRes[id] || {};
+      base[id] = Math.max(0, +(r.p95 || r.mean || 0));
+      incoming[id] = 0; emitted[id] = 0; centrality[id] = 0;
+    });
 
     // Centralidade FRAM: saída direta + alcance a jusante ponderado por tipo de acoplamento.
     ids.forEach(id => {
       const visited = new Set();
       let score = 0;
       const walk = (cur, depth, factor) => {
-        if (depth > 4) return;
+        if (depth > 5) return;
         DGRState.coups.filter(c => c.source_function_id === cur).forEach(c => {
           if (!ids.includes(c.target_function_id)) return;
           const w = this.couplingWeight(c) * factor;
-          score += w / depth;
+          score += w / Math.sqrt(depth);
           const key = cur + '>' + c.target_function_id + ':' + depth;
-          if (!visited.has(key)) { visited.add(key); walk(c.target_function_id, depth + 1, w * 0.62); }
+          if (!visited.has(key)) { visited.add(key); walk(c.target_function_id, depth + 1, w * 0.72); }
         });
       };
       walk(id, 1, 1);
       centrality[id] = score;
     });
-    const maxCent = Math.max(1, ...Object.values(centrality));
+    const maxCent = Math.max(1e-6, ...Object.values(centrality));
 
-    // Propagação iterativa: parte da VFR residual passa pelas conexões e se atenua pela rede.
+    // RF em cascata: a VFR de cada função se propaga por múltiplas camadas da rede.
+    // Não há normalização do IIS para 100%; IIS_i = VFR_i + RF_i pode ultrapassar 100%.
     let signal = {...base};
-    for (let k = 0; k < 8; k++) {
+    const decay = 0.68;
+    for (let k = 0; k < 10; k++) {
       const next = {}; ids.forEach(id => next[id] = 0);
       DGRState.coups.forEach(c => {
         if (!ids.includes(c.source_function_id) || !ids.includes(c.target_function_id)) return;
         const out = DGRState.coups.filter(x => x.source_function_id === c.source_function_id).length || 1;
-        const transfer = (signal[c.source_function_id] || 0) * this.couplingWeight(c) * 0.42 / Math.sqrt(out);
+        const w = this.couplingWeight(c);
+        const transfer = (signal[c.source_function_id] || 0) * w * decay / Math.sqrt(out);
         next[c.target_function_id] += transfer;
+        emitted[c.source_function_id] += transfer / (k + 1);
       });
       ids.forEach(id => incoming[id] += next[id] / (k + 1));
       signal = next;
+      if (Object.values(signal).reduce((a,b)=>a+b,0) < 1e-5) break;
     }
 
-    const maxIncoming = Math.max(1e-6, ...Object.values(incoming));
     ids.forEach(id => {
-      // Fórmula final adotada: IIS_i = VFR_i + RF_i.
-      // O IIS é normalizado para 0–100%. Quando a soma ultrapassa 100%,
-      // o valor exibido permanece 100% e o estado é marcado como Saturação Sistêmica.
       const vfr = Math.max(0, +(base[id] || 0));
-      rf[id] = Math.max(0, Math.min(2, 0.55 * incoming[id]));
+      rf[id] = Math.max(0, incoming[id] * 0.75);
       const r = DGRState.mcRes[id] || {};
       const rawIIS = Math.max(0, vfr + rf[id]);
-      iis[id] = Math.min(1, rawIIS);
       DGRState.mcRes[id] = {...r,
         centrality: centrality[id] / maxCent,
         incomingResonance: incoming[id],
-        incomingResonanceNorm: incoming[id] / maxIncoming,
+        incomingResonanceNorm: incoming[id] / Math.max(1e-6, ...Object.values(incoming)),
+        emittedResonance: emitted[id],
+        emittedResonanceNorm: emitted[id] / Math.max(1e-6, ...Object.values(emitted)),
         functionalResonance: rf[id],
         rawIIS,
-        iis: iis[id],
+        iis: rawIIS,
         saturation: rawIIS > 1,
-        state: rawIIS > 1 ? 'Saturação Sistêmica' : 'Normalizado'
+        state: rawIIS > 1 ? 'Saturação Sistêmica' : 'Normal'
       };
     });
   },
@@ -926,7 +934,7 @@ const DGRManager = {
     svg.setAttribute('width', area.clientWidth);
     svg.setAttribute('height', area.clientHeight);
     svg.setAttribute('viewBox', `0 0 ${area.clientWidth} ${area.clientHeight}`);
-    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"></path></marker></defs>`;
+    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"></path></marker><marker id="arrow-critical" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#cc0000"></path></marker></defs>`;
 
     DGRState.coups.forEach(c => {
       const s = DGRState.fns.find(f => f.id === c.source_function_id);
@@ -956,6 +964,40 @@ const DGRManager = {
       }
     });
 
+
+
+    // Rotas críticas explícitas no mapa FRAM: sobreposição vermelha espessa nas conexões que compõem as rotas.
+    const routeEdges = new Map();
+    if (DGRState.fns.some(f => DGRState.mcRes[f.id])) {
+      this.findCriticalRoutes(3).forEach((r, ri) => {
+        for (let pi = 0; pi < r.path.length - 1; pi++) {
+          const key = r.path[pi] + '>' + r.path[pi+1];
+          routeEdges.set(key, Math.max(routeEdges.get(key) || 0, Math.min(1.5, r.score)));
+        }
+      });
+    }
+    DGRState.coups.forEach(c => {
+      const key = c.source_function_id + '>' + c.target_function_id;
+      if (!routeEdges.has(key)) return;
+      const s = DGRState.fns.find(f => f.id === c.source_function_id);
+      const t = DGRState.fns.find(f => f.id === c.target_function_id);
+      if (!s || !t) return;
+      const a = this.getPortPoint(s, c.source_aspect || c.source_port || 'O'), b = this.getPortPoint(t, c.target_aspect || c.target_port || 'I');
+      const dx = b.x - a.x, dy = b.y - a.y, curve = Math.max(-90, Math.min(90, dy * 0.28));
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${a.x} ${a.y} C ${a.x+dx*0.42} ${a.y+curve}, ${a.x+dx*0.58} ${b.y-curve}, ${b.x} ${b.y}`);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', '#cc0000');
+      path.setAttribute('stroke-width', '4.2');
+      path.setAttribute('stroke-opacity', '0.78');
+      path.setAttribute('marker-end', 'url(#arrow-critical)');
+      svg.appendChild(path);
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', (a.x+b.x)/2); text.setAttribute('y', (a.y+b.y)/2 + 12);
+      text.setAttribute('text-anchor', 'middle'); text.setAttribute('class', 'fram-edge-label');
+      text.textContent = 'rota crítica ' + Math.round(routeEdges.get(key)*100) + '%';
+      svg.appendChild(text);
+    });
     DGRState.fns.forEach(fn => {
       const div = document.createElement('div');
       div.className = 'fram-node' + (this.hasFunctionVariability(fn.id) ? ' resonant' : '');
@@ -968,7 +1010,7 @@ const DGRManager = {
       const nColor = this.nodeColor(fn);
       const waveSvg = '<div class="fram-var-wave" title="Função com RE/RX associada"><svg viewBox="0 0 70 24" aria-hidden="true"><path d="M3 12 C10 2 17 22 24 12 S38 2 45 12 S59 22 67 12" stroke="#e00000" stroke-width="4" fill="none" stroke-linecap="round"/></svg></div>';
       const shield = '<div class="fram-shield" title="Função com mecanismo de resiliência">🛡️</div>';
-      div.innerHTML = `<svg class="fram-node-svg" viewBox="0 0 118 104" aria-hidden="true"><polygon class="fram-node-poly" points="29,5 89,5 113,52 89,99 29,99 5,52" fill="#fff" stroke="${nColor}" stroke-width="7" stroke-linejoin="round"></polygon></svg><div class="${titleCls}">${this.esc(fn.name)}</div>${hasVariability ? waveSvg : (hasMR ? shield : '')}<div class="port p-i">I</div><div class="port p-o">O</div><div class="port p-t">T</div><div class="port p-c">C</div><div class="port p-p">P</div><div class="port p-r">R</div><div class="fram-node-actions"><button class="fram-mini-btn" type="button">✏️ Editar</button><button class="fram-mini-btn" type="button">🗑️</button></div>`;
+      div.innerHTML = `<svg class="fram-node-svg" viewBox="0 0 118 104" aria-hidden="true"><polygon class="fram-node-poly" points="29,5 89,5 113,52 89,99 29,99 5,52" fill="#fff" stroke="${nColor}" stroke-width="7" stroke-linejoin="round"></polygon></svg><div class="${titleCls}">${this.esc(fn.name)}</div>${hasVariability ? waveSvg : ''}${hasMR ? shield : ''}<div class="port p-i">I</div><div class="port p-o">O</div><div class="port p-t">T</div><div class="port p-c">C</div><div class="port p-p">P</div><div class="port p-r">R</div><div class="fram-node-actions"><button class="fram-mini-btn" type="button">✏️ Editar</button><button class="fram-mini-btn" type="button">🗑️</button></div>`;
       div.querySelectorAll('button')[0].onclick = (ev) => { ev.stopPropagation(); this.editFn(fn.id); document.getElementById('fn-name').focus(); };
       div.querySelectorAll('button')[1].onclick = (ev) => { ev.stopPropagation(); this.deleteFn(fn.id); };
       this.bindNodeDrag(div, fn.id);
@@ -1020,7 +1062,7 @@ const DGRManager = {
     if (!svg || !area) return;
     svg.setAttribute('width', area.clientWidth); svg.setAttribute('height', area.clientHeight);
     svg.setAttribute('viewBox', `0 0 ${area.clientWidth} ${area.clientHeight}`);
-    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"></path></marker></defs>`;
+    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"></path></marker><marker id="arrow-critical" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#cc0000"></path></marker></defs>`;
     DGRState.coups.forEach(c => {
       const s = DGRState.fns.find(f => f.id === c.source_function_id), t = DGRState.fns.find(f => f.id === c.target_function_id);
       if (!s || !t) return;
@@ -1574,10 +1616,10 @@ const DGRManager = {
 
 
   critClass(v) {
-    if (v >= 0.70) return { cls:'cb-c', lbl:'Crítica', color:'#7c0000' };
-    if (v >= 0.50) return { cls:'cb-a', lbl:'Alta', color:'#c0392b' };
-    if (v >= 0.30) return { cls:'cb-m', lbl:'Moderada', color:'#854f0b' };
-    return { cls:'cb-b', lbl:'Baixa', color:'#0f6e56' };
+    if (v >= 0.70) return { cls:'cb-c', lbl:'🔴 Crítica', color:'#c0392b' };
+    if (v >= 0.50) return { cls:'cb-a', lbl:'🟠 Alta', color:'#f59e0b' };
+    if (v >= 0.30) return { cls:'cb-m', lbl:'🟡 Moderada', color:'#eab308' };
+    return { cls:'cb-b', lbl:'🟢 Baixa', color:'#0f6e56' };
   },
 
   igrClass(v) {
@@ -1592,7 +1634,7 @@ const DGRManager = {
       const r = DGRState.mcRes[f.id] || {};
       const rf = +(r.functionalResonance || 0);
       const rawIIS = +(r.rawIIS || r.iis || r.p95 || 0);
-      const iis = Math.min(1, +(r.iis || rawIIS || 0));
+      const iis = +(r.iis || rawIIS || 0);
       return { fn:f, r, vfr:+(r.p95 || 0), rf, rawIIS, iis, saturation: !!r.saturation || rawIIS > 1, crit:this.critClass(iis) };
     });
   },
@@ -1613,9 +1655,11 @@ const DGRManager = {
     DGRState.fns.forEach(f => { outScore[f.id]=0; inScore[f.id]=0; });
     DGRState.coups.forEach(c => {
       const src = DGRState.mcRes[c.source_function_id] || {};
-      const val = (src.p95 || 0) * this.couplingWeight(c);
+      const srcRes = DGRState.mcRes[c.source_function_id] || {};
+      const tgtRes = DGRState.mcRes[c.target_function_id] || {};
+      const val = ((srcRes.p95 || 0) + (srcRes.functionalResonance || 0)) * this.couplingWeight(c);
       outScore[c.source_function_id] = (outScore[c.source_function_id] || 0) + val;
-      inScore[c.target_function_id] = (inScore[c.target_function_id] || 0) + val;
+      inScore[c.target_function_id] = (inScore[c.target_function_id] || 0) + val + (tgtRes.functionalResonance || 0) * 0.25;
     });
     const fnName = id => (DGRState.fns.find(f => f.id === id) || {}).name || '-';
     const maxObj = obj => Object.entries(obj).sort((a,b)=>b[1]-a[1])[0] || [null,0];
@@ -1698,6 +1742,7 @@ const DGRManager = {
       card('Maior RF Recebido', this.esc(d.maiorRF?.fn.name || '-'), d.maiorRF ? this.pct(d.maiorRF.rf) : '-', '#c0392b'),
       card('Maior Emissor', this.esc(d.emissor.name), this.pct(d.emissor.value), '#854f0b'),
       card('Maior Receptor', this.esc(d.receptor.name), this.pct(d.receptor.value), '#0f6e56'),
+      `<div class="adv-card" style="grid-column:1/-1"><div class="adv-title">RF recebida e emitida por função</div><table class="adv-table"><thead><tr><th>Função</th><th>RF recebida</th><th>RF emitida</th><th>IIS</th><th>Classe</th></tr></thead><tbody>${d.rows.sort((a,b)=>b.iis-a.iis).map(x=>`<tr><td>${this.esc(x.fn.name)}</td><td>${this.pct(x.rf)}</td><td>${this.pct(x.r.emittedResonance || 0)}</td><td><b>${this.pct(x.iis)}</b></td><td><span class="cbadge ${x.crit.cls}">${x.crit.lbl}</span></td></tr>`).join('')}</tbody></table></div>`,
       `<div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Interpretação automática</div><div class="adv-text">${this.esc(this.autoInterpretationText())}</div></div>`
     ].join('');
     const routes = this.findCriticalRoutes(3);
@@ -1728,7 +1773,8 @@ const DGRManager = {
       { val: hasRes ? this.pct(maxLC) : '-', lbl: 'Limite Crítico Máx. (P95)', color: hasRes ? this.vColor(maxLC) : '#9898b0' },
       { val: hasRes ? this.pct(avgProbCrit) : '-', lbl: 'Prob. Criticidade Média', color: hasRes ? this.vColor(avgProbCrit) : '#9898b0' },
       { val: hasRes ? this.pct(this.calcIGR()) : '-', lbl: 'IGR do Sistema', color: hasRes ? this.igrClass(this.calcIGR()).color : '#9898b0' },
-      { val: hasRes ? this.pct(Math.max(...resFns.map(f => DGRState.mcRes[f.id].functionalResonance || 0))) : '-', lbl: 'RF Máx. Recebido', color: hasRes ? '#c0392b' : '#9898b0' }
+      { val: hasRes ? this.pct(Math.max(...resFns.map(f => DGRState.mcRes[f.id].functionalResonance || 0))) : '-', lbl: 'RF Máx. Recebido', color: hasRes ? '#c0392b' : '#9898b0' },
+      { val: hasRes ? this.pct(Math.max(...resFns.map(f => DGRState.mcRes[f.id].emittedResonance || 0))) : '-', lbl: 'RF Máx. Emitido', color: hasRes ? '#854f0b' : '#9898b0' }
     ];
     document.getElementById('dash-stats').innerHTML = stats.map(s => `
       <div class="dash-card">
@@ -1874,13 +1920,14 @@ const DGRManager = {
       const cv = document.getElementById('ch-iis'); const g = cv.getContext('2d');
       cv.width = cv.parentElement.offsetWidth - 40; g.clearRect(0,0,cv.width,cv.height);
       const iisS = [...sorted].sort((a,b) => DGRState.mcRes[b.id].iis - DGRState.mcRes[a.id].iis);
-      const maxI = Math.max(...iisS.map(f => DGRState.mcRes[f.id].iis), 0.001);
+      const maxI = Math.max(...iisS.map(f => DGRState.mcRes[f.id].iis), 1, 0.001);
       const bH = Math.min(22, (cv.height-30)/iisS.length - 4);
       iisS.forEach((fn, i) => {
         const r = DGRState.mcRes[fn.id]; const y = 15 + i * (bH + 4);
         g.fillStyle = '#eeedfe'; g.fillRect(10, y, cv.width-80, bH);
-        g.fillStyle = this.vColor(r.functionalResonance || r.p95); g.fillRect(10, y, (r.iis / maxI) * (cv.width-80), bH);
+        g.fillStyle = this.vColor(r.iis || r.p95); g.fillRect(10, y, (r.iis / maxI) * (cv.width-80), bH);
         g.fillStyle = '#1a1a2e'; g.font = '10px sans-serif'; g.fillText(fn.name.substring(0,18), 15, y + bH/2 + 3);
+        g.fillStyle = this.vColor(r.iis || r.p95); g.font = 'bold 10px sans-serif'; g.fillText(this.pct(r.iis || 0), cv.width-65, y + bH/2 + 3);
       });
     }
   },
@@ -2048,14 +2095,14 @@ const DGRManager = {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text('Relatório DGR-FRAM Analítico', 15, 18);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 15, 25);
-    doc.text('Modelo: Beta-PERT (mínima, média, máxima); VT = VE + VX; VFR = VT × (1 − AR); IIS = VFR + RF; Limite Crítico = P95.', 15, 31);
+    doc.text('Modelo: Beta-PERT (mínima, média, máxima); VT = VE + VX; VFR = VT × (1 − AR); IIS = VFR + RF sem normalização para 100%; Limite Crítico = P95.', 15, 31);
     doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(`IGR do Sistema: ${this.pct(d.igr)} (${igrInfo.lbl})`, 15, 38);
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(doc.splitTextToSize(this.autoInterpretationText(), 260), 15, 45);
     let y = 62;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('Ranking por IIS', 15, y); y += 7; doc.setFontSize(8);
-    ['Função','VFR/P95','RF','IIS','Criticidade','Estado','Prob. Crit.'].forEach((h,i)=> doc.text(h, [15,126,154,178,200,230,260][i], y));
+    ['Função','VFR/P95','RF Rec.','RF Emit.','IIS','Criticidade','Estado'].forEach((h,i)=> doc.text(h, [15,118,143,168,193,218,250][i], y));
     y += 3; doc.line(15,y,285,y); y += 5; doc.setFont('helvetica','normal');
-    sortedIIS.forEach((x,i) => { if (y > 188) { doc.addPage(); y = 18; } doc.text(`${i+1}. ${x.fn.name}`.slice(0,58), 15, y); doc.text(this.pct(x.vfr), 126, y); doc.text(this.pct(x.rf), 154, y); doc.text(this.pct(x.iis), 178, y); doc.text(x.crit.lbl, 200, y); doc.text(x.saturation ? 'Saturação Sistêmica' : 'Normal', 230, y); doc.text(this.pct(x.r.probCrit || 0), 260, y); y += 6; });
+    sortedIIS.forEach((x,i) => { if (y > 188) { doc.addPage(); y = 18; } doc.text(`${i+1}. ${x.fn.name}`.slice(0,58), 15, y); doc.text(this.pct(x.vfr), 118, y); doc.text(this.pct(x.rf), 143, y); doc.text(this.pct(x.r.emittedResonance || 0), 168, y); doc.text(this.pct(x.iis), 193, y); doc.text(x.crit.lbl, 218, y); doc.text(x.saturation ? 'Saturação Sistêmica' : 'Normal', 250, y); y += 6; });
     y += 5; if (y > 165) { doc.addPage(); y = 18; }
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Ranking das funções por P95', 15, y); y += 7; doc.setFontSize(8);
     ['Função','VFR média','P90','P95','RF','P99','Prob. Crit.','IIS'].forEach((h,i)=> doc.text(h, [15,108,136,160,184,207,232,262][i], y));
