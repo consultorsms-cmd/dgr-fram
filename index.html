@@ -2218,13 +2218,14 @@ const DGRManager = {
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 15, 25);
     doc.text('Modelo: Beta-PERT (minima, media, maxima); VT = VE + VX; VFR = VT x (1 - AR); IIS = VFR + RF, sem normalizacao para 100%; Limite Critico = P95.', 15, 31);
     doc.text('Formula do IGR: IGR = Σ IIS_i / N; IIS_i = VFR_i + RF_i. Sem normalizacao oculta.', 15, 36);
-    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(`IGR do Sistema: ${this.pct(d.igr)} (${igrInfo.lbl})`, 15, 42);
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(doc.splitTextToSize(this.autoInterpretationText(), 260), 15, 49);
-    let y = 66;
+    doc.text('Classes: <30% Baixa; 30-50% Moderada; 50-70% Alta; >70% Critica. Icones e cores aplicados nas tabelas.', 15, 41);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(`IGR do Sistema: ${this.pct(d.igr)} (${igrInfo.lbl})`, 15, 47);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(doc.splitTextToSize(this.autoInterpretationText(), 260), 15, 54);
+    let y = 72;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('Ranking por IIS', 15, y); y += 7; doc.setFontSize(8);
-    ['Função','VFR/P95','RF Rec.','RF Emit.','IIS','Criticidade','Estado'].forEach((h,i)=> doc.text(h, [15,118,143,168,193,218,250][i], y));
+    ['Função','VFR/P95','RF Rec.','RF Emit.','RF Total','IIS','Criticidade','Estado'].forEach((h,i)=> doc.text(h, [15,108,132,156,180,204,228,258][i], y));
     y += 3; doc.line(15,y,285,y); y += 5; doc.setFont('helvetica','normal');
-    sortedIIS.forEach((x,i) => { if (y > 188) { doc.addPage(); y = 18; } doc.text(`${i+1}. ${x.fn.name}`.slice(0,58), 15, y); doc.text(this.pct(x.vfr), 118, y); doc.text(this.pct(x.rf), 143, y); doc.text(this.pct(x.r.emittedResonance || 0), 168, y); doc.text(this.pct(x.iis), 193, y); this.pdfCritLabel(doc, 218, y, x.crit); doc.text(x.saturation ? 'Saturacao Sistemica' : 'Normal', 250, y); y += 6; });
+    sortedIIS.forEach((x,i) => { if (y > 188) { doc.addPage(); y = 18; } doc.text(`${i+1}. ${x.fn.name}`.slice(0,58), 15, y); doc.text(this.pct(x.vfr), 108, y); doc.text(this.pct(x.rf), 132, y); doc.text(this.pct(x.r.emittedResonance || 0), 156, y); doc.text(this.pct((x.r.directResonance || 0)+(x.r.indirectResonance || 0)), 180, y); doc.text(this.pct(x.iis), 204, y); this.pdfCritLabel(doc, 228, y, x.crit); doc.text(x.saturation ? 'Saturacao Sistemica' : 'Normal', 258, y); y += 6; });
     y += 5; if (y > 165) { doc.addPage(); y = 18; }
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Ranking das funções por P95', 15, y); y += 7; doc.setFontSize(8);
     ['Função','VFR média','P90','P95','RF','P99','Prob. Crit.','IIS'].forEach((h,i)=> doc.text(h, [15,108,136,160,184,207,232,262][i], y));
