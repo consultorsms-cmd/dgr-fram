@@ -138,6 +138,18 @@ textarea.fi{resize:vertical;min-height:55px}
 .legend-dot{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1.5px solid #4778e8;background:#fff;font-weight:700;font-size:10px;margin-right:5px}
 .form-anchor{scroll-margin-top:80px}
 
+
+/* AJUSTE SOLICITADO: tela Funções como workspace visual, mapa primeiro e comandos no topo */
+#s-fram{padding:0;background:#f4f6fb;overflow:auto}
+#s-fram .fram-full-wrap{width:100%;max-width:none;margin:0;padding:16px 18px 24px}
+#s-fram .page-title{margin-left:0}
+#s-fram .fram-workspace{margin:8px 0 14px;border-radius:8px}
+#s-fram .fram-toolbar{position:sticky;top:0;z-index:5;box-shadow:0 1px 6px rgba(15,23,42,.06)}
+#s-fram .fram-map-wrap{height:640px;min-height:520px;background:radial-gradient(#e4e8f2 1px,transparent 1px);background-size:18px 18px}
+#s-fram #fram-map{height:100%}
+#s-fram .fram-forms-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}
+@media (max-width:1100px){#s-fram .fram-forms-grid{grid-template-columns:1fr}#s-fram .fram-map-wrap{height:560px}}
+
 .empty{text-align:center;padding:32px 16px;color:#9898b0}
 </style>
 </head>
@@ -248,7 +260,7 @@ textarea.fi{resize:vertical;min-height:55px}
       </div>
 
       <div class="screen scroll-screen" id="s-fram">
-        <div class="form-wrap">
+        <div class="fram-full-wrap">
           <div class="page-title">Mapa de Funções (FRAM)</div>
           <div class="page-sub">Visualização sistêmica das funções, conexões e extremos FRAM. As conexões partem e chegam pelos extremos escolhidos: Input, Output, Precondition, Resource, Control e Time.</div>
 
@@ -257,11 +269,11 @@ textarea.fi{resize:vertical;min-height:55px}
               <button class="ftbtn primary" onclick="document.getElementById('fn-form-card').scrollIntoView({behavior:'smooth',block:'start'})">＋ Nova Função</button>
               <button class="ftbtn" onclick="document.getElementById('conn-form-card').scrollIntoView({behavior:'smooth',block:'start'})">🔗 Nova Conexão</button>
               <button class="ftbtn" onclick="document.getElementById('res-form-card').scrollIntoView({behavior:'smooth',block:'start'})">〽 Cenário de Ressonância</button>
-              <button class="ftbtn" onclick="DGRManager.drawFramMap('fram-map',560)">⤢ Ajustar Layout</button>
+              <button class="ftbtn" onclick="DGRManager.resetFramLayout()">⤢ Ajustar Layout</button>
               <button class="ftbtn" onclick="DGRManager.runSimulation()">▶ Rodar Simulação</button>
-              <span style="margin-left:auto;font-size:11px;color:#6b7280">Mapa FRAM com extremos I/O/P/R/C/T</span>
+              <span style="margin-left:auto;font-size:11px;color:#6b7280">Comandos no topo • arraste as funções para reposicionar • conexões pelos extremos I/O/P/R/C/T</span>
             </div>
-            <div class="fram-map-wrap"><canvas id="fram-map" height="560"></canvas></div>
+            <div class="fram-map-wrap"><canvas id="fram-map" height="640"></canvas></div>
             <div class="fram-legend">
               <span><span class="legend-dot">I</span>Input</span>
               <span><span class="legend-dot">O</span>Output</span>
@@ -273,7 +285,7 @@ textarea.fi{resize:vertical;min-height:55px}
             </div>
           </div>
           
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="fram-forms-grid">
             <div>
               <div class="form-card form-anchor" id="fn-form-card">
                 <h3 id="fnh3">Nova Função</h3>
@@ -552,13 +564,14 @@ const DGRState = {
   params: {},
   subs: {},
   mcRes: {},
+  positions: {},
   mcN: 5000,
   curPage: 'mc',
 
   serialize() {
     return JSON.stringify({
       fns: this.fns, coups: this.coups, vars: this.vars, mechs: this.mechs,
-      resEvs: this.resEvs, params: this.params, subs: this.subs, mcRes: this.mcRes, mcN: this.mcN
+      resEvs: this.resEvs, params: this.params, subs: this.subs, mcRes: this.mcRes, positions: this.positions, mcN: this.mcN
     });
   },
 
@@ -572,6 +585,7 @@ const DGRState = {
     this.params = d.params || {};
     this.subs = d.subs || {};
     this.mcRes = d.mcRes || {};
+    this.positions = d.positions || {};
     this.mcN = d.mcN || 5000;
   }
 };
@@ -621,7 +635,8 @@ const DGRManager = {
   init() {
     this.loadData();
     DGRHistory.push();
-    window.addEventListener('resize', () => { if(DGRState.curPage === 'mc') this.renderCharts(); if(DGRState.curPage === 'fram') this.drawFramMap('fram-map',560); });
+    this.bindFramDrag();
+    window.addEventListener('resize', () => { if(DGRState.curPage === 'mc') this.renderCharts(); if(DGRState.curPage === 'fram') this.drawFramMap('fram-map',640); });
   },
 
   switchPage(page) {
@@ -656,7 +671,7 @@ const DGRManager = {
       this.renderMCPanel(hasRes);
     }
     if (DGRState.curPage === 'fram') {
-      setTimeout(() => this.drawFramMap('fram-map', 560), 0);
+      setTimeout(() => this.drawFramMap('fram-map', 640), 0);
     }
   },
 
@@ -727,7 +742,7 @@ const DGRManager = {
     DGRState.vars = DGRState.vars.filter(v => v.affected_function_id !== id);
     DGRState.mechs = DGRState.mechs.filter(m => m.controlled_function_id !== id);
     DGRState.resEvs = DGRState.resEvs.filter(r => r.initial_function_id !== id);
-    delete DGRState.params[id]; delete DGRState.subs[id]; delete DGRState.mcRes[id];
+    delete DGRState.params[id]; delete DGRState.subs[id]; delete DGRState.mcRes[id]; delete DGRState.positions[id];
     DGRHistory.push();
     this.refreshUI();
   },
@@ -1330,6 +1345,116 @@ const DGRManager = {
   },
 
 
+  resetFramLayout() {
+    DGRHistory.push();
+    DGRState.positions = {};
+    DGRHistory.push();
+    this.drawFramMap('fram-map', 640);
+  },
+
+  bindFramDrag() {
+    const cv = document.getElementById('fram-map');
+    if (!cv || cv.dataset.dragReady === '1') return;
+    cv.dataset.dragReady = '1';
+    cv.style.cursor = 'grab';
+    let draggingId = null;
+    let hasMoved = false;
+
+    const getMouse = (ev) => {
+      const rect = cv.getBoundingClientRect();
+      const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+      return { x: (clientX - rect.left) * (cv.width / rect.width), y: (clientY - rect.top) * (cv.height / rect.height) };
+    };
+
+    const hitNode = (pt) => {
+      const layout = this.getFramLayout(cv);
+      for (let i = layout.fns.length - 1; i >= 0; i--) {
+        const fn = layout.fns[i];
+        const n = layout.pos[fn.id];
+        if (!n) continue;
+        const dx = Math.abs(pt.x - n.x), dy = Math.abs(pt.y - n.y);
+        if (dx <= layout.rx + 12 && dy <= layout.ry + 12) return fn.id;
+      }
+      return null;
+    };
+
+    const moveTo = (ev) => {
+      if (!draggingId) return;
+      ev.preventDefault();
+      const pt = getMouse(ev);
+      const margin = 45;
+      const x = Math.max(margin, Math.min(cv.width - margin, pt.x));
+      const y = Math.max(margin, Math.min(cv.height - margin, pt.y));
+      DGRState.positions[draggingId] = { x: +(x / cv.width).toFixed(4), y: +(y / cv.height).toFixed(4) };
+      hasMoved = true;
+      this.drawFramMap('fram-map', 640);
+    };
+
+    const stop = () => {
+      if (draggingId && hasMoved) {
+        DGRHistory.push();
+        this.saveToLocalStorageSilent();
+      }
+      draggingId = null;
+      hasMoved = false;
+      cv.style.cursor = 'grab';
+    };
+
+    cv.addEventListener('mousedown', (ev) => {
+      const id = hitNode(getMouse(ev));
+      if (!id) return;
+      DGRHistory.push();
+      draggingId = id;
+      cv.style.cursor = 'grabbing';
+      ev.preventDefault();
+    });
+    window.addEventListener('mousemove', moveTo);
+    window.addEventListener('mouseup', stop);
+
+    cv.addEventListener('touchstart', (ev) => {
+      const id = hitNode(getMouse(ev));
+      if (!id) return;
+      DGRHistory.push();
+      draggingId = id;
+      cv.style.cursor = 'grabbing';
+      ev.preventDefault();
+    }, { passive: false });
+    window.addEventListener('touchmove', moveTo, { passive: false });
+    window.addEventListener('touchend', stop);
+  },
+
+  getFramLayout(cv) {
+    const fns = DGRState.fns;
+    const cols = Math.max(1, Math.ceil(Math.sqrt(fns.length * 1.5)));
+    const rows = Math.ceil(fns.length / cols);
+    const padX = 95, padY = 70;
+    const usableW = Math.max(200, cv.width - padX * 2);
+    const usableH = Math.max(160, cv.height - padY * 2);
+    const cellW = usableW / cols;
+    const cellH = usableH / Math.max(1, rows);
+    const rx = Math.min(58, Math.max(42, cellW * 0.32));
+    const ry = Math.min(44, Math.max(32, cellH * 0.30));
+    const pos = {};
+    fns.forEach((fn, i) => {
+      const saved = DGRState.positions[fn.id];
+      if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+        pos[fn.id] = { x: saved.x * cv.width, y: saved.y * cv.height };
+        return;
+      }
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = padX + cellW * (col + 0.5) + (row % 2 ? Math.min(18, cellW * .08) : 0);
+      const y = padY + cellH * (row + 0.5);
+      pos[fn.id] = { x, y };
+    });
+    return { fns, pos, rx, ry };
+  },
+
+  saveToLocalStorageSilent() {
+    try { localStorage.setItem('dgr_autosave', DGRState.serialize()); } catch(e) {}
+  },
+
   drawFramMap(canvasId = 'ch-heat', canvasHeight = 280) {
     const cv = document.getElementById(canvasId);
     if (!cv) return;
@@ -1339,26 +1464,18 @@ const DGRManager = {
     g.clearRect(0, 0, cv.width, cv.height);
 
     const fns = DGRState.fns;
-    if (!fns.length) return;
+    if (!fns.length) {
+      g.fillStyle = '#8b93a7';
+      g.font = '14px sans-serif';
+      g.textAlign = 'center';
+      g.fillText('Nenhuma função cadastrada. Use o botão Nova Função no topo.', cv.width/2, cv.height/2);
+      return;
+    }
 
-    const cols = Math.max(1, Math.ceil(Math.sqrt(fns.length * 1.5)));
-    const rows = Math.ceil(fns.length / cols);
-    const padX = 55, padY = 45;
-    const usableW = Math.max(200, cv.width - padX * 2);
-    const usableH = Math.max(160, cv.height - padY * 2);
-    const cellW = usableW / cols;
-    const cellH = usableH / rows;
-    const rx = Math.min(44, Math.max(30, cellW * 0.30));
-    const ry = Math.min(32, Math.max(24, cellH * 0.28));
-
-    const pos = {};
-    fns.forEach((fn, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = padX + cellW * (col + 0.5) + (row % 2 ? Math.min(18, cellW * .08) : 0);
-      const y = padY + cellH * (row + 0.5);
-      pos[fn.id] = { x, y };
-    });
+    const layout = this.getFramLayout(cv);
+    const pos = layout.pos;
+    const rx = layout.rx;
+    const ry = layout.ry;
 
     const portPoint = (node, port) => {
       const map = {
@@ -1452,17 +1569,21 @@ const DGRManager = {
       g.fillStyle = '#1a1a2e';
       g.font = 'bold 10px sans-serif';
       g.textAlign = 'center';
-      const nm = fn.name.length > 24 ? fn.name.substring(0, 22) + '…' : fn.name;
-      g.fillText(nm, n.x, n.y - 2);
+      const words = String(fn.name || '').split(/\s+/);
+      const lines = [];
+      let line = '';
+      words.forEach(w => { const t = (line + ' ' + w).trim(); if (t.length > 16 && line) { lines.push(line); line = w; } else line = t; });
+      if (line) lines.push(line);
+      lines.slice(0,3).forEach((ln, li) => g.fillText(ln.length > 18 ? ln.substring(0,17)+'…' : ln, n.x, n.y - 10 + li*11));
       g.font = '9px sans-serif';
       g.fillStyle = color;
-      g.fillText(r ? `P95 ${this.pct(r.p95,0)}` : 'sem simulação', n.x, n.y + 12);
+      g.fillText(r ? `P95 ${this.pct(r.p95,0)}` : 'sem simulação', n.x, n.y + 24);
     });
 
     g.fillStyle = '#5a5a7a';
     g.font = '9px sans-serif';
     g.textAlign = 'left';
-    g.fillText('Extremos FRAM: I=Input, O=Output, P=Precondition, R=Resource, C=Control, T=Time', 8, cv.height - 8);
+    g.fillText('Arraste qualquer função para reposicioná-la. Extremos FRAM: I=Input, O=Output, P=Precondition, R=Resource, C=Control, T=Time', 8, cv.height - 8);
   },
 
   drawStaticVarsChart() {
