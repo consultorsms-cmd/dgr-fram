@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>DGR-FRAM Modeler & Simulator - v10.7 PDF COMPLETO SEM VARIABILIDADES</title>
+<title>DGR-FRAM Modeler & Simulator - v10.8 PDF GRAFICOS VETORIAIS CORRIGIDOS</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -184,7 +184,7 @@ textarea.fi{resize:vertical;min-height:55px}
   <div id="topbar">
     <div class="logo-area">
       <div class="title">DGR-FRAM</div>
-      <div class="sub">Modeler & Simulator • v10.7 • PDF completo • sem painel de variabilidades • Σ • RF Total</div>
+      <div class="sub">Modeler & Simulator • v10.8 • PDF corrigido • gráficos vetoriais • sem variabilidades • Σ • RF Total</div>
     </div>
     <div class="actions">
       <button class="gbtn" onclick="DGRManager.saveToLocalStorage()">💾 Salvar</button>
@@ -2550,6 +2550,141 @@ const DGRManager = {
   DGRManager.renderCharts=function(hasRes){
     oldRenderCharts(hasRes);
     this.renderVectorChartsV104(hasRes);
+  };
+})();
+
+
+
+// ─────────────────────────────────────────────
+// v10.8: exportação PDF robusta com gráficos vetoriais em canvas próprio.
+// Não depende de html2canvas, visibilidade da tela, scroll ou canvas exibido.
+// ─────────────────────────────────────────────
+(function(){
+  function pct(v,d=1){ return ((+v||0)*100).toFixed(d)+'%'; }
+  function short(s,n){ s=String(s||''); return s.length>n ? s.slice(0,n-1)+'…' : s; }
+  function colorFor(v){
+    v=+v||0;
+    if(v>=0.70) return '#c0392b';
+    if(v>=0.50) return '#f59e0b';
+    if(v>=0.30) return '#eab308';
+    return '#0f6e56';
+  }
+  function hexToRgb(hex){
+    const m=String(hex||'').match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+    return m ? {r:parseInt(m[1],16),g:parseInt(m[2],16),b:parseInt(m[3],16)} : {r:80,g:80,b:80};
+  }
+  function setupCanvas(w,h,title){
+    const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+    const g=cv.getContext('2d');
+    g.fillStyle='#fff'; g.fillRect(0,0,w,h);
+    g.fillStyle='#1a1a2e'; g.font='700 34px Segoe UI, Arial, sans-serif';
+    g.fillText(title,34,48);
+    return {cv,g};
+  }
+  DGRManager.buildPDFChartCanvasV108=function(kind,width=1500,height=760){
+    const rows=(this.resultRows ? this.resultRows() : []).filter(x=>x&&x.fn&&x.r);
+    const titles={vfr:'VFR por Função (P95 — Limite Crítico)',donut:'Distribuição de Criticidade Estrutural',hist:'Histograma de Risco Acumulado — Distribuição Agregada',heat:'Propagação da Variabilidade na Rede FRAM',iis:'IIS = VFR + RF (sem normalização)'};
+    const {cv,g}=setupCanvas(width,height,titles[kind]||'Gráfico DGR-FRAM');
+    if(!rows.length){ g.fillStyle='#6b7280'; g.font='26px Segoe UI, Arial, sans-serif'; g.fillText('Sem dados simulados. Execute a simulação antes de exportar.',34,110); return cv; }
+    const byP95=[...rows].sort((a,b)=>(b.vfr||0)-(a.vfr||0));
+    const byIIS=[...rows].sort((a,b)=>(b.iis||0)-(a.iis||0));
+    if(kind==='vfr' || kind==='iis'){
+      const list=kind==='vfr'?byP95:byIIS;
+      const left=370,right=150,top=95,gap=18;
+      const bh=Math.max(26,Math.min(54,(height-top-45)/Math.max(1,list.length)-gap));
+      const maxVal=Math.max(1,...list.map(x=>kind==='vfr'?(x.vfr||0):(x.iis||0)));
+      list.forEach((x,i)=>{
+        const val=kind==='vfr'?(x.vfr||0):(x.iis||0);
+        const y=top+i*(bh+gap); const bw=(width-left-right)*(val/maxVal);
+        g.fillStyle='#4c5570'; g.font='22px Segoe UI, Arial, sans-serif'; g.textAlign='right';
+        g.fillText(short(x.fn.name,34),left-18,y+bh*.68);
+        g.fillStyle='#eef0f6'; g.fillRect(left,y,width-left-right,bh);
+        g.fillStyle=colorFor(Math.min(1,val)); g.fillRect(left,y,bw,bh);
+        g.fillStyle='#1a1a2e'; g.font='700 22px Segoe UI, Arial, sans-serif'; g.textAlign='left';
+        g.fillText(pct(val),left+bw+12,y+bh*.68);
+      });
+      return cv;
+    }
+    if(kind==='donut'){
+      const vals=rows.map(x=>x.vfr||0);
+      const cats=[
+        {label:'Crítica (≥70%)',color:'#c0392b',n:vals.filter(v=>v>=.70).length},
+        {label:'Alta (50–70%)',color:'#f59e0b',n:vals.filter(v=>v>=.50&&v<.70).length},
+        {label:'Moderada (30–50%)',color:'#eab308',n:vals.filter(v=>v>=.30&&v<.50).length},
+        {label:'Baixa (<30%)',color:'#0f6e56',n:vals.filter(v=>v<.30).length}
+      ];
+      const total=Math.max(1,vals.length), cx=width*.34, cy=height*.54, R=Math.min(width,height)*.30;
+      let a=-Math.PI/2;
+      cats.forEach(c=>{ if(c.n<=0)return; const sweep=(c.n/total)*Math.PI*2; g.beginPath(); g.moveTo(cx,cy); g.arc(cx,cy,R,a,a+sweep,false); g.closePath(); g.fillStyle=c.color; g.fill(); a+=sweep; });
+      g.fillStyle='#fff'; g.beginPath(); g.arc(cx,cy,R*.52,0,Math.PI*2); g.fill();
+      g.textAlign='center'; g.fillStyle='#1a1a2e'; g.font='800 66px Segoe UI, Arial, sans-serif'; g.fillText(String(total),cx,cy-4);
+      g.font='24px Segoe UI, Arial, sans-serif'; g.fillStyle='#6b7280'; g.fillText('funções',cx,cy+40);
+      const lx=width*.62, ly=height*.30;
+      cats.forEach((c,i)=>{ const y=ly+i*72; const pc=Math.round(c.n/total*100); g.fillStyle=c.color; g.fillRect(lx,y-24,34,34); g.fillStyle='#1a1a2e'; g.textAlign='left'; g.font='700 28px Segoe UI, Arial, sans-serif'; g.fillText(`${c.label}: ${c.n} (${pc}%)`,lx+52,y+3); });
+      g.fillStyle='#6b7280'; g.font='20px Segoe UI, Arial, sans-serif'; g.fillText('Classificação conforme P95/VFR das funções simuladas.',34,height-30);
+      return cv;
+    }
+    if(kind==='hist'){
+      const bins=Array(20).fill(0);
+      rows.forEach(x=>(x.r.hist||[]).forEach((v,i)=>{ if(i<20) bins[i]+= (+v||0); }));
+      if(bins.reduce((a,b)=>a+b,0)<=0) rows.forEach(x=>{ const bi=Math.max(0,Math.min(19,Math.floor((x.vfr||0)*19))); bins[bi]+=1; });
+      const maxB=Math.max(1,...bins), left=65, top=95, bottom=75, right=45, gap=6, gw=width-left-right, gh=height-top-bottom, bw=gw/bins.length;
+      bins.forEach((v,i)=>{ const h=(v/maxB)*gh, x=left+i*bw, y=top+gh-h; g.fillStyle=colorFor(i/19); g.fillRect(x,y,Math.max(4,bw-gap),h); });
+      g.strokeStyle='#d9dde8'; g.lineWidth=2; g.beginPath(); g.moveTo(left,top+gh); g.lineTo(left+gw,top+gh); g.stroke();
+      g.fillStyle='#6b7280'; g.font='20px Segoe UI, Arial, sans-serif'; g.textAlign='left'; g.fillText('Baixa',left,height-30); g.textAlign='right'; g.fillText('Crítica',left+gw,height-30);
+      return cv;
+    }
+    if(kind==='heat'){
+      const nodes=byIIS.slice(0,Math.max(1,Math.min(byIIS.length,10))).map(x=>x.fn);
+      const n=nodes.length, matrix=this.computePropagationMatrix(nodes,5), maxVal=Math.max(.0001,...matrix.flat());
+      const left=335, top=155, right=65, bottom=75, gw=width-left-right, gh=height-top-bottom, cw=gw/n, ch=gh/n;
+      g.fillStyle='#4c5570'; g.font='700 20px Segoe UI, Arial, sans-serif'; g.textAlign='left'; g.fillText('Destino \\ Origem',34,104);
+      nodes.forEach((fn,j)=>{ const x=left+j*cw+cw/2; g.save(); g.translate(x,top-18); g.rotate(-.62); g.font='18px Segoe UI, Arial, sans-serif'; g.fillStyle='#4c5570'; g.textAlign='left'; g.fillText(short(fn.name,18),0,0); g.restore(); });
+      nodes.forEach((fn,i)=>{ const y=top+i*ch; g.fillStyle='#4c5570'; g.font='18px Segoe UI, Arial, sans-serif'; g.textAlign='right'; g.fillText(short(fn.name,27),left-12,y+ch/2+6); nodes.forEach((_,j)=>{ const x=left+j*cw, val=matrix[i][j]||0, norm=val/maxVal; const col=norm>.66?'#c0392b':norm>.33?'#f59e0b':'#0f6e56'; const rgb=hexToRgb(col); g.fillStyle=val>0?`rgba(${rgb.r},${rgb.g},${rgb.b},${.16+norm*.82})`:'#f5f6fa'; g.fillRect(x,y,Math.max(2,cw-4),Math.max(2,ch-4)); if(val>0&&cw>42&&ch>28){ g.fillStyle=norm>.56?'#fff':'#1a1a2e'; g.font='700 18px Segoe UI, Arial, sans-serif'; g.textAlign='center'; g.fillText(Math.round(val*100),x+cw/2,y+ch/2+6); } }); });
+      g.fillStyle='#6b7280'; g.font='18px Segoe UI, Arial, sans-serif'; g.textAlign='left'; g.fillText('Células = influência acumulada direta + indireta em cascata.',34,height-30);
+      return cv;
+    }
+    return cv;
+  };
+
+  DGRManager.exportPDF = async function(){
+    if(!window.jspdf) return;
+    const hasRes=DGRState.fns.some(f=>DGRState.mcRes[f.id]);
+    if(hasRes){ this.calculateNetworkResonance(); }
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF('l','mm','a4');
+    const pageW=doc.internal.pageSize.getWidth(), pageH=doc.internal.pageSize.getHeight();
+    const rows=this.resultRows(), sortedIIS=[...rows].sort((a,b)=>(b.iis||0)-(a.iis||0));
+    const d=this.networkDiagnostics ? this.networkDiagnostics() : {igr:0};
+    let y=16;
+    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Relatório DGR-FRAM Analítico',15,y); y+=8;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text('Modelo: Beta-PERT; VT = VE + VX; VFR = VT × (1 − AR); IIS = VFR + RF; Limite Crítico = P95.',15,y); y+=6;
+    doc.text(`IGR do Sistema: ${pct(d.igr||this.calcIGR())}`,15,y); y+=8;
+    doc.setFont('helvetica','bold'); doc.text('Ranking por IIS',15,y); y+=7;
+    doc.setFontSize(7.5); doc.text('Função',15,y); doc.text('VFR/P95',108,y); doc.text('RF Rec.',135,y); doc.text('RF Emit.',162,y); doc.text('RF Total',190,y); doc.text('IIS',220,y); doc.text('Estado',242,y); y+=5;
+    doc.setFont('helvetica','normal');
+    sortedIIS.forEach((x,i)=>{ if(y>190){doc.addPage(); y=16;} const rfTot=(x.rf||0)+(x.r.emittedResonance||0); doc.text(`${i+1}. ${x.fn.name}`.slice(0,48),15,y); doc.text(pct(x.vfr),108,y); doc.text(pct(x.rf),135,y); doc.text(pct(x.r.emittedResonance||0),162,y); doc.text(pct(rfTot),190,y); doc.text(pct(x.iis),220,y); doc.text(String(x.state||'Normal').normalize('NFD').replace(/[\u0300-\u036f]/g,''),242,y); y+=6; });
+    y+=5; if(y>150){doc.addPage(); y=16;}
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text('Critério matemático de Saturação Sistêmica',15,y); y+=7;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    doc.text('IISᵢ = VFRᵢ + RFᵢ',15,y); y+=6;
+    doc.text('Normal: IISᵢ < 1,00; Saturado: 1,00 ≤ IISᵢ < 1,20; Colapso Potencial: IISᵢ ≥ 1,20.',15,y); y+=10;
+    doc.setFont('helvetica','bold'); doc.text('Rotas críticas de ressonância',15,y); y+=6; doc.setFont('helvetica','normal');
+    (this.findCriticalRoutes?this.findCriticalRoutes(3):[]).forEach((r,i)=>{ if(y>190){doc.addPage(); y=16;} doc.text(`Rota ${i+1}: ${r.names.join(' → ')} | Intensidade: ${pct(Math.min(1,r.score))}`.slice(0,155),15,y); y+=6; });
+    // Matriz
+    doc.addPage(); y=16; doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text('Matriz de Propagação em Cascata (direta + indireta)',15,y); y+=8;
+    const pm=this.computePropagationMatrix(DGRState.fns,5), maxPM=Math.max(.0001,...pm.flat());
+    const n=DGRState.fns.length, startX=82, startY=42, cellW=Math.min(26,(pageW-startX-12)/Math.max(1,n)), cellH=10;
+    doc.setFontSize(6.5); doc.text('Destino \\ Origem',15,34); DGRState.fns.forEach((f,j)=>doc.text(f.name.slice(0,15),startX+j*cellW,34,{angle:25}));
+    doc.setFont('helvetica','normal');
+    DGRState.fns.forEach((f,i)=>{ const yy=startY+i*cellH; doc.text(f.name.slice(0,26),15,yy+6); DGRState.fns.forEach((_,j)=>{ const val=pm[i][j]||0, norm=val/maxPM; const c=norm>.66?[192,57,43]:norm>.33?[245,158,11]:[15,110,86]; if(val>0) doc.setFillColor(c[0],c[1],c[2]); else doc.setFillColor(245,246,250); doc.rect(startX+j*cellW,yy,cellW-1,cellH-1,'F'); if(val>0){ doc.setTextColor(norm>.55?255:0,norm>.55?255:0,norm>.55?255:0); doc.text(String(Math.round(val*100)),startX+j*cellW+cellW/2,yy+6,{align:'center'}); doc.setTextColor(0,0,0); } }); });
+    // Mapa FRAM
+    if(this.drawFramMapPDF){ this.drawFramMapPDF(doc,pageW,pageH); }
+    // Páginas de gráficos, todas por canvas próprio
+    const charts=[['vfr','VFR por Função (P95 — Limite Crítico)'],['donut','Distribuição de Criticidade Estrutural'],['hist','Histograma de Risco Acumulado — Distribuição Agregada'],['heat','Propagação da Variabilidade na Rede FRAM'],['iis','IIS = VFR + RF (sem normalização)']];
+    charts.forEach(([kind,title])=>{ doc.addPage(); const cv=this.buildPDFChartCanvasV108(kind,1500,760); const img=cv.toDataURL('image/png',1); doc.addImage(img,'PNG',10,10,pageW-20,pageH-20); });
+    doc.save('dgr-fram-analytics-v10-8-pdf-corrigido.pdf');
   };
 })();
 
