@@ -884,17 +884,22 @@ const DGRManager = {
     const maxIncoming = Math.max(1e-6, ...Object.values(incoming));
     ids.forEach(id => {
       // Fórmula final adotada: IIS_i = VFR_i + RF_i.
-      // VFR_i é representado pelo P95 residual da função; RF_i é o componente de ressonância funcional recebido da rede FRAM.
+      // O IIS é normalizado para 0–100%. Quando a soma ultrapassa 100%,
+      // o valor exibido permanece 100% e o estado é marcado como Saturação Sistêmica.
       const vfr = Math.max(0, +(base[id] || 0));
       rf[id] = Math.max(0, Math.min(2, 0.55 * incoming[id]));
       const r = DGRState.mcRes[id] || {};
-      iis[id] = Math.max(0, Math.min(4, vfr + rf[id]));
+      const rawIIS = Math.max(0, vfr + rf[id]);
+      iis[id] = Math.min(1, rawIIS);
       DGRState.mcRes[id] = {...r,
         centrality: centrality[id] / maxCent,
         incomingResonance: incoming[id],
         incomingResonanceNorm: incoming[id] / maxIncoming,
         functionalResonance: rf[id],
-        iis: iis[id]
+        rawIIS,
+        iis: iis[id],
+        saturation: rawIIS > 1,
+        state: rawIIS > 1 ? 'Saturação Sistêmica' : 'Normalizado'
       };
     });
   },
@@ -1575,12 +1580,20 @@ const DGRManager = {
     return { cls:'cb-b', lbl:'Baixa', color:'#0f6e56' };
   },
 
+  igrClass(v) {
+    if (v >= 0.70) return { cls:'cb-c', lbl:'Crítico', color:'#7c0000' };
+    if (v >= 0.50) return { cls:'cb-a', lbl:'Vulnerável', color:'#c0392b' };
+    if (v >= 0.30) return { cls:'cb-m', lbl:'Atenção', color:'#854f0b' };
+    return { cls:'cb-b', lbl:'Resiliente', color:'#0f6e56' };
+  },
+
   resultRows() {
     return DGRState.fns.filter(f => DGRState.mcRes[f.id]).map(f => {
       const r = DGRState.mcRes[f.id] || {};
       const rf = +(r.functionalResonance || 0);
-      const iis = +(r.iis || r.p95 || 0);
-      return { fn:f, r, vfr:+(r.p95 || 0), rf, iis, crit:this.critClass(iis) };
+      const rawIIS = +(r.rawIIS || r.iis || r.p95 || 0);
+      const iis = Math.min(1, +(r.iis || rawIIS || 0));
+      return { fn:f, r, vfr:+(r.p95 || 0), rf, rawIIS, iis, saturation: !!r.saturation || rawIIS > 1, crit:this.critClass(iis) };
     });
   },
 
@@ -1659,9 +1672,10 @@ const DGRManager = {
     const d = this.networkDiagnostics();
     if (!d.rows.length) return 'Execute a simulação para gerar a interpretação automática.';
     const crit = d.maiorIIS;
-    const igrInfo = this.critClass(d.igr);
+    const igrInfo = this.igrClass(d.igr);
     const rfTxt = crit ? ` A função ${crit.fn.name} apresenta o maior IIS (${this.pct(crit.iis)}), composto por VFR/P95 de ${this.pct(crit.vfr)} e RF de ${this.pct(crit.rf)}.` : '';
-    return `O Índice Global de Resiliência/Risco do sistema (IGR) é ${this.pct(d.igr)}, classificado como ${igrInfo.lbl}.${rfTxt} O principal receptor de variabilidade é ${d.receptor.name} (${this.pct(d.receptor.value)}), enquanto o principal emissor é ${d.emissor.name} (${this.pct(d.emissor.value)}). Priorize intervenções nas funções com maior IIS e nas rotas críticas de propagação.`;
+    const satTxt = crit && crit.saturation ? ' O maior IIS foi normalizado para 100% e indica Saturação Sistêmica.' : '';
+    return `O Índice Global de Resiliência/Risco do sistema (IGR) é ${this.pct(d.igr)}, classificado como ${igrInfo.lbl}.${rfTxt}${satTxt} O principal receptor de variabilidade é ${d.receptor.name} (${this.pct(d.receptor.value)}), enquanto o principal emissor é ${d.emissor.name} (${this.pct(d.emissor.value)}). Priorize intervenções nas funções com maior IIS e nas rotas críticas de propagação.`;
   },
 
   renderAdvancedAnalytics(hasRes) {
@@ -1676,21 +1690,24 @@ const DGRManager = {
       return;
     }
     const d = this.networkDiagnostics();
-    const igrInfo = this.critClass(d.igr);
+    const igrInfo = this.igrClass(d.igr);
     const card = (title, val, sub, color='#1a1a2e') => `<div class="adv-card"><div class="adv-title">${title}</div><div style="font-size:22px;font-weight:800;color:${color}">${val}</div><div class="adv-text">${sub || ''}</div></div>`;
     diagEl.innerHTML = [
       card('IGR do Sistema', this.pct(d.igr), igrInfo.lbl, igrInfo.color),
-      card('Maior IIS', this.esc(d.maiorIIS?.fn.name || '-'), d.maiorIIS ? `${this.pct(d.maiorIIS.iis)} • ${d.maiorIIS.crit.lbl}` : '-', d.maiorIIS?.crit.color || '#1a1a2e'),
+      card('Maior IIS', this.esc(d.maiorIIS?.fn.name || '-'), d.maiorIIS ? `${this.pct(d.maiorIIS.iis)} • ${d.maiorIIS.crit.lbl}${d.maiorIIS.saturation ? ' • Saturação Sistêmica' : ''}` : '-', d.maiorIIS?.crit.color || '#1a1a2e'),
       card('Maior RF Recebido', this.esc(d.maiorRF?.fn.name || '-'), d.maiorRF ? this.pct(d.maiorRF.rf) : '-', '#c0392b'),
       card('Maior Emissor', this.esc(d.emissor.name), this.pct(d.emissor.value), '#854f0b'),
       card('Maior Receptor', this.esc(d.receptor.name), this.pct(d.receptor.value), '#0f6e56'),
       `<div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Interpretação automática</div><div class="adv-text">${this.esc(this.autoInterpretationText())}</div></div>`
     ].join('');
-    const routes = this.findCriticalRoutes(5);
+    const routes = this.findCriticalRoutes(3);
     routesEl.innerHTML = routes.length ? routes.map((r,i) => `<div class="route-line"><b>Rota ${i+1}</b>: ${r.names.map(n => this.esc(n)).join(' → ')} <span class="cbadge cb-a" style="float:right">${this.pct(Math.min(1,r.score))}</span></div>`).join('') : '<div class="empty">Nenhuma rota crítica identificada. Cadastre conexões entre funções.</div>';
     const effects = this.resilienceEffects();
+    const avgRed = effects.length ? effects.reduce((a,e)=>a+e.reduction,0)/effects.length : 0;
     const rows = effects.slice(0, 8).map(e => `<tr><td>${this.esc(e.fn.name)}</td><td>${this.pct(e.withoutMR)}</td><td>${this.pct(e.withMR)}</td><td><b>${this.pct(e.reduction)}</b></td></tr>`).join('');
-    resEl.innerHTML = `<div class="adv-card"><div class="adv-title">Efeito estimado dos MR (antes/depois)</div><table class="adv-table"><thead><tr><th>Função</th><th>Sem MR</th><th>Com MR</th><th>Redução</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    const critCount = d.rows.filter(x => x.iis >= 0.70).length;
+    const resilientCount = DGRState.fns.filter(f => this.hasFunctionMR(f.id)).length;
+    resEl.innerHTML = `<div class="adv-grid"><div class="adv-card"><div class="adv-title">Efeito da Resiliência</div><div style="font-size:22px;font-weight:800;color:#0f6e56">${this.pct(avgRed)}</div><div class="adv-text">Redução média estimada obtida pelos MR</div></div><div class="adv-card"><div class="adv-title">Resumo executivo</div><div class="adv-text"><b>Funções críticas:</b> ${critCount}<br><b>Funções resilientes:</b> ${resilientCount}<br><b>Principal rota crítica:</b> ${routes[0] ? routes[0].names.map(n=>this.esc(n)).join(' → ') : '-'}</div></div><div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Efeito estimado dos MR (antes/depois)</div><table class="adv-table"><thead><tr><th>Função</th><th>Sem MR</th><th>Com MR</th><th>Redução</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   },
 
 
@@ -1710,7 +1727,7 @@ const DGRManager = {
       { val: hasRes ? this.pct(avgVFR) : '-', lbl: 'VFR Média P95', color: hasRes ? this.vColor(avgVFR) : '#9898b0' },
       { val: hasRes ? this.pct(maxLC) : '-', lbl: 'Limite Crítico Máx. (P95)', color: hasRes ? this.vColor(maxLC) : '#9898b0' },
       { val: hasRes ? this.pct(avgProbCrit) : '-', lbl: 'Prob. Criticidade Média', color: hasRes ? this.vColor(avgProbCrit) : '#9898b0' },
-      { val: hasRes ? this.pct(this.calcIGR()) : '-', lbl: 'IGR do Sistema', color: hasRes ? this.critClass(this.calcIGR()).color : '#9898b0' },
+      { val: hasRes ? this.pct(this.calcIGR()) : '-', lbl: 'IGR do Sistema', color: hasRes ? this.igrClass(this.calcIGR()).color : '#9898b0' },
       { val: hasRes ? this.pct(Math.max(...resFns.map(f => DGRState.mcRes[f.id].functionalResonance || 0))) : '-', lbl: 'RF Máx. Recebido', color: hasRes ? '#c0392b' : '#9898b0' }
     ];
     document.getElementById('dash-stats').innerHTML = stats.map(s => `
@@ -1914,6 +1931,7 @@ const DGRManager = {
         <div class="sbox"><span class="sval">${this.pct(r.p99)}</span><span class="slbl">P99</span></div>
         <div class="sbox"><span class="sval" style="color:${this.vColor(x.rf)}">${this.pct(x.rf)}</span><span class="slbl">RF recebido</span></div>
         <div class="sbox"><span class="sval" style="color:${this.vColor(Math.min(1,x.iis))}">${this.pct(x.iis)}</span><span class="slbl">IIS = VFR+RF</span></div>
+        <div class="sbox"><span class="sval">${x.saturation ? 'Saturação' : 'Normal'}</span><span class="slbl">Estado</span></div>
         <div class="sbox"><span class="sval">${this.pct(r.incomingResonanceNorm || 0)}</span><span class="slbl">Propagação recebida</span></div>
         <div class="sbox"><span class="sval" style="color:${this.vColor(r.probCrit)}">${this.pct(r.probCrit)}</span><span class="slbl">Prob. Criticidade</span></div>
       </div><div class="histbars">${r.hist.map((hv,bi) => `<div class="hb" style="height:${Math.round(hv*50)}px;background:${this.vColor(bi/20)};opacity:${0.4+hv*0.6}"></div>`).join('')}</div></div>`;
@@ -1999,6 +2017,11 @@ const DGRManager = {
       const ang = Math.atan2(b.y-a.y, b.x-a.x), ah = 3.2;
       doc.line(b.x, b.y, b.x - ah*Math.cos(ang-.45), b.y - ah*Math.sin(ang-.45));
       doc.line(b.x, b.y, b.x - ah*Math.cos(ang+.45), b.y - ah*Math.sin(ang+.45));
+      const srcRes = DGRState.mcRes[c.source_function_id] || {};
+      const intensity = Math.min(1, (srcRes.functionalResonance || srcRes.p95 || 0) * this.couplingWeight(c));
+      doc.setFont('helvetica','bold'); doc.setFontSize(6); doc.setTextColor(40,40,55);
+      doc.text(`${Math.round(intensity*100)}%`, (a.x+b.x)/2, (a.y+b.y)/2 - 1, {align:'center'});
+      doc.setTextColor(0,0,0);
     });
     DGRState.fns.forEach(f => {
       const x = mapX(f.x || 0), y = mapY(f.y || 0), w = 118 * scale, h = 104 * scale;
@@ -2021,7 +2044,7 @@ const DGRManager = {
     const doc = new jsPDF('l', 'mm', 'a4');
     const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
     const rows = this.resultRows(), sortedP95 = [...rows].sort((a,b) => b.vfr - a.vfr), sortedIIS = [...rows].sort((a,b) => b.iis - a.iis);
-    const d = this.networkDiagnostics(), igrInfo = this.critClass(d.igr);
+    const d = this.networkDiagnostics(), igrInfo = this.igrClass(d.igr);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text('Relatório DGR-FRAM Analítico', 15, 18);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 15, 25);
@@ -2030,22 +2053,40 @@ const DGRManager = {
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(doc.splitTextToSize(this.autoInterpretationText(), 260), 15, 45);
     let y = 62;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('Ranking por IIS', 15, y); y += 7; doc.setFontSize(8);
-    ['Função','VFR/P95','RF','IIS','Criticidade','Prob. Crit.'].forEach((h,i)=> doc.text(h, [15,130,160,185,210,245][i], y));
+    ['Função','VFR/P95','RF','IIS','Criticidade','Estado','Prob. Crit.'].forEach((h,i)=> doc.text(h, [15,126,154,178,200,230,260][i], y));
     y += 3; doc.line(15,y,285,y); y += 5; doc.setFont('helvetica','normal');
-    sortedIIS.forEach((x,i) => { if (y > 188) { doc.addPage(); y = 18; } doc.text(`${i+1}. ${x.fn.name}`.slice(0,60), 15, y); doc.text(this.pct(x.vfr), 130, y); doc.text(this.pct(x.rf), 160, y); doc.text(this.pct(x.iis), 185, y); doc.text(x.crit.lbl, 210, y); doc.text(this.pct(x.r.probCrit || 0), 245, y); y += 6; });
+    sortedIIS.forEach((x,i) => { if (y > 188) { doc.addPage(); y = 18; } doc.text(`${i+1}. ${x.fn.name}`.slice(0,58), 15, y); doc.text(this.pct(x.vfr), 126, y); doc.text(this.pct(x.rf), 154, y); doc.text(this.pct(x.iis), 178, y); doc.text(x.crit.lbl, 200, y); doc.text(x.saturation ? 'Saturação Sistêmica' : 'Normal', 230, y); doc.text(this.pct(x.r.probCrit || 0), 260, y); y += 6; });
     y += 5; if (y > 165) { doc.addPage(); y = 18; }
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Ranking das funções por P95', 15, y); y += 7; doc.setFontSize(8);
-    ['Função','VFR média','P90','P95','P99','Prob. Crit.','IIS'].forEach((h,i)=> doc.text(h, [15,112,142,165,190,218,257][i], y));
+    ['Função','VFR média','P90','P95','RF','P99','Prob. Crit.','IIS'].forEach((h,i)=> doc.text(h, [15,108,136,160,184,207,232,262][i], y));
     y += 3; doc.line(15,y,285,y); y += 5; doc.setFont('helvetica','normal');
-    sortedP95.forEach((x,i) => { if (y > 188) { doc.addPage(); y = 18; } const r = x.r; doc.text(`${i+1}. ${x.fn.name}`.slice(0,58), 15, y); doc.text(this.pct(r.mean), 112, y); doc.text(this.pct(r.p90), 142, y); doc.text(this.pct(r.p95), 165, y); doc.text(this.pct(r.p99), 190, y); doc.text(this.pct(r.probCrit), 218, y); doc.text(this.pct(r.iis), 257, y); y += 6; });
+    sortedP95.forEach((x,i) => { if (y > 188) { doc.addPage(); y = 18; } const r = x.r; doc.text(`${i+1}. ${x.fn.name}`.slice(0,56), 15, y); doc.text(this.pct(r.mean), 108, y); doc.text(this.pct(r.p90), 136, y); doc.text(this.pct(r.p95), 160, y); doc.text(this.pct(x.rf), 184, y); doc.text(this.pct(r.p99), 207, y); doc.text(this.pct(r.probCrit), 232, y); doc.text(this.pct(r.iis), 262, y); y += 6; });
     doc.addPage(); y = 18; doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text('Diagnóstico Automático da Rede FRAM', 15, y); y += 8; doc.setFont('helvetica','normal'); doc.setFontSize(9);
     [`Maior IIS: ${d.maiorIIS?.fn.name || '-'} (${d.maiorIIS ? this.pct(d.maiorIIS.iis) : '-'})`, `Maior RF recebido: ${d.maiorRF?.fn.name || '-'} (${d.maiorRF ? this.pct(d.maiorRF.rf) : '-'})`, `Maior P95: ${d.maiorP95?.fn.name || '-'} (${d.maiorP95 ? this.pct(d.maiorP95.vfr) : '-'})`, `Maior emissor de variabilidade: ${d.emissor.name} (${this.pct(d.emissor.value)})`, `Maior receptor de variabilidade: ${d.receptor.name} (${this.pct(d.receptor.value)})`].forEach(line => { doc.text(line, 15, y); y += 6; });
     y += 5; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Rotas críticas de ressonância', 15, y); y += 7; doc.setFont('helvetica','normal'); doc.setFontSize(9);
-    const routes = this.findCriticalRoutes(6); if (!routes.length) { doc.text('Nenhuma rota crítica identificada.', 15, y); y += 6; }
+    const routes = this.findCriticalRoutes(3); if (!routes.length) { doc.text('Nenhuma rota crítica identificada.', 15, y); y += 6; }
     routes.forEach((r,i) => { const t = `Rota ${i+1}: ${r.names.join(' → ')} | Intensidade: ${this.pct(Math.min(1,r.score))}`; doc.text(doc.splitTextToSize(t, 260), 15, y); y += 8; });
     y += 4; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Efeito dos Mecanismos de Resiliência (antes/depois)', 15, y); y += 7; doc.setFontSize(8);
     ['Função','Sem MR','Com MR','Redução'].forEach((h,i)=> doc.text(h, [15,150,180,210][i], y)); y += 3; doc.line(15,y,245,y); y += 5; doc.setFont('helvetica','normal');
-    this.resilienceEffects().slice(0,10).forEach(e => { if (y > 188) { doc.addPage(); y = 18; } doc.text(e.fn.name.slice(0,60), 15, y); doc.text(this.pct(e.withoutMR), 150, y); doc.text(this.pct(e.withMR), 180, y); doc.text(this.pct(e.reduction), 210, y); y += 6; });
+    const effectsPDF = this.resilienceEffects();
+    effectsPDF.slice(0,10).forEach(e => { if (y > 188) { doc.addPage(); y = 18; } doc.text(e.fn.name.slice(0,60), 15, y); doc.text(this.pct(e.withoutMR), 150, y); doc.text(this.pct(e.withMR), 180, y); doc.text(this.pct(e.reduction), 210, y); y += 6; });
+    const avgRedPDF = effectsPDF.length ? effectsPDF.reduce((a,e)=>a+e.reduction,0)/effectsPDF.length : 0;
+    const critCountPDF = rows.filter(x => x.iis >= 0.70).length;
+    const resilientCountPDF = DGRState.fns.filter(f => this.hasFunctionMR(f.id)).length;
+    doc.addPage(); y = 18; doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text('Resumo Executivo', 15, y); y += 10;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    const principalRota = routes[0] ? routes[0].names.join(' → ') : '-';
+    [
+      `IGR do sistema: ${this.pct(d.igr)} (${igrInfo.lbl})`,
+      `Maior IIS: ${d.maiorIIS?.fn.name || '-'} (${d.maiorIIS ? this.pct(d.maiorIIS.iis) : '-'})${d.maiorIIS?.saturation ? ' — Saturação Sistêmica' : ''}`,
+      `Maior P95: ${d.maiorP95?.fn.name || '-'} (${d.maiorP95 ? this.pct(d.maiorP95.vfr) : '-'})`,
+      `Maior emissor: ${d.emissor.name} (${this.pct(d.emissor.value)})`,
+      `Maior receptor: ${d.receptor.name} (${this.pct(d.receptor.value)})`,
+      `Principal rota crítica: ${principalRota}`,
+      `Mitigação média estimada pelos MR: ${this.pct(avgRedPDF)}`,
+      `Quantidade de funções críticas: ${critCountPDF}`,
+      `Quantidade de funções resilientes: ${resilientCountPDF}`
+    ].forEach(line => { doc.text(doc.splitTextToSize(line, 260), 15, y); y += 8; });
     this.drawFramMapPDF(doc, pageW, pageH);
     const charts = [{ id: 'ch-vfr', title: 'VFR por Função (P95 — Limite Crítico)' },{ id: 'ch-hist', title: 'Histograma da Distribuição Agregada' },{ id: 'ch-heat', title: 'Propagação da Variabilidade na Rede FRAM' },{ id: 'ch-iis', title: 'IIS = VFR + RF' }];
     charts.forEach(ch => { const cv = document.getElementById(ch.id); if (!cv || cv.style.display === 'none') return; doc.addPage(); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text(ch.title, 15, 18); try { const img = cv.toDataURL('image/png', 1.0); doc.addImage(img, 'PNG', 15, 28, pageW - 30, Math.min(pageH - 45, 145)); } catch(e) { doc.setFont('helvetica', 'normal'); doc.text('Não foi possível incorporar este gráfico ao PDF.', 15, 32); } });
