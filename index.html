@@ -244,7 +244,7 @@ textarea.fi{resize:vertical;min-height:55px}
               <div id="ch-heat-empty" class="empty">Execute a simulação para visualizar a propagação</div>
             </div>
             <div class="dash-section">
-              <h3>IIS com Ressonância Funcional da Rede</h3>
+              <h3>IIS = VFR + RF</h3>
               <canvas id="ch-iis" height="200"></canvas>
               <div id="ch-iis-empty" class="empty">Execute a simulação para calcular</div>
             </div>
@@ -819,9 +819,12 @@ const DGRManager = {
 
     const maxIncoming = Math.max(1e-6, ...Object.values(incoming));
     ids.forEach(id => {
-      rf[id] = Math.max(0, Math.min(2, base[id] + 0.55 * incoming[id]));
+      // Fórmula final adotada: IIS_i = VFR_i + RF_i.
+      // VFR_i é representado pelo P95 residual da função; RF_i é o componente de ressonância funcional recebido da rede FRAM.
+      const vfr = Math.max(0, +(base[id] || 0));
+      rf[id] = Math.max(0, Math.min(2, 0.55 * incoming[id]));
       const r = DGRState.mcRes[id] || {};
-      iis[id] = rf[id] * (0.35 + 0.65 * centrality[id] / maxCent) * (1 + (r.probCrit || 0));
+      iis[id] = Math.max(0, Math.min(4, vfr + rf[id]));
       DGRState.mcRes[id] = {...r,
         centrality: centrality[id] / maxCent,
         incomingResonance: incoming[id],
@@ -1442,7 +1445,7 @@ const DGRManager = {
       vfrs.forEach(v => hist[Math.min(19, Math.floor(Math.min(v, 0.9999) * 20))]++);
       const hmax = Math.max(...hist) || 1;
 
-      DGRState.mcRes[fn.id] = { mean, p90: vfrs[Math.floor(N*0.9)], p95, p99: vfrs[Math.floor(N*0.99)], probCrit, ip, centrality: ip, incomingResonance: 0, incomingResonanceNorm: 0, functionalResonance: p95, iis: p95 * ip, hist: hist.map(h => h / hmax) };
+      DGRState.mcRes[fn.id] = { mean, p90: vfrs[Math.floor(N*0.9)], p95, p99: vfrs[Math.floor(N*0.99)], probCrit, ip, centrality: ip, incomingResonance: 0, incomingResonanceNorm: 0, functionalResonance: 0, iis: p95, hist: hist.map(h => h / hmax) };
     });
     this.calculateNetworkResonance();
     this.refreshUI();
@@ -1671,7 +1674,7 @@ const DGRManager = {
             <div class="sbox"><span class="sval" style="color:${this.vColor(r.p95)}">${this.pct(r.p95)}</span><span class="slbl">Limite Crítico (P95)</span></div>
             <div class="sbox"><span class="sval">${this.pct(r.p99)}</span><span class="slbl">P99</span></div>
             <div class="sbox"><span class="sval">${this.pct(r.ip)}</span><span class="slbl">IP</span></div>
-            <div class="sbox"><span class="sval">${this.pct(r.iis)}</span><span class="slbl">IIS rede</span></div>
+            <div class="sbox"><span class="sval">${this.pct(r.iis)}</span><span class="slbl">IIS = VFR+RF</span></div>
             <div class="sbox"><span class="sval" style="color:${this.vColor(r.functionalResonance || r.p95)}">${this.pct(r.functionalResonance || r.p95)}</span><span class="slbl">Ressonância Funcional</span></div>
             <div class="sbox"><span class="sval">${this.pct(r.incomingResonanceNorm || 0)}</span><span class="slbl">Propagação Recebida</span></div>
             <div class="sbox"><span class="sval" style="color:${this.vColor(r.probCrit)}">${this.pct(r.probCrit)}</span><span class="slbl">Prob. Criticidade</span></div>
@@ -1766,7 +1769,7 @@ const DGRManager = {
     doc.text('Limite Crítico P95', 165, y);
     doc.text('P99', 205, y);
     doc.text('Prob. Criticidade', 230, y);
-    doc.text('IIS rede', 267, y);
+    doc.text('IIS = VFR + RF', 267, y);
     y += 4;
     doc.line(15, y, 285, y);
     y += 5;
@@ -1790,7 +1793,7 @@ const DGRManager = {
       { id: 'ch-vfr', title: 'VFR por Função (P95 — Limite Crítico)' },
       { id: 'ch-hist', title: 'Histograma da Distribuição Agregada' },
       { id: 'ch-heat', title: 'Propagação da Variabilidade na Rede FRAM' },
-      { id: 'ch-iis', title: 'IIS com Ressonância Funcional da Rede' }
+      { id: 'ch-iis', title: 'IIS = VFR + RF' }
     ];
 
     charts.forEach(ch => {
