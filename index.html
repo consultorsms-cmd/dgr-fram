@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>DGR-FRAM Modeler & Simulator - Avaliação Qualitativa</title>
+<title>DGR-FRAM Modeler & Simulator - Avaliação Qualitativa v10</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -1660,10 +1660,16 @@ const DGRManager = {
   resultRows() {
     return DGRState.fns.filter(f => DGRState.mcRes[f.id]).map(f => {
       const r = DGRState.mcRes[f.id] || {};
+      const vfr = +(r.p95 || 0);
       const rf = +(r.functionalResonance || 0);
-      const rawIIS = +(r.rawIIS || r.iis || r.p95 || 0);
-      const iis = +(r.iis || rawIIS || 0);
-      return { fn:f, r, vfr:+(r.p95 || 0), rf, rawIIS, iis, saturation: !!r.saturation || rawIIS > 1, crit:this.critClass(iis) };
+      // Fonte única da verdade: IIS = VFR + RF, sem normalização relativa.
+      // Pode ultrapassar 100%; nesse caso a função é marcada como Saturação Sistêmica.
+      const rawIIS = Math.max(0, vfr + rf);
+      r.rawIIS = rawIIS;
+      r.iis = rawIIS;
+      r.saturation = rawIIS > 1;
+      r.state = rawIIS > 1 ? 'Saturação Sistêmica' : 'Normal';
+      return { fn:f, r, vfr, rf, rawIIS, iis: rawIIS, saturation: rawIIS > 1, crit:this.critClass(rawIIS) };
     });
   },
 
@@ -2131,8 +2137,12 @@ const DGRManager = {
         }
       }
       if (this.hasFunctionMR(f.id)) {
-        doc.setFont('helvetica','bold'); doc.setTextColor(19,138,46);
-        doc.text('🛡', x+w*.72, y+h*.75, {align:'center'});
+        // Desenha escudo vetorial para evitar perda do emoji no PDF.
+        const sx = x + w*.70, sy = y + h*.66, sw = Math.max(4, w*.14), sh = Math.max(5, h*.18);
+        doc.setDrawColor(19,138,46); doc.setFillColor(232,248,240); doc.setLineWidth(0.5);
+        doc.lines([[sw,0],[0,sh*.62],[-sw*.5,sh*.38],[-sw*.5,-sh*.38]], sx-sw/2, sy, [1,1], 'FD');
+        doc.setFont('helvetica','bold'); doc.setFontSize(Math.max(4, 6*scale)); doc.setTextColor(19,138,46);
+        doc.text('MR', sx, sy + sh*.50, {align:'center'});
         doc.setTextColor(0,0,0);
       }
     });
@@ -2141,6 +2151,11 @@ const DGRManager = {
 
   exportPDF() {
     if (!window.jspdf) return;
+    // Garante que o PDF use o motor atual, não resultados antigos em cache.
+    if (DGRState.fns.some(f => DGRState.mcRes[f.id])) {
+      this.calculateNetworkResonance();
+      this.renderCharts(true);
+    }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
     const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
@@ -2161,12 +2176,17 @@ const DGRManager = {
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Ranking das funções por P95', 15, y); y += 7; doc.setFontSize(8);
     ['Função','VFR média','P90','P95','RF','P99','Prob. Crit.','IIS'].forEach((h,i)=> doc.text(h, [15,108,136,160,184,207,232,262][i], y));
     y += 3; doc.line(15,y,285,y); y += 5; doc.setFont('helvetica','normal');
-    sortedP95.forEach((x,i) => { if (y > 188) { doc.addPage(); y = 18; } const r = x.r; doc.text(`${i+1}. ${x.fn.name}`.slice(0,56), 15, y); doc.text(this.pct(r.mean), 108, y); doc.text(this.pct(r.p90), 136, y); doc.text(this.pct(r.p95), 160, y); doc.text(this.pct(x.rf), 184, y); doc.text(this.pct(r.p99), 207, y); doc.text(this.pct(r.probCrit), 232, y); doc.text(this.pct(r.iis), 262, y); y += 6; });
+    sortedP95.forEach((x,i) => { if (y > 188) { doc.addPage(); y = 18; } const r = x.r; doc.text(`${i+1}. ${x.fn.name}`.slice(0,56), 15, y); doc.text(this.pct(r.mean), 108, y); doc.text(this.pct(r.p90), 136, y); doc.text(this.pct(r.p95), 160, y); doc.text(this.pct(x.rf), 184, y); doc.text(this.pct(r.p99), 207, y); doc.text(this.pct(r.probCrit), 232, y); doc.text(this.pct(x.iis), 262, y); y += 6; });
     doc.addPage(); y = 18; doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text('Diagnóstico Automático da Rede FRAM', 15, y); y += 8; doc.setFont('helvetica','normal'); doc.setFontSize(9);
     [`Maior IIS: ${d.maiorIIS?.fn.name || '-'} (${d.maiorIIS ? this.pct(d.maiorIIS.iis) : '-'})`, `Maior RF recebido: ${d.maiorRF?.fn.name || '-'} (${d.maiorRF ? this.pct(d.maiorRF.rf) : '-'})`, `Maior P95: ${d.maiorP95?.fn.name || '-'} (${d.maiorP95 ? this.pct(d.maiorP95.vfr) : '-'})`, `Maior emissor de variabilidade: ${d.emissor.name} (${this.pct(d.emissor.value)})`, `Maior receptor de variabilidade: ${d.receptor.name} (${this.pct(d.receptor.value)})`].forEach(line => { doc.text(line, 15, y); y += 6; });
     y += 5; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Rotas críticas de ressonância', 15, y); y += 7; doc.setFont('helvetica','normal'); doc.setFontSize(9);
     const routes = this.findCriticalRoutes(3); if (!routes.length) { doc.text('Nenhuma rota crítica identificada.', 15, y); y += 6; }
     routes.forEach((r,i) => { const t = `Rota ${i+1}: ${r.names.join(' → ')} | Intensidade: ${this.pct(Math.min(1,r.score))}`; doc.text(doc.splitTextToSize(t, 260), 15, y); y += 8; });
+    y += 4; if (y > 145) { doc.addPage(); y = 18; }
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('RF recebida e emitida por função', 15, y); y += 7; doc.setFontSize(8);
+    ['Função','RF Recebida','RF Emitida','VFR/P95','IIS = VFR + RF','Classe'].forEach((h,i)=> doc.text(h, [15,116,145,174,203,242][i], y));
+    y += 3; doc.line(15,y,285,y); y += 5; doc.setFont('helvetica','normal');
+    sortedIIS.forEach(x => { if (y > 188) { doc.addPage(); y = 18; } doc.text(x.fn.name.slice(0,52), 15, y); doc.text(this.pct(x.rf), 116, y); doc.text(this.pct(x.r.emittedResonance || 0), 145, y); doc.text(this.pct(x.vfr), 174, y); doc.text(this.pct(x.iis), 203, y); doc.text(x.crit.lbl, 242, y); y += 6; });
     y += 4; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Efeito dos Mecanismos de Resiliência (antes/depois)', 15, y); y += 7; doc.setFontSize(8);
     ['Função','Sem MR','Com MR','Redução'].forEach((h,i)=> doc.text(h, [15,150,180,210][i], y)); y += 3; doc.line(15,y,245,y); y += 5; doc.setFont('helvetica','normal');
     const effectsPDF = this.resilienceEffects();
