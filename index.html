@@ -11,17 +11,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:#f0f0f5;color:#1a1a2
 #app{display:flex;height:100vh;overflow:hidden}
 
 /* ── NAV SIDEBAR ── */
-#nav{width:200px;background:#1e1e2e;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
-#nav-logo{padding:18px 16px 14px;border-bottom:1px solid #2e2e42}
+#nav{width:220px;background:#1f2532;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;border-right:1px solid #303747}
+#nav-logo{padding:18px 16px 14px;border-bottom:1px solid #303747}
 #nav-logo .title{font-size:15px;font-weight:700;color:#fff;letter-spacing:.02em}
-#nav-logo .sub{font-size:11px;color:#6868a0;margin-top:2px}
-#nav-items{padding:10px 8px;flex:1;overflow-y:auto}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;color:#8888b0;font-size:13px;font-weight:500;transition:all .15s;margin-bottom:2px;user-select:none}
-.nav-item:hover{background:#2a2a3e;color:#c0c0e0}
-.nav-item.act{background:#534AB7;color:#fff}
+#nav-logo .sub{font-size:11px;color:#9aa4b8;margin-top:2px}
+#nav-items{padding:10px 0;flex:1;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:0 9px 9px 0;cursor:pointer;color:#a8b0c0;font-size:14px;font-weight:600;transition:all .15s;margin:2px 0;user-select:none}
+.nav-item:hover{background:#2b3344;color:#fff}
+.nav-item.act{background:#4778e8;color:#fff;box-shadow:inset 4px 0 0 rgba(255,255,255,.28)}
 .nav-item svg{flex-shrink:0;opacity:.8}
 .nav-item.act svg{opacity:1}
-#nav-bottom{padding:10px 8px;border-top:1px solid #2e2e42}
+#nav-bottom{display:none}
 .nav-tool{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;color:#6868a0;font-size:12px;transition:all .12s;margin-bottom:2px}
 .nav-tool:hover{background:#2a2a3e;color:#a0a0c8}
 .nav-tool.r:hover{color:#e85555}
@@ -191,7 +191,7 @@ textarea.fi{resize:vertical;min-height:60px}
 <div id="nav">
   <div id="nav-logo">
     <div class="title">DGR-FRAM</div>
-    <div class="sub">Modeler v1.5</div>
+    <div class="sub">Analyze · DGR-FRAM</div>
   </div>
   <div id="nav-items">
     <div class="nav-item act" id="ni-painel" onclick="goTo('painel')">
@@ -200,7 +200,7 @@ textarea.fi{resize:vertical;min-height:60px}
     </div>
     <div class="nav-item" id="ni-fram" onclick="goTo('fram')">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/></svg>
-      Diagrama FRAM
+      Funções
     </div>
     <div class="nav-item" id="ni-endo" onclick="goTo('endo')">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
@@ -219,16 +219,8 @@ textarea.fi{resize:vertical;min-height:60px}
       Monte Carlo
     </div>
   </div>
-  <div id="nav-bottom">
-    <div class="nav-tool" onclick="expJSON()">⬇ Exportar JSON</div>
-    <div class="nav-tool" onclick="expPNG()">⬇ Exportar PNG</div>
-    <div class="nav-tool" onclick="expPDF()">⬇ Exportar PDF</div>
-    <div style="height:6px"></div>
-    <label class="nav-tool">⬆ Importar JSON<input type="file" accept=".json" onchange="impJSON(event)" style="display:none"></label>
-    <label class="nav-tool">⬆ Importar XFMV<input type="file" accept=".xfmv" onchange="impXFMV(event)" style="display:none"></label>
-    <div style="height:6px"></div>
-    <div class="nav-tool r" onclick="clearAll()">⊘ Limpar tudo</div>
-  </div>
+  <!-- Ferramentas de exportação/importação removidas do menu lateral para manter navegação limpa. -->
+
 </div>
 
 <!-- CONTENT -->
@@ -238,6 +230,7 @@ textarea.fi{resize:vertical;min-height:60px}
   <div id="frambar" style="display:none">
     <button class="tbtn on" id="bsel" onclick="setMode('select')">↖ Selecionar</button>
     <button class="tbtn" id="bcon" onclick="setMode('connect')">⟿ Conectar</button>
+    <button class="tbtn" onclick="openConnectPanel()">＋ Conexão por lista</button>
     <button class="tbtn" id="bera" onclick="setMode('erase')">✕ Apagar</button>
     <span style="width:1px;height:18px;background:#e0e0ea;flex-shrink:0"></span>
     <button class="tbtn" onclick="addFn()">＋ Função</button>
@@ -325,7 +318,7 @@ textarea.fi{resize:vertical;min-height:60px}
       <span style="color:#534AB7;font-size:12px">As subcategorias selecionadas aqui alimentam automaticamente o parâmetro <b>VE</b> no Monte Carlo.</span></div>
       <!-- Subcategory selector by function -->
       <div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:18px 20px;margin-bottom:18px">
-        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar Subcategorias RE por Função</h3>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar subcategorias RE por função</h3>
         <div id="endo-subcat-sel"></div>
       </div>
       <!-- Variabilidade form -->
@@ -341,7 +334,7 @@ textarea.fi{resize:vertical;min-height:60px}
       <div class="page-sub">Ressonância por Perturbações Exógenas — variabilidade de fronteira entre funções e ecossistema (RX)<br>
       <span style="color:#534AB7;font-size:12px">As subcategorias selecionadas aqui alimentam automaticamente o parâmetro <b>VX</b> no Monte Carlo.</span></div>
       <div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:18px 20px;margin-bottom:18px">
-        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar Subcategorias RX por Função</h3>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar subcategorias RX por função</h3>
         <div id="exo-subcat-sel"></div>
       </div>
       <div class="inline-form" id="exo-form"></div>
@@ -356,7 +349,7 @@ textarea.fi{resize:vertical;min-height:60px}
       <div class="page-sub">Capacidades dinâmicas que amortecem variabilidade e garantem continuidade operacional (MR)<br>
       <span style="color:#534AB7;font-size:12px">As subcategorias selecionadas aqui alimentam automaticamente o parâmetro <b>AR</b> no Monte Carlo.</span></div>
       <div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:18px 20px;margin-bottom:18px">
-        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar Subcategorias MR por Função</h3>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar subcategorias MR por função</h3>
         <div id="mr-subcat-sel"></div>
       </div>
       <div class="inline-form" id="mr-form"></div>
@@ -752,6 +745,36 @@ function delFn(id){
 // ══════════════════════════════════════════
 // COUPLINGS
 // ══════════════════════════════════════════
+
+function openConnectPanel(){
+  if(fns.length<2){alert('Adicione pelo menos duas funções para criar uma conexão.');return;}
+  const opts=fns.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
+  const aspOpts=`<option value="O">O — Output</option><option value="I">I — Input</option><option value="P">P — Precondição</option><option value="R">R — Recurso</option><option value="C">C — Controle</option><option value="T">T — Tempo</option>`;
+  document.getElementById('fnptitle').textContent='Criar conexão';
+  document.getElementById('fnpbody').innerHTML=`
+<label class="fl">Função de ORIGEM</label>
+<select class="fi" id="cp-src" onchange="if(document.getElementById('cp-tgt').value===this.value){document.getElementById('cp-tgt').selectedIndex=(this.selectedIndex+1)%document.getElementById('cp-tgt').options.length}">${opts}</select>
+<label class="fl">Aspecto de origem</label>
+<select class="fi" id="cp-sa"><option value="O" selected>O — Output</option><option value="I">I — Input</option><option value="P">P — Precondição</option><option value="R">R — Recurso</option><option value="C">C — Controle</option><option value="T">T — Tempo</option></select>
+<label class="fl">Função de DESTINO</label>
+<select class="fi" id="cp-tgt">${opts}</select>
+<label class="fl">Aspecto de destino</label>
+<select class="fi" id="cp-ta"><option value="I" selected>I — Input</option><option value="O">O — Output</option><option value="P">P — Precondição</option><option value="R">R — Recurso</option><option value="C">C — Controle</option><option value="T">T — Tempo</option></select>
+<label class="fl">Rótulo da conexão</label><input class="fi" id="cp-lbl" placeholder="Ex.: alimenta, controla, informa">
+<label class="fl">Tipo de linha</label><select class="fi" id="cp-type"><option value="normal">Normal</option><option value="variable">Variável / tracejada</option><option value="critical">Crítica / vermelha</option></select>
+<div class="brow"><button class="bsav" onclick="saveConnFromPanel()">Criar conexão</button><button class="bdel" onclick="document.getElementById('fnpanel').style.display='none'">Cancelar</button></div>`;
+  const tgt=document.getElementById('cp-tgt'); if(tgt.options.length>1)tgt.selectedIndex=1;
+  document.getElementById('fnpanel').style.display='block';
+}
+function saveConnFromPanel(){
+  const s=document.getElementById('cp-src').value,t=document.getElementById('cp-tgt').value;
+  if(!s||!t||s===t){alert('Escolha duas funções diferentes.');return;}
+  coups.push({id:uid(),source_function_id:s,target_function_id:t,source_aspect:document.getElementById('cp-sa').value,target_aspect:document.getElementById('cp-ta').value,label:document.getElementById('cp-lbl').value,line_type:document.getElementById('cp-type').value,created_date:new Date().toISOString()});
+  document.getElementById('fnpanel').style.display='none';
+  selFn=fns.find(f=>f.id===s)||null;
+  draw();
+}
+
 function openConnModal(src,tgt){
   connSrcFn=src;connTgtFn=tgt;
   document.getElementById('cinfo').textContent='De: '+src.name+' → Para: '+tgt.name;
@@ -1093,7 +1116,7 @@ let openSubcatFn={}; // which fn is expanded per page
 
 function renderSubcatSelector(taxoKey,containerId){
   if(!fns.length){
-    document.getElementById(containerId).innerHTML='<div style="color:#9898b0;font-size:13px;padding:8px 0">Adicione funções no Diagrama FRAM primeiro.</div>';
+    document.getElementById(containerId).innerHTML='<div style="color:#9898b0;font-size:13px;padding:8px 0">Adicione funções na aba Funções primeiro.</div>';
     return;
   }
   const T=TAXO[taxoKey];
@@ -1368,7 +1391,7 @@ function vColor(v){if(v>=.70)return'#c0392b';if(v>=.50)return'#854f0b';if(v>=.30
 function pct(v,d=1){return(v*100).toFixed(d)+'%';}
 
 function renderMC(){
-  if(!fns.length){document.getElementById('mc-inner').innerHTML='<div class="empty"><p>Adicione funções no Diagrama FRAM primeiro.</p></div>';return;}
+  if(!fns.length){document.getElementById('mc-inner').innerHTML='<div class="empty"><p>Adicione funções na aba Funções primeiro.</p></div>';return;}
   const hasRes=fns.some(fn=>mcRes[fn.id]);const maxOD=maxOutDeg();
   fns.forEach(fn=>{initP(fn.id);initSubs(fn.id);});
   let h=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
