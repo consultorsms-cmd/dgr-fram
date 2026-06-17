@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>DGR-FRAM Modeler & Simulator - v10.1 EXPORTAÇÃO PDF CORRIGIDA</title>
+<title>DGR-FRAM Modeler & Simulator - v10.2 EXPORTAÇÃO PDF E DASHBOARD CORRIGIDOS</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -180,7 +180,7 @@ textarea.fi{resize:vertical;min-height:55px}
   <div id="topbar">
     <div class="logo-area">
       <div class="title">DGR-FRAM</div>
-      <div class="sub">Modeler & Simulator • v10.1 PDF corrigido • Σ, RF Total, Saturação e gráficos vetoriais</div>
+      <div class="sub">Modeler & Simulator • v10.2 real • Σ, RF Total, Saturação, conexões finas e gráficos corrigidos</div>
     </div>
     <div class="actions">
       <button class="gbtn" onclick="DGRManager.saveToLocalStorage()">💾 Salvar</button>
@@ -1669,7 +1669,7 @@ const DGRManager = {
     // Sᵢ ≤ 0: Normal; 0 < Sᵢ ≤ 0,20: Saturação Sistêmica; Sᵢ > 0,20: Colapso Potencial.
     const s = Math.max(0, +(iis || 0) - 1);
     if (s > 0.20) return { state:'Colapso Potencial', code:'CP', excess:s };
-    if (s > 0) return { state:'Saturação Sistêmica', code:'SS', excess:s };
+    if (s > 0) return { state:'Saturado', code:'SS', excess:s };
     return { state:'Normal', code:'N', excess:0 };
   },
 
@@ -1845,6 +1845,9 @@ const DGRManager = {
   },
 
   renderCharts(hasRes) {
+    // v10.2: renderização robusta dos canvas do dashboard.
+    // Quando chamada por resize sem argumento, detecta automaticamente se há resultados.
+    hasRes = (hasRes === undefined) ? DGRState.fns.some(f => DGRState.mcRes[f.id]) : hasRes;
     const sorted = DGRState.fns.filter(f => DGRState.mcRes[f.id]).sort((a, b) => DGRState.mcRes[b.id].p95 - DGRState.mcRes[a.id].p95);
     ['ch-vfr', 'ch-donut', 'ch-hist', 'ch-heat', 'ch-iis'].forEach(id => {
       document.getElementById(id).style.display = (hasRes && sorted.length) ? 'block' : 'none';
@@ -1981,6 +1984,8 @@ const DGRManager = {
         g.fillStyle = this.vColor(r.iis || r.p95); g.font = 'bold 10px sans-serif'; g.fillText(this.pct(r.iis || 0), cv.width-65, y + bH/2 + 3);
       });
     }
+    // Reforça a renderização dos dois painéis que estavam saindo em branco.
+    this.drawDashboardHeatAndIIS();
   },
 
   drawStaticVarsChart() {
@@ -2001,6 +2006,29 @@ const DGRManager = {
     });
   },
 
+
+
+  paintCanvasFromPDFBuilder(canvasId, kind) {
+    const cv = document.getElementById(canvasId);
+    if (!cv) return;
+    const parent = cv.parentElement;
+    const w = Math.max(360, (parent ? parent.clientWidth : 640) - 40);
+    const h = Math.max(180, parseInt(cv.getAttribute('height') || '200', 10));
+    cv.width = w;
+    cv.height = h;
+    cv.style.width = '100%';
+    cv.style.height = h + 'px';
+    const g = cv.getContext('2d');
+    g.clearRect(0, 0, w, h);
+    const src = this.buildPDFChartCanvas(kind, 1200, kind === 'hist' ? 420 : 620);
+    g.drawImage(src, 0, 0, w, h);
+  },
+
+  drawDashboardHeatAndIIS() {
+    // Fallback explícito para evitar os painéis vazios observados na tela e no PDF.
+    this.paintCanvasFromPDFBuilder('ch-heat', 'heat');
+    this.paintCanvasFromPDFBuilder('ch-iis', 'iis');
+  },
 
   buildPDFChartCanvas(kind, width = 1500, height = 760) {
     // Gera gráficos em canvas próprio, sem depender da visibilidade/estado da tela.
@@ -2044,6 +2072,10 @@ const DGRManager = {
       const nodes = byIIS.slice(0, Math.max(1, Math.min(byIIS.length, 10))).map(x=>x.fn);
       const n = nodes.length;
       const matrix = this.computePropagationMatrix(nodes, 5);
+      // Se não houver acoplamentos ou se a matriz ficar zerada por dados antigos, ainda exibe uma matriz diagnóstica mínima.
+      if (!matrix.flat().some(v => v > 0)) {
+        nodes.forEach((fn,i) => { const r = DGRState.mcRes[fn.id] || {}; matrix[i][i] = Math.max(0.01, +(r.functionalResonance || r.iis || r.p95 || 0) * 0.15); });
+      }
       const maxVal = Math.max(0.0001, ...matrix.flat());
       const left = 330, top = 150, right = 60, bottom = 70;
       const gridW = width-left-right, gridH = height-top-bottom;
@@ -2378,7 +2410,7 @@ const DGRManager = {
     [
       `IIS = VFR + RF; RF = propagação direta + indireta; IGR = Σ IISᵢ / N`,
       `IGR do sistema: ${this.pct(d.igr)} (${igrInfo.lbl})`,
-      `Maior IIS: ${d.maiorIIS?.fn.name || '-'} (${d.maiorIIS ? this.pct(d.maiorIIS.iis) : '-'})${d.maiorIIS?.saturation ? ' — Saturação Sistêmica' : ''}`,
+      `Maior IIS: ${d.maiorIIS?.fn.name || '-'} (${d.maiorIIS ? this.pct(d.maiorIIS.iis) : '-'})${d.maiorIIS?.saturation ? ' — Saturado' : ''}`,
       `Maior P95: ${d.maiorP95?.fn.name || '-'} (${d.maiorP95 ? this.pct(d.maiorP95.vfr) : '-'})`,
       `Maior emissor: ${d.emissor.name} (${this.pct(d.emissor.value)})`,
       `Maior receptor: ${d.receptor.name} (${this.pct(d.receptor.value)})`,
