@@ -135,19 +135,26 @@ textarea.fi{resize:vertical;min-height:55px}
 .fram-map-toolbar{height:44px;background:#f8f9fd;border-bottom:1px solid #e6e9f2;display:flex;align-items:center;justify-content:space-between;padding:0 12px;gap:8px}
 .fram-map-title{font-size:13px;font-weight:700;color:#1a1a2e}
 .fram-map-help{font-size:11px;color:#7b8195}
-#fram-map-area{position:relative;height:520px;min-height:420px;background:radial-gradient(circle at 1px 1px,#d8ddea 1px,transparent 1px);background-size:22px 22px;overflow:hidden;user-select:none;touch-action:none}
+#fram-map-area{position:relative;height:620px;min-height:520px;background:#fff;overflow:hidden;user-select:none;touch-action:none}
+#fram-map-area::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 1px 1px,#edf0f6 1px,transparent 1px);background-size:18px 18px;pointer-events:none}
 #fram-map-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
-.fram-node{position:absolute;width:176px;height:112px;z-index:2;cursor:grab;filter:drop-shadow(0 5px 7px rgba(0,0,0,.16));touch-action:none}
-.fram-node.dragging{cursor:grabbing;z-index:10}
-.fram-node .hex{position:absolute;inset:0;background:#fff;border:2px solid #3f6fd9;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);display:flex;align-items:center;justify-content:center;text-align:center;padding:24px 22px 16px 22px;font-weight:700;font-size:12px;color:#1a1a2e;line-height:1.2}
-.fram-node .port{position:absolute;width:26px;height:20px;border-radius:4px;background:#eef2fb;border:1px solid #9fb2e6;color:#274b9b;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:3}
-.fram-node .p-i{left:-4px;top:46px}.fram-node .p-o{right:-4px;top:46px}.fram-node .p-p{left:31px;top:2px}.fram-node .p-r{right:31px;top:2px}.fram-node .p-c{left:31px;bottom:2px}.fram-node .p-t{right:31px;bottom:2px}
-.fram-node-actions{position:absolute;left:50%;transform:translateX(-50%);bottom:-12px;display:none;gap:4px;z-index:4}
+.fram-node{position:absolute;width:118px;height:104px;z-index:2;cursor:grab;touch-action:none;overflow:visible}
+.fram-node.dragging{cursor:grabbing;z-index:10;filter:drop-shadow(0 8px 12px rgba(0,0,0,.22))}
+.fram-node-svg{position:absolute;inset:0;width:118px;height:104px;overflow:visible;filter:drop-shadow(0 1px 2px rgba(0,0,0,.10))}
+.fram-node-poly{fill:#fff;stroke:var(--node-color,#6b7280);stroke-width:6;stroke-linejoin:round}
+.fram-node-title{position:absolute;left:18px;right:18px;top:29px;height:46px;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:10.5px;color:#121827;line-height:1.12;word-break:break-word;pointer-events:none}
+.fram-node-title.small{font-size:9.4px;line-height:1.08}
+.fram-var-wave{position:absolute;left:50%;top:68px;transform:translateX(-50%);font-size:30px;font-weight:900;line-height:1;color:#e00000;letter-spacing:-2px;pointer-events:none;font-family:Arial,Helvetica,sans-serif}
+.fram-var-wave::before{content:"∿∿"}
+.fram-node .port{position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;border:1.8px solid #5f6572;color:#111827;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:3;box-shadow:0 0 0 2px rgba(255,255,255,.9)}
+.fram-node .p-i{left:-7px;top:43px}.fram-node .p-o{right:-7px;top:43px}.fram-node .p-p{left:21px;bottom:0}.fram-node .p-r{right:21px;bottom:0}.fram-node .p-c{right:21px;top:0}.fram-node .p-t{left:21px;top:0}
+.fram-node-actions{position:absolute;left:50%;transform:translateX(-50%);bottom:-22px;display:none;gap:4px;z-index:4;white-space:nowrap}
 .fram-node:hover .fram-node-actions{display:flex}
-.fram-mini-btn{border:1px solid #d0d0da;border-radius:10px;background:#fff;padding:2px 6px;font-size:10px;cursor:pointer;color:#4c5570}
+.fram-mini-btn{border:1px solid #d0d0da;border-radius:10px;background:#fff;padding:2px 6px;font-size:10px;cursor:pointer;color:#4c5570;box-shadow:0 1px 2px rgba(0,0,0,.10)}
 .fram-mini-btn:hover{border-color:#4778e8;color:#4778e8}
-.fram-empty-map{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8b91a5;font-size:13px;text-align:center;padding:20px}
-@media(max-width:1100px){.fram-top-tools{grid-template-columns:1fr}.fram-node{width:160px;height:104px}}
+.fram-edge-label{font:700 10px "Segoe UI",system-ui,sans-serif;fill:#1f2937;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.fram-empty-map{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8b91a5;font-size:13px;text-align:center;padding:20px;z-index:3}
+@media(max-width:1100px){.fram-top-tools{grid-template-columns:1fr}.fram-node{width:110px;height:98px}.fram-node-svg{width:110px;height:98px}}
 
 </style>
 </head>
@@ -262,6 +269,23 @@ textarea.fi{resize:vertical;min-height:55px}
           <div class="page-title">Funções e Acoplamentos Estruturais</div>
           <div class="page-sub">Comandos no topo e mapa FRAM arrastável abaixo. Arraste as funções para reorganizar a rede.</div>
 
+          <div class="fram-map-card">
+            <div class="fram-map-toolbar">
+              <div>
+                <div class="fram-map-title">Mapa FRAM de Funções</div>
+                <div class="fram-map-help">Clique e arraste os hexágonos. Use ✏️ no nó ou nas listas para editar.</div>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <button class="gbtn" onclick="DGRManager.autoArrangeFramMap()">⟳ Auto-organizar</button>
+              </div>
+            </div>
+            <div id="fram-map-area">
+              <svg id="fram-map-svg"></svg>
+              <div id="fram-map-nodes"></div>
+              <div id="fram-map-empty" class="fram-empty-map">Cadastre funções no topo para visualizar o mapa FRAM.</div>
+            </div>
+          </div>
+
           <div class="fram-top-tools">
             <div class="form-card">
               <h3 id="fnh3">Nova Função</h3>
@@ -279,10 +303,40 @@ textarea.fi{resize:vertical;min-height:55px}
             <div class="form-card">
               <h3 id="connh3">Adicionar Conexão</h3>
               <input type="hidden" id="edit-conn-id">
-              <label class="fl">Função de Origem *</label>
-              <select class="fi" id="conn-src"></select>
-              <label class="fl">Função de Destino *</label>
-              <select class="fi" id="conn-tgt"></select>
+              <div class="fir">
+                <div>
+                  <label class="fl">Função de Origem *</label>
+                  <select class="fi" id="conn-src"></select>
+                </div>
+                <div>
+                  <label class="fl">Extremo de Saída da Origem</label>
+                  <select class="fi" id="conn-src-aspect">
+                    <option value="O" selected>Output (O)</option>
+                    <option value="I">Input (I)</option>
+                    <option value="P">Precondition (P)</option>
+                    <option value="R">Resource (R)</option>
+                    <option value="C">Control (C)</option>
+                    <option value="T">Time (T)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fir">
+                <div>
+                  <label class="fl">Função de Destino *</label>
+                  <select class="fi" id="conn-tgt"></select>
+                </div>
+                <div>
+                  <label class="fl">Extremo de Entrada no Destino</label>
+                  <select class="fi" id="conn-tgt-aspect">
+                    <option value="I" selected>Input (I)</option>
+                    <option value="O">Output (O)</option>
+                    <option value="P">Precondition (P)</option>
+                    <option value="R">Resource (R)</option>
+                    <option value="C">Control (C)</option>
+                    <option value="T">Time (T)</option>
+                  </select>
+                </div>
+              </div>
               <label class="fl">Tipo de Relação / Acoplamento</label>
               <select class="fi" id="conn-type">
                 <option value="normal">Normal (Estável)</option>
@@ -318,22 +372,7 @@ textarea.fi{resize:vertical;min-height:55px}
             </div>
           </div>
 
-          <div class="fram-map-card">
-            <div class="fram-map-toolbar">
-              <div>
-                <div class="fram-map-title">Mapa FRAM de Funções</div>
-                <div class="fram-map-help">Clique e arraste os hexágonos. Use ✏️ no nó ou nas listas para editar.</div>
-              </div>
-              <div style="display:flex;gap:6px;align-items:center">
-                <button class="gbtn" onclick="DGRManager.autoArrangeFramMap()">⟳ Auto-organizar</button>
-              </div>
-            </div>
-            <div id="fram-map-area">
-              <svg id="fram-map-svg"></svg>
-              <div id="fram-map-nodes"></div>
-              <div id="fram-map-empty" class="fram-empty-map">Cadastre funções no topo para visualizar o mapa FRAM.</div>
-            </div>
-          </div>
+
 
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
             <div>
@@ -663,11 +702,11 @@ const DGRManager = {
     const h = area ? Math.max(420, area.clientHeight) : 520;
     DGRState.fns.forEach((fn, idx) => {
       if (typeof fn.x !== 'number' || typeof fn.y !== 'number') {
-        const cols = Math.max(1, Math.floor((w - 80) / 220));
-        fn.x = 40 + (idx % cols) * 220;
-        fn.y = 45 + Math.floor(idx / cols) * 150;
-        fn.x = Math.min(fn.x, w - 190);
-        fn.y = Math.min(fn.y, h - 125);
+        const cols = Math.max(1, Math.floor((w - 80) / 185));
+        fn.x = 40 + (idx % cols) * 185;
+        fn.y = 45 + Math.floor(idx / cols) * 145;
+        fn.x = Math.min(fn.x, w - 130);
+        fn.y = Math.min(fn.y, h - 120);
       }
     });
   },
@@ -677,16 +716,36 @@ const DGRManager = {
     if (!area) return;
     DGRHistory.push();
     const w = Math.max(700, area.clientWidth);
-    const cols = Math.max(1, Math.floor((w - 80) / 230));
+    const cols = Math.max(1, Math.floor((w - 80) / 185));
     DGRState.fns.forEach((fn, idx) => {
-      fn.x = 42 + (idx % cols) * 230;
-      fn.y = 48 + Math.floor(idx / cols) * 155;
+      fn.x = 42 + (idx % cols) * 185;
+      fn.y = 48 + Math.floor(idx / cols) * 145;
     });
     DGRHistory.push();
     this.renderFramMap();
   },
 
-  getNodeCenter(fn) { return { x: (fn.x || 0) + 88, y: (fn.y || 0) + 56 }; },
+  getNodeCenter(fn) { return { x: (fn.x || 0) + 59, y: (fn.y || 0) + 52 }; },
+
+  nodeColor(fn) {
+    const r = DGRState.mcRes?.[fn.id];
+    if (r) return r.p95 >= 0.70 ? '#cc0000' : r.p95 >= 0.40 ? '#f59e0b' : '#138a2e';
+    const hasMR = DGRState.mechs.some(m => m.controlled_function_id === fn.id);
+    const hasVar = DGRState.vars.some(v => v.affected_function_id === fn.id);
+    if (hasVar) return '#cc0000';
+    if (hasMR) return '#138a2e';
+    return '#6b7280';
+  },
+
+  getPortPoint(fn, aspect = 'O') {
+    const x = fn.x || 0, y = fn.y || 0;
+    const pts = {
+      I:{x:x-7+9, y:y+43+9}, O:{x:x+118-7+9, y:y+43+9},
+      P:{x:x+21+9, y:y+104+0+9}, R:{x:x+118-21-18+9, y:y+104+0+9},
+      C:{x:x+118-21-18+9, y:y+0+9}, T:{x:x+21+9, y:y+0+9}
+    };
+    return pts[String(aspect || 'O').toUpperCase()[0]] || pts.O;
+  },
 
   renderFramMap() {
     const area = document.getElementById('fram-map-area');
@@ -700,28 +759,31 @@ const DGRManager = {
     svg.setAttribute('width', area.clientWidth);
     svg.setAttribute('height', area.clientHeight);
     svg.setAttribute('viewBox', `0 0 ${area.clientWidth} ${area.clientHeight}`);
-    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52627a"></path></marker></defs>`;
+    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#8b8f98"></path></marker></defs>`;
 
     DGRState.coups.forEach(c => {
       const s = DGRState.fns.find(f => f.id === c.source_function_id);
       const t = DGRState.fns.find(f => f.id === c.target_function_id);
       if (!s || !t) return;
-      const a = this.getNodeCenter(s), b = this.getNodeCenter(t);
+      const sp = (c.source_aspect || c.source_port || 'O');
+      const tp = (c.target_aspect || c.target_port || 'I');
+      const a = this.getPortPoint(s, sp), b = this.getPortPoint(t, tp);
       const dx = b.x - a.x, dy = b.y - a.y;
-      const len = Math.max(1, Math.sqrt(dx*dx + dy*dy));
-      const sx = a.x + dx/len*88, sy = a.y + dy/len*56;
-      const tx = b.x - dx/len*88, ty = b.y - dy/len*56;
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', sx); line.setAttribute('y1', sy); line.setAttribute('x2', tx); line.setAttribute('y2', ty);
-      line.setAttribute('stroke', c.line_type === 'critical' ? '#c0392b' : '#52627a');
-      line.setAttribute('stroke-width', c.line_type === 'critical' ? '3' : '2');
-      if (c.line_type === 'variable') line.setAttribute('stroke-dasharray', '7 5');
-      line.setAttribute('marker-end', 'url(#arrow-fram)');
-      svg.appendChild(line);
+      const curve = Math.max(-90, Math.min(90, dy * 0.28));
+      const c1x = a.x + dx * 0.42, c1y = a.y + curve;
+      const c2x = a.x + dx * 0.58, c2y = b.y - curve;
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${a.x} ${a.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${b.x} ${b.y}`);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', c.line_type === 'critical' ? '#c0392b' : c.line_type === 'variable' ? '#8b8f98' : '#a3a7ae');
+      path.setAttribute('stroke-width', c.line_type === 'critical' ? '2.4' : '2');
+      if (c.line_type === 'variable') path.setAttribute('stroke-dasharray', '7 5');
+      path.setAttribute('marker-end', 'url(#arrow-fram)');
+      svg.appendChild(path);
       if (c.label) {
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', (sx+tx)/2); text.setAttribute('y', (sy+ty)/2 - 6);
-        text.setAttribute('text-anchor', 'middle'); text.setAttribute('font-size', '10'); text.setAttribute('fill', '#5d6678');
+        text.setAttribute('x', (a.x+b.x)/2); text.setAttribute('y', (a.y+b.y)/2 - 8);
+        text.setAttribute('text-anchor', 'middle'); text.setAttribute('class', 'fram-edge-label');
         text.textContent = c.label;
         svg.appendChild(text);
       }
@@ -731,8 +793,11 @@ const DGRManager = {
       const div = document.createElement('div');
       div.className = 'fram-node';
       div.style.left = `${fn.x}px`; div.style.top = `${fn.y}px`;
+      div.style.setProperty('--node-color', this.nodeColor(fn));
       div.dataset.id = fn.id;
-      div.innerHTML = `<div class="hex">${this.esc(fn.name)}</div><div class="port p-i">I</div><div class="port p-o">O</div><div class="port p-p">P</div><div class="port p-r">R</div><div class="port p-c">C</div><div class="port p-t">T</div><div class="fram-node-actions"><button class="fram-mini-btn" type="button">✏️ Editar</button><button class="fram-mini-btn" type="button">🗑️</button></div>`;
+      const titleCls = String(fn.name || '').length > 42 ? 'fram-node-title small' : 'fram-node-title';
+      const hasVariability = DGRState.vars.some(v => v.affected_function_id === fn.id);
+      div.innerHTML = `<svg class="fram-node-svg" viewBox="0 0 118 104" aria-hidden="true"><polygon class="fram-node-poly" points="29,5 89,5 113,52 89,99 29,99 5,52"></polygon></svg><div class="${titleCls}">${this.esc(fn.name)}</div>${hasVariability ? '<div class="fram-var-wave" title="Função com variabilidade cadastrada"></div>' : ''}<div class="port p-i">I</div><div class="port p-o">O</div><div class="port p-p">P</div><div class="port p-r">R</div><div class="port p-c">C</div><div class="port p-t">T</div><div class="fram-node-actions"><button class="fram-mini-btn" type="button">✏️ Editar</button><button class="fram-mini-btn" type="button">🗑️</button></div>`;
       div.querySelectorAll('button')[0].onclick = (ev) => { ev.stopPropagation(); this.editFn(fn.id); document.getElementById('fn-name').focus(); };
       div.querySelectorAll('button')[1].onclick = (ev) => { ev.stopPropagation(); this.deleteFn(fn.id); };
       this.bindNodeDrag(div, fn.id);
@@ -769,7 +834,6 @@ const DGRManager = {
       e.preventDefault();
       const pt = e.touches ? e.touches[0] : e;
       const fn = DGRState.fns.find(f => f.id === fnId); if (!fn) return;
-      DGRHistory.push();
       dragging = true; moved = false; startX = pt.clientX; startY = pt.clientY; baseX = fn.x || 0; baseY = fn.y || 0;
       el.classList.add('dragging');
       document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
@@ -785,17 +849,18 @@ const DGRManager = {
     if (!svg || !area) return;
     svg.setAttribute('width', area.clientWidth); svg.setAttribute('height', area.clientHeight);
     svg.setAttribute('viewBox', `0 0 ${area.clientWidth} ${area.clientHeight}`);
-    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52627a"></path></marker></defs>`;
+    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#8b8f98"></path></marker></defs>`;
     DGRState.coups.forEach(c => {
       const s = DGRState.fns.find(f => f.id === c.source_function_id), t = DGRState.fns.find(f => f.id === c.target_function_id);
       if (!s || !t) return;
-      const a = this.getNodeCenter(s), b = this.getNodeCenter(t), dx = b.x-a.x, dy = b.y-a.y, len = Math.max(1, Math.sqrt(dx*dx+dy*dy));
-      const sx=a.x+dx/len*88, sy=a.y+dy/len*56, tx=b.x-dx/len*88, ty=b.y-dy/len*56;
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', sx); line.setAttribute('y1', sy); line.setAttribute('x2', tx); line.setAttribute('y2', ty);
-      line.setAttribute('stroke', c.line_type === 'critical' ? '#c0392b' : '#52627a'); line.setAttribute('stroke-width', c.line_type === 'critical' ? '3' : '2');
-      if (c.line_type === 'variable') line.setAttribute('stroke-dasharray', '7 5');
-      line.setAttribute('marker-end', 'url(#arrow-fram)'); svg.appendChild(line);
+      const a = this.getPortPoint(s, c.source_aspect || c.source_port || 'O'), b = this.getPortPoint(t, c.target_aspect || c.target_port || 'I');
+      const dx = b.x-a.x, dy = b.y-a.y, curve = Math.max(-90, Math.min(90, dy * 0.28));
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${a.x} ${a.y} C ${a.x+dx*0.42} ${a.y+curve}, ${a.x+dx*0.58} ${b.y-curve}, ${b.x} ${b.y}`);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', c.line_type === 'critical' ? '#c0392b' : c.line_type === 'variable' ? '#8b8f98' : '#a3a7ae'); path.setAttribute('stroke-width', c.line_type === 'critical' ? '2.4' : '2');
+      if (c.line_type === 'variable') path.setAttribute('stroke-dasharray', '7 5');
+      path.setAttribute('marker-end', 'url(#arrow-fram)'); svg.appendChild(path);
     });
   },
 
@@ -812,7 +877,7 @@ const DGRManager = {
       if (fn) { fn.name = name; fn.description = desc; }
     } else {
       const nid = this.uid();
-      DGRState.fns.push({ id: nid, name, description: desc, x: 40 + (DGRState.fns.length % 4) * 220, y: 45 + Math.floor(DGRState.fns.length / 4) * 150 });
+      DGRState.fns.push({ id: nid, name, description: desc, x: 40 + (DGRState.fns.length % 5) * 185, y: 45 + Math.floor(DGRState.fns.length / 5) * 145 });
       DGRState.params[nid] = { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.2,mp:0.4,mx:0.7} };
       DGRState.subs[nid] = {};
       [...TAXO.RE.items, ...TAXO.RX.items, ...TAXO.MR.items].forEach(i => {
@@ -881,6 +946,8 @@ const DGRManager = {
     const src = document.getElementById('conn-src').value;
     const tgt = document.getElementById('conn-tgt').value;
     const type = document.getElementById('conn-type').value;
+    const srcAspect = document.getElementById('conn-src-aspect')?.value || 'O';
+    const tgtAspect = document.getElementById('conn-tgt-aspect')?.value || 'I';
     const lbl = document.getElementById('conn-lbl').value.trim();
     const id = document.getElementById('edit-conn-id').value;
     if (!src || !tgt || src === tgt) { alert('Parâmetros lógicos inválidos.'); return; }
@@ -888,9 +955,9 @@ const DGRManager = {
     DGRHistory.push();
     if (id) {
       const c = DGRState.coups.find(x => x.id === id);
-      if (c) { c.source_function_id = src; c.target_function_id = tgt; c.line_type = type; c.label = lbl; }
+      if (c) { c.source_function_id = src; c.target_function_id = tgt; c.source_aspect = srcAspect; c.target_aspect = tgtAspect; c.line_type = type; c.label = lbl; }
     } else {
-      DGRState.coups.push({ id: this.uid(), source_function_id: src, target_function_id: tgt, line_type: type, label: lbl });
+      DGRState.coups.push({ id: this.uid(), source_function_id: src, target_function_id: tgt, source_aspect: srcAspect, target_aspect: tgtAspect, line_type: type, label: lbl });
     }
     this.clearConnForm();
     DGRHistory.push();
@@ -903,6 +970,8 @@ const DGRManager = {
     document.getElementById('edit-conn-id').value = c.id;
     document.getElementById('conn-src').value = c.source_function_id;
     document.getElementById('conn-tgt').value = c.target_function_id;
+    if (document.getElementById('conn-src-aspect')) document.getElementById('conn-src-aspect').value = c.source_aspect || c.source_port || 'O';
+    if (document.getElementById('conn-tgt-aspect')) document.getElementById('conn-tgt-aspect').value = c.target_aspect || c.target_port || 'I';
     document.getElementById('conn-type').value = c.line_type;
     document.getElementById('conn-lbl').value = c.label || '';
     document.getElementById('connh3').textContent = "Editar Conexão";
@@ -919,6 +988,8 @@ const DGRManager = {
   clearConnForm() {
     document.getElementById('edit-conn-id').value = '';
     document.getElementById('conn-lbl').value = '';
+    if (document.getElementById('conn-src-aspect')) document.getElementById('conn-src-aspect').value = 'O';
+    if (document.getElementById('conn-tgt-aspect')) document.getElementById('conn-tgt-aspect').value = 'I';
     document.getElementById('connh3').textContent = "Adicionar Conexão";
     document.getElementById('btn-cancel-conn').style.display = "none";
   },
@@ -935,7 +1006,7 @@ const DGRManager = {
         <div class="item-card">
           <div class="item-card-body">
             <div class="item-card-title">${this.esc(s)} ➔ ${this.esc(t)}</div>
-            <div class="item-card-sub">Relação: <b>${c.line_type}</b> | ${this.esc(c.label)}</div>
+            <div class="item-card-sub">${c.source_aspect || 'O'} → ${c.target_aspect || 'I'} | Relação: <b>${c.line_type}</b> | ${this.esc(c.label)}</div>
           </div>
           <div class="item-card-actions">
             <button class="rtab" onclick="DGRManager.editConn('${c.id}')">✏️ Editar</button>
@@ -1529,7 +1600,7 @@ const DGRManager = {
 
   saveToLocalStorage(silent = false) {
     localStorage.setItem('dgr_autosave', DGRState.serialize());
-    if (!silent) alert('Autosave atualizado localmente!');
+    alert('Autosave atualizado localmente!');
   },
 
   loadData() {
