@@ -2061,12 +2061,47 @@ const DGRManager = {
     this.refreshUI();
   },
 
+
+  pdfCritLabel(doc, x, y, crit) {
+    const label = (crit && crit.lbl ? crit.lbl : 'Baixa').replace(/[🟢🟡🟠🔴]/g, '').trim();
+    const color = crit && crit.color ? crit.color : '#0f6e56';
+    const rgb = this.hexToRgb(color) || {r:15,g:110,b:86};
+    doc.setFillColor(rgb.r, rgb.g, rgb.b);
+    doc.setDrawColor(rgb.r, rgb.g, rgb.b);
+    doc.circle(x + 1.5, y - 1.5, 1.35, 'FD');
+    doc.setTextColor(0,0,0);
+    doc.text(label, x + 5, y);
+  },
+
+  drawPDFPorts(doc, x, y, w, h) {
+    const ports = [
+      ['I', x - 1.2, y + h * 0.50],
+      ['O', x + w + 1.2, y + h * 0.50],
+      ['T', x + w * 0.30, y + 1.2],
+      ['C', x + w * 0.70, y + 1.2],
+      ['P', x + w * 0.30, y + h - 1.2],
+      ['R', x + w * 0.70, y + h - 1.2]
+    ];
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(Math.max(4, 6 * (w/49.56)));
+    ports.forEach(([lbl, px, py]) => {
+      doc.setFillColor(255,255,255);
+      doc.setDrawColor(95,101,114);
+      doc.circle(px, py, Math.max(1.8, w * 0.045), 'FD');
+      doc.setTextColor(17,24,39);
+      doc.text(lbl, px, py + Math.max(0.8, w*0.010), {align:'center'});
+    });
+    doc.setTextColor(0,0,0);
+  },
+
   drawFramMapPDF(doc, pageW, pageH) {
     doc.addPage();
     doc.setFont('helvetica','bold'); doc.setFontSize(13);
     doc.text('Mapa FRAM Completo', 15, 18);
     doc.setFont('helvetica','normal'); doc.setFontSize(8);
-    doc.text('Cores por classe IIS: 🟢 Baixa, 🟡 Moderada, 🟠 Alta, 🔴 Crítica. Senoide = RE/RX; escudo = MR. Rotas críticas em vermelho.', 15, 24);
+    doc.text('Cores por classe IIS: Baixa / Moderada / Alta / Critica. Senoide vermelha = RE/RX; escudo verde = MR. Rotas criticas em vermelho.', 15, 24);
+    const legend = [this.critClass(0.10), this.critClass(0.40), this.critClass(0.60), this.critClass(0.80)];
+    legend.forEach((c,i)=>this.pdfCritLabel(doc, 15 + i*34, 29, c));
     if (!DGRState.fns.length) { doc.text('Nenhuma função cadastrada.', 15, 36); return; }
     const xs = DGRState.fns.map(f => f.x || 0), ys = DGRState.fns.map(f => f.y || 0);
     const minX = Math.min(...xs), minY = Math.min(...ys), maxX = Math.max(...xs) + 125, maxY = Math.max(...ys) + 112;
@@ -2123,6 +2158,7 @@ const DGRManager = {
       if (rgb) doc.setDrawColor(rgb.r, rgb.g, rgb.b); else doc.setDrawColor(17,24,39);
       doc.setFillColor(255,255,255); doc.setLineWidth(1.2);
       doc.lines(pts.slice(1).map((p,i)=>[p[0]-pts[i][0],p[1]-pts[i][1]]).concat([[pts[0][0]-pts[5][0], pts[0][1]-pts[5][1]]]), pts[0][0], pts[0][1], [1,1], 'FD');
+      this.drawPDFPorts(doc, x, y, w, h);
       doc.setFont('helvetica','bold'); doc.setFontSize(Math.max(5, 8*scale)); doc.setTextColor(20,20,35);
       const label = doc.splitTextToSize(f.name, Math.max(18, w-8)); doc.text(label.slice(0,2), x+w/2, y+h/2-2, {align:'center'});
       doc.setFontSize(Math.max(5, 7*scale));
@@ -2164,15 +2200,15 @@ const DGRManager = {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text('Relatório DGR-FRAM Analítico', 15, 18);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 15, 25);
-    doc.text('Modelo: Beta-PERT (mínima, média, máxima); VT = VE + VX; VFR = VT × (1 − AR); IIS = VFR + RF sem normalização para 100%; Limite Crítico = P95.', 15, 31);
-    doc.text('IGR = média dos IIS por função, com truncamento individual em 100% apenas para compor o índice global.', 15, 36);
+    doc.text('Modelo: Beta-PERT (minima, media, maxima); VT = VE + VX; VFR = VT x (1 - AR); IIS = VFR + RF, sem normalizacao para 100%; Limite Critico = P95.', 15, 31);
+    doc.text('Formula do IGR: IGR = media[ min(1, IIS_i) ]; IIS_i = VFR_i + RF_i. O truncamento vale apenas para o indice global.', 15, 36);
     doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(`IGR do Sistema: ${this.pct(d.igr)} (${igrInfo.lbl})`, 15, 42);
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(doc.splitTextToSize(this.autoInterpretationText(), 260), 15, 49);
     let y = 66;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('Ranking por IIS', 15, y); y += 7; doc.setFontSize(8);
     ['Função','VFR/P95','RF Rec.','RF Emit.','IIS','Criticidade','Estado'].forEach((h,i)=> doc.text(h, [15,118,143,168,193,218,250][i], y));
     y += 3; doc.line(15,y,285,y); y += 5; doc.setFont('helvetica','normal');
-    sortedIIS.forEach((x,i) => { if (y > 188) { doc.addPage(); y = 18; } doc.text(`${i+1}. ${x.fn.name}`.slice(0,58), 15, y); doc.text(this.pct(x.vfr), 118, y); doc.text(this.pct(x.rf), 143, y); doc.text(this.pct(x.r.emittedResonance || 0), 168, y); doc.text(this.pct(x.iis), 193, y); doc.text(x.crit.lbl, 218, y); doc.text(x.saturation ? 'Saturação Sistêmica' : 'Normal', 250, y); y += 6; });
+    sortedIIS.forEach((x,i) => { if (y > 188) { doc.addPage(); y = 18; } doc.text(`${i+1}. ${x.fn.name}`.slice(0,58), 15, y); doc.text(this.pct(x.vfr), 118, y); doc.text(this.pct(x.rf), 143, y); doc.text(this.pct(x.r.emittedResonance || 0), 168, y); doc.text(this.pct(x.iis), 193, y); this.pdfCritLabel(doc, 218, y, x.crit); doc.text(x.saturation ? 'Saturacao Sistemica' : 'Normal', 250, y); y += 6; });
     y += 5; if (y > 165) { doc.addPage(); y = 18; }
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Ranking das funções por P95', 15, y); y += 7; doc.setFontSize(8);
     ['Função','VFR média','P90','P95','RF','P99','Prob. Crit.','IIS'].forEach((h,i)=> doc.text(h, [15,108,136,160,184,207,232,262][i], y));
@@ -2187,7 +2223,7 @@ const DGRManager = {
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('RF recebida e emitida por função', 15, y); y += 7; doc.setFontSize(8);
     ['Função','RF Recebida','RF Emitida','VFR/P95','IIS = VFR + RF','Classe'].forEach((h,i)=> doc.text(h, [15,116,145,174,203,242][i], y));
     y += 3; doc.line(15,y,285,y); y += 5; doc.setFont('helvetica','normal');
-    sortedIIS.forEach(x => { if (y > 188) { doc.addPage(); y = 18; } doc.text(x.fn.name.slice(0,52), 15, y); doc.text(this.pct(x.rf), 116, y); doc.text(this.pct(x.r.emittedResonance || 0), 145, y); doc.text(this.pct(x.vfr), 174, y); doc.text(this.pct(x.iis), 203, y); doc.text(x.crit.lbl, 242, y); y += 6; });
+    sortedIIS.forEach(x => { if (y > 188) { doc.addPage(); y = 18; } doc.text(x.fn.name.slice(0,52), 15, y); doc.text(this.pct(x.rf), 116, y); doc.text(this.pct(x.r.emittedResonance || 0), 145, y); doc.text(this.pct(x.vfr), 174, y); doc.text(this.pct(x.iis), 203, y); this.pdfCritLabel(doc, 242, y, x.crit); y += 6; });
     y += 4; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Efeito dos Mecanismos de Resiliência (antes/depois)', 15, y); y += 7; doc.setFontSize(8);
     ['Função','Sem MR','Com MR','Redução'].forEach((h,i)=> doc.text(h, [15,150,180,210][i], y)); y += 3; doc.line(15,y,245,y); y += 5; doc.setFont('helvetica','normal');
     const effectsPDF = this.resilienceEffects();
@@ -2209,6 +2245,31 @@ const DGRManager = {
       `Quantidade de funções críticas: ${critCountPDF}`,
       `Quantidade de funções resilientes: ${resilientCountPDF}`
     ].forEach(line => { doc.text(doc.splitTextToSize(line, 260), 15, y); y += 8; });
+
+    // Matriz numérica de propagação direta e indireta em cascata no PDF.
+    doc.addPage(); y = 18; doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text('Matriz de Propagacao em Cascata (direta + indireta)', 15, y); y += 8;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('Cada celula representa a influencia acumulada da origem sobre o destino em multiplas camadas da rede FRAM.', 15, y); y += 8;
+    const pm = this.computePropagationMatrix(DGRState.fns, 5);
+    const namesPDF = DGRState.fns.map(f=>f.name.slice(0,18));
+    const maxPM = Math.max(0.0001, ...pm.flat());
+    const startX=52, startY=y+8, cellW=Math.min(34, 210/Math.max(1,DGRState.fns.length)), cellH=9;
+    doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.text('Destino \\ Origem', 15, y+5);
+    namesPDF.forEach((n,i)=>doc.text(n, startX+i*cellW, y+5, {angle:25}));
+    doc.setFont('helvetica','normal');
+    DGRState.fns.forEach((fn,i)=>{
+      const yy=startY+i*cellH;
+      doc.text(fn.name.slice(0,24), 15, yy+5);
+      DGRState.fns.forEach((_,j)=>{
+        const val=pm[i][j]||0, norm=val/maxPM;
+        if(val>0){ doc.setFillColor(230-Math.round(norm*90),245-Math.round(norm*160),240-Math.round(norm*190)); }
+        else { doc.setFillColor(245,246,250); }
+        doc.rect(startX+j*cellW, yy, cellW-1, cellH-1, 'F');
+        doc.setTextColor(norm>0.55?255:20, norm>0.55?255:20, norm>0.55?255:35);
+        if(val>0) doc.text(String(Math.round(val*100)), startX+j*cellW+cellW/2, yy+5.7, {align:'center'});
+        doc.setTextColor(0,0,0);
+      });
+    });
+
     this.drawFramMapPDF(doc, pageW, pageH);
     const charts = [{ id: 'ch-vfr', title: 'VFR por Função (P95 — Limite Crítico)' },{ id: 'ch-hist', title: 'Histograma da Distribuição Agregada' },{ id: 'ch-heat', title: 'Propagação da Variabilidade na Rede FRAM' },{ id: 'ch-iis', title: 'IIS = VFR + RF (sem normalização)' }];
     charts.forEach(ch => { const cv = document.getElementById(ch.id); if (!cv || cv.style.display === 'none') return; doc.addPage(); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text(ch.title, 15, 18); try { const img = cv.toDataURL('image/png', 1.0); doc.addImage(img, 'PNG', 15, 28, pageW - 30, Math.min(pageH - 45, 145)); } catch(e) { doc.setFont('helvetica', 'normal'); doc.text('Não foi possível incorporar este gráfico ao PDF.', 15, 32); } });
