@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>DGR-FRAM Analyze</title>
+<title>DGR-FRAM Modeler & Simulator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -126,31 +126,29 @@ textarea.fi{resize:vertical;min-height:55px}
 .hb{border-radius:1px 1px 0 0;flex:1;min-width:0}
 .histax{display:flex;justify-content:space-between;font-size:8px;color:#9898b0;margin-top:2px}
 
-/* ── FRAM MAP WORKSPACE ── */
-.fram-workspace{background:#fff;border:1px solid #d8dbe8;border-radius:10px;margin:14px 0 16px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04)}
-.fram-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid #edf0f7;background:#fff;position:sticky;top:0;z-index:2}
-.ftbtn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid #d0d5e2;border-radius:6px;background:#fff;color:#1a1a2e;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
-.ftbtn:hover{border-color:#4778e8;background:#f7f9ff}
-.ftbtn.primary{background:#4778e8;color:#fff;border-color:#4778e8}
-.fram-map-wrap{height:560px;position:relative;background:radial-gradient(#eef1f7 1px,transparent 1px);background-size:16px 16px}
-#fram-map{width:100%;height:100%;display:block}
-.fram-legend{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:10px 14px;border-top:1px solid #edf0f7;background:#fbfcff;font-size:11px;color:#5a5a7a}
-.legend-dot{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1.5px solid #4778e8;background:#fff;font-weight:700;font-size:10px;margin-right:5px}
-.form-anchor{scroll-margin-top:80px}
-
-
-/* AJUSTE SOLICITADO: tela Funções como workspace visual, mapa primeiro e comandos no topo */
-#s-fram{padding:0;background:#f4f6fb;overflow:auto}
-#s-fram .fram-full-wrap{width:100%;max-width:none;margin:0;padding:16px 18px 24px}
-#s-fram .page-title{margin-left:0}
-#s-fram .fram-workspace{margin:8px 0 14px;border-radius:8px}
-#s-fram .fram-toolbar{position:sticky;top:0;z-index:5;box-shadow:0 1px 6px rgba(15,23,42,.06)}
-#s-fram .fram-map-wrap{height:640px;min-height:520px;background:radial-gradient(#e4e8f2 1px,transparent 1px);background-size:18px 18px}
-#s-fram #fram-map{height:100%}
-#s-fram .fram-forms-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}
-@media (max-width:1100px){#s-fram .fram-forms-grid{grid-template-columns:1fr}#s-fram .fram-map-wrap{height:560px}}
-
 .empty{text-align:center;padding:32px 16px;color:#9898b0}
+
+
+/* ── FRAM FUNCTION MAP ── */
+.fram-top-tools{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:start;margin-bottom:14px}
+.fram-map-card{background:#fff;border:1px solid #dfe3ee;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04);margin-bottom:14px}
+.fram-map-toolbar{height:44px;background:#f8f9fd;border-bottom:1px solid #e6e9f2;display:flex;align-items:center;justify-content:space-between;padding:0 12px;gap:8px}
+.fram-map-title{font-size:13px;font-weight:700;color:#1a1a2e}
+.fram-map-help{font-size:11px;color:#7b8195}
+#fram-map-area{position:relative;height:520px;min-height:420px;background:radial-gradient(circle at 1px 1px,#d8ddea 1px,transparent 1px);background-size:22px 22px;overflow:hidden;user-select:none;touch-action:none}
+#fram-map-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.fram-node{position:absolute;width:176px;height:112px;z-index:2;cursor:grab;filter:drop-shadow(0 5px 7px rgba(0,0,0,.16));touch-action:none}
+.fram-node.dragging{cursor:grabbing;z-index:10}
+.fram-node .hex{position:absolute;inset:0;background:#fff;border:2px solid #3f6fd9;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);display:flex;align-items:center;justify-content:center;text-align:center;padding:24px 22px 16px 22px;font-weight:700;font-size:12px;color:#1a1a2e;line-height:1.2}
+.fram-node .port{position:absolute;width:26px;height:20px;border-radius:4px;background:#eef2fb;border:1px solid #9fb2e6;color:#274b9b;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:3}
+.fram-node .p-i{left:-4px;top:46px}.fram-node .p-o{right:-4px;top:46px}.fram-node .p-p{left:31px;top:2px}.fram-node .p-r{right:31px;top:2px}.fram-node .p-c{left:31px;bottom:2px}.fram-node .p-t{right:31px;bottom:2px}
+.fram-node-actions{position:absolute;left:50%;transform:translateX(-50%);bottom:-12px;display:none;gap:4px;z-index:4}
+.fram-node:hover .fram-node-actions{display:flex}
+.fram-mini-btn{border:1px solid #d0d0da;border-radius:10px;background:#fff;padding:2px 6px;font-size:10px;cursor:pointer;color:#4c5570}
+.fram-mini-btn:hover{border-color:#4778e8;color:#4778e8}
+.fram-empty-map{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8b91a5;font-size:13px;text-align:center;padding:20px}
+@media(max-width:1100px){.fram-top-tools{grid-template-columns:1fr}.fram-node{width:160px;height:104px}}
+
 </style>
 </head>
 <body>
@@ -229,9 +227,9 @@ textarea.fi{resize:vertical;min-height:55px}
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
             <div class="dash-section">
-              <h3>Mapa Sistêmico FRAM — Funções e Acoplamentos</h3>
-              <canvas id="ch-heat" height="280"></canvas>
-              <div id="ch-heat-empty" class="empty">Cadastre funções e conexões para visualizar o mapa</div>
+              <h3>Mapa de Calor das Funções (VFR × IP)</h3>
+              <canvas id="ch-heat" height="200"></canvas>
+              <div id="ch-heat-empty" class="empty">Execute a simulação para calcular</div>
             </div>
             <div class="dash-section">
               <h3>Índice de Impacto Sistêmico (IIS)</h3>
@@ -260,128 +258,93 @@ textarea.fi{resize:vertical;min-height:55px}
       </div>
 
       <div class="screen scroll-screen" id="s-fram">
-        <div class="fram-full-wrap">
-          <div class="page-title">Mapa de Funções (FRAM)</div>
-          <div class="page-sub">Visualização sistêmica das funções, conexões e extremos FRAM. As conexões partem e chegam pelos extremos escolhidos: Input, Output, Precondition, Resource, Control e Time.</div>
+        <div class="form-wrap" style="max-width:1280px">
+          <div class="page-title">Funções e Acoplamentos Estruturais</div>
+          <div class="page-sub">Comandos no topo e mapa FRAM arrastável abaixo. Arraste as funções para reorganizar a rede.</div>
 
-          <div class="fram-workspace">
-            <div class="fram-toolbar">
-              <button class="ftbtn primary" onclick="document.getElementById('fn-form-card').scrollIntoView({behavior:'smooth',block:'start'})">＋ Nova Função</button>
-              <button class="ftbtn" onclick="document.getElementById('conn-form-card').scrollIntoView({behavior:'smooth',block:'start'})">🔗 Nova Conexão</button>
-              <button class="ftbtn" onclick="document.getElementById('res-form-card').scrollIntoView({behavior:'smooth',block:'start'})">〽 Cenário de Ressonância</button>
-              <button class="ftbtn" onclick="DGRManager.resetFramLayout()">⤢ Ajustar Layout</button>
-              <button class="ftbtn" onclick="DGRManager.runSimulation()">▶ Rodar Simulação</button>
-              <span style="margin-left:auto;font-size:11px;color:#6b7280">Comandos no topo • arraste as funções para reposicionar • conexões pelos extremos I/O/P/R/C/T</span>
-            </div>
-            <div class="fram-map-wrap"><canvas id="fram-map" height="640"></canvas></div>
-            <div class="fram-legend">
-              <span><span class="legend-dot">I</span>Input</span>
-              <span><span class="legend-dot">O</span>Output</span>
-              <span><span class="legend-dot">P</span>Precondition</span>
-              <span><span class="legend-dot">R</span>Resource</span>
-              <span><span class="legend-dot">C</span>Control</span>
-              <span><span class="legend-dot">T</span>Time</span>
-              <span style="margin-left:auto">Cores: verde/azul/amarelo/vermelho conforme P95 ou estado simulado.</span>
-            </div>
-          </div>
-          
-          <div class="fram-forms-grid">
-            <div>
-              <div class="form-card form-anchor" id="fn-form-card">
-                <h3 id="fnh3">Nova Função</h3>
-                <input type="hidden" id="edit-fn-id">
-                <label class="fl">Nome da Função *</label>
-                <input type="text" class="fi" id="fn-name" placeholder="Ex: Processar lote de pagamentos">
-                <label class="fl">Descrição / Escopo Operacional</label>
-                <textarea class="fi" id="fn-desc" placeholder="Detalhamento técnico da execução..."></textarea>
-                <div class="brow">
-                  <button class="bsav" onclick="DGRManager.saveFn()">Salvar Função</button>
-                  <button class="bdel" id="btn-cancel-fn" onclick="DGRManager.clearFnForm()" style="display:none">Cancelar</button>
-                </div>
+          <div class="fram-top-tools">
+            <div class="form-card">
+              <h3 id="fnh3">Nova Função</h3>
+              <input type="hidden" id="edit-fn-id">
+              <label class="fl">Nome da Função *</label>
+              <input type="text" class="fi" id="fn-name" placeholder="Ex: Processar lote de pagamentos">
+              <label class="fl">Descrição / Escopo Operacional</label>
+              <textarea class="fi" id="fn-desc" placeholder="Detalhamento técnico da execução..."></textarea>
+              <div class="brow">
+                <button class="bsav" onclick="DGRManager.saveFn()">Salvar Função</button>
+                <button class="bdel" id="btn-cancel-fn" onclick="DGRManager.clearFnForm()" style="display:none">Cancelar</button>
               </div>
-              <div class="item-list" id="fn-list-target"></div>
             </div>
 
-            <div>
-              <div class="form-card form-anchor" id="conn-form-card">
-                <h3 id="connh3">Adicionar Conexão</h3>
-                <input type="hidden" id="edit-conn-id">
-                <div class="fir">
-                  <div>
-                    <label class="fl">Função de Origem *</label>
-                    <select class="fi" id="conn-src"></select>
-                  </div>
-                  <div>
-                    <label class="fl">Extremo de Saída da Origem</label>
-                    <select class="fi" id="conn-src-port">
-                      <option value="output" selected>Output</option>
-                      <option value="input">Input</option>
-                      <option value="precondition">Precondition</option>
-                      <option value="resource">Resource</option>
-                      <option value="control">Control</option>
-                      <option value="time">Time</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="fir">
-                  <div>
-                    <label class="fl">Função de Destino *</label>
-                    <select class="fi" id="conn-tgt"></select>
-                  </div>
-                  <div>
-                    <label class="fl">Extremo de Entrada no Destino</label>
-                    <select class="fi" id="conn-tgt-port">
-                      <option value="input" selected>Input</option>
-                      <option value="output">Output</option>
-                      <option value="precondition">Precondition</option>
-                      <option value="resource">Resource</option>
-                      <option value="control">Control</option>
-                      <option value="time">Time</option>
-                    </select>
-                  </div>
-                </div>
-                <label class="fl">Tipo de Relação / Acoplamento</label>
-                <select class="fi" id="conn-type">
-                  <option value="normal">Normal (Estável)</option>
-                  <option value="variable">Variável (Tracejado)</option>
-                  <option value="critical">Crítico (Alta Dependência)</option>
-                </select>
-                <label class="fl">Rótulo / Descritor do Link</label>
-                <input type="text" class="fi" id="conn-lbl" placeholder="Ex: Dados cadastrais">
-                <div class="brow">
-                  <button class="bsav" onclick="DGRManager.saveConn()">Adicionar Conexão</button>
-                  <button class="bdel" id="btn-cancel-conn" onclick="DGRManager.clearConnForm()" style="display:none">Cancelar</button>
-                </div>
+            <div class="form-card">
+              <h3 id="connh3">Adicionar Conexão</h3>
+              <input type="hidden" id="edit-conn-id">
+              <label class="fl">Função de Origem *</label>
+              <select class="fi" id="conn-src"></select>
+              <label class="fl">Função de Destino *</label>
+              <select class="fi" id="conn-tgt"></select>
+              <label class="fl">Tipo de Relação / Acoplamento</label>
+              <select class="fi" id="conn-type">
+                <option value="normal">Normal (Estável)</option>
+                <option value="variable">Variável (Tracejado)</option>
+                <option value="critical">Crítico (Alta Dependência)</option>
+              </select>
+              <label class="fl">Rótulo / Descritor do Link</label>
+              <input type="text" class="fi" id="conn-lbl" placeholder="Ex: Dados cadastrais">
+              <div class="brow">
+                <button class="bsav" onclick="DGRManager.saveConn()">Salvar Conexão</button>
+                <button class="bdel" id="btn-cancel-conn" onclick="DGRManager.clearConnForm()" style="display:none">Cancelar</button>
               </div>
-              <div class="item-list" id="conn-list-target"></div>
+            </div>
+
+            <div class="form-card">
+              <h3 id="resh3">Registrar Cenário de Ressonância</h3>
+              <input type="hidden" id="edit-res-id">
+              <label class="fl">Título do Cenário</label>
+              <input type="text" class="fi" id="res-title" placeholder="Ex: Instabilidade de Link WAN">
+              <label class="fl">Função Propagadora Inicial</label>
+              <select class="fi" id="res-src"></select>
+              <label class="fl">Impacto Operacional Estimado</label>
+              <select class="fi" id="res-impact">
+                <option value="baixo">Baixo</option>
+                <option value="moderado" selected>Moderado</option>
+                <option value="alto">Alto</option>
+                <option value="critico">Crítico</option>
+              </select>
+              <div class="brow">
+                <button class="bsav" onclick="DGRManager.saveResonanceEvent()">Salvar Cenário</button>
+                <button class="bdel" id="btn-cancel-res" onclick="DGRManager.clearResForm()" style="display:none">Cancelar</button>
+              </div>
             </div>
           </div>
-          
-          <div class="form-card form-anchor" id="res-form-card" style="margin-top:16px">
-            <h3 id="resh3">Registrar Cenário de Ressonância</h3>
-            <input type="hidden" id="edit-res-id">
-            <div class="fir">
+
+          <div class="fram-map-card">
+            <div class="fram-map-toolbar">
               <div>
-                <label class="fl">Título do Cenário</label>
-                <input type="text" class="fi" id="res-title" placeholder="Ex: Instabilidade de Link WAN">
+                <div class="fram-map-title">Mapa FRAM de Funções</div>
+                <div class="fram-map-help">Clique e arraste os hexágonos. Use ✏️ no nó ou nas listas para editar.</div>
               </div>
-              <div>
-                <label class="fl">Função Propagadora Inicial</label>
-                <select class="fi" id="res-src"></select>
+              <div style="display:flex;gap:6px;align-items:center">
+                <button class="gbtn" onclick="DGRManager.autoArrangeFramMap()">⟳ Auto-organizar</button>
               </div>
             </div>
-            <label class="fl">Impacto Operacional Estimado</label>
-            <select class="fi" id="res-impact" style="width:200px">
-              <option value="baixo">Baixo</option>
-              <option value="moderado" selected>Moderado</option>
-              <option value="alto">Alto</option>
-              <option value="critico">Crítico</option>
-            </select>
-            <div class="brow">
-              <button class="bsav" onclick="DGRManager.saveResonanceEvent()">Salvar Cenário</button>
-              <button class="bdel" id="btn-cancel-res" onclick="DGRManager.clearResForm()" style="display:none">Cancelar</button>
+            <div id="fram-map-area">
+              <svg id="fram-map-svg"></svg>
+              <div id="fram-map-nodes"></div>
+              <div id="fram-map-empty" class="fram-empty-map">Cadastre funções no topo para visualizar o mapa FRAM.</div>
             </div>
-            <div class="item-list" id="res-list-target" style="margin-top:12px"></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+            <div>
+              <div class="dash-section"><h3>Funções cadastradas</h3><div class="item-list" id="fn-list-target"></div></div>
+            </div>
+            <div>
+              <div class="dash-section"><h3>Conexões cadastradas</h3><div class="item-list" id="conn-list-target"></div></div>
+            </div>
+            <div>
+              <div class="dash-section"><h3>Cenários de ressonância</h3><div class="item-list" id="res-list-target"></div></div>
+            </div>
           </div>
         </div>
       </div>
@@ -564,14 +527,13 @@ const DGRState = {
   params: {},
   subs: {},
   mcRes: {},
-  positions: {},
   mcN: 5000,
   curPage: 'mc',
 
   serialize() {
     return JSON.stringify({
       fns: this.fns, coups: this.coups, vars: this.vars, mechs: this.mechs,
-      resEvs: this.resEvs, params: this.params, subs: this.subs, mcRes: this.mcRes, positions: this.positions, mcN: this.mcN
+      resEvs: this.resEvs, params: this.params, subs: this.subs, mcRes: this.mcRes, mcN: this.mcN
     });
   },
 
@@ -585,7 +547,6 @@ const DGRState = {
     this.params = d.params || {};
     this.subs = d.subs || {};
     this.mcRes = d.mcRes || {};
-    this.positions = d.positions || {};
     this.mcN = d.mcN || 5000;
   }
 };
@@ -635,8 +596,7 @@ const DGRManager = {
   init() {
     this.loadData();
     DGRHistory.push();
-    this.bindFramDrag();
-    window.addEventListener('resize', () => { if(DGRState.curPage === 'mc') this.renderCharts(); if(DGRState.curPage === 'fram') this.drawFramMap('fram-map',640); });
+    window.addEventListener('resize', () => { if(DGRState.curPage === 'mc') this.renderCharts(); });
   },
 
   switchPage(page) {
@@ -663,15 +623,13 @@ const DGRManager = {
     this.renderTaxonomyAccordion('RE', 'endo-subcat-sel');
     this.renderTaxonomyAccordion('RX', 'exo-subcat-sel');
     this.renderTaxonomyAccordion('MR', 'mr-subcat-sel');
+    if (DGRState.curPage === 'fram') this.renderFramMap();
     
     if (DGRState.curPage === 'mc') {
       const hasRes = DGRState.fns.some(f => DGRState.mcRes[f.id]);
       this.renderKPIs(hasRes);
       this.renderCharts(hasRes);
       this.renderMCPanel(hasRes);
-    }
-    if (DGRState.curPage === 'fram') {
-      setTimeout(() => this.drawFramMap('fram-map', 640), 0);
     }
   },
 
@@ -680,7 +638,6 @@ const DGRManager = {
   pct(v, d = 1) { return (v * 100).toFixed(d) + '%'; },
   vColor(v) { return v >= 0.70 ? '#c0392b' : v >= 0.50 ? '#854f0b' : v >= 0.30 ? '#4778e8' : '#0f6e56'; },
   critInfo(v) { return v >= 0.70 ? {cls:'cb-c', lbl:'Crítica'} : v >= 0.50 ? {cls:'cb-a', lbl:'Alta'} : v >= 0.30 ? {cls:'cb-m', lbl:'Moderada'} : {cls:'cb-b', lbl:'Baixa'}; },
-  portLabel(p) { return ({input:'Input', output:'Output', precondition:'Precondition', resource:'Resource', control:'Control', time:'Time'})[p] || 'Output'; },
 
   getCouplingDegree(fnId) {
     return DGRState.coups.filter(c => c.source_function_id === fnId || c.target_function_id === fnId).length;
@@ -699,6 +656,149 @@ const DGRManager = {
     document.getElementById('mr-fn').innerHTML = html;
   },
 
+
+  ensureFnPositions() {
+    const area = document.getElementById('fram-map-area');
+    const w = area ? Math.max(700, area.clientWidth) : 1000;
+    const h = area ? Math.max(420, area.clientHeight) : 520;
+    DGRState.fns.forEach((fn, idx) => {
+      if (typeof fn.x !== 'number' || typeof fn.y !== 'number') {
+        const cols = Math.max(1, Math.floor((w - 80) / 220));
+        fn.x = 40 + (idx % cols) * 220;
+        fn.y = 45 + Math.floor(idx / cols) * 150;
+        fn.x = Math.min(fn.x, w - 190);
+        fn.y = Math.min(fn.y, h - 125);
+      }
+    });
+  },
+
+  autoArrangeFramMap() {
+    const area = document.getElementById('fram-map-area');
+    if (!area) return;
+    DGRHistory.push();
+    const w = Math.max(700, area.clientWidth);
+    const cols = Math.max(1, Math.floor((w - 80) / 230));
+    DGRState.fns.forEach((fn, idx) => {
+      fn.x = 42 + (idx % cols) * 230;
+      fn.y = 48 + Math.floor(idx / cols) * 155;
+    });
+    DGRHistory.push();
+    this.renderFramMap();
+  },
+
+  getNodeCenter(fn) { return { x: (fn.x || 0) + 88, y: (fn.y || 0) + 56 }; },
+
+  renderFramMap() {
+    const area = document.getElementById('fram-map-area');
+    const nodes = document.getElementById('fram-map-nodes');
+    const svg = document.getElementById('fram-map-svg');
+    const empty = document.getElementById('fram-map-empty');
+    if (!area || !nodes || !svg) return;
+    this.ensureFnPositions();
+    empty.style.display = DGRState.fns.length ? 'none' : 'flex';
+    nodes.innerHTML = '';
+    svg.setAttribute('width', area.clientWidth);
+    svg.setAttribute('height', area.clientHeight);
+    svg.setAttribute('viewBox', `0 0 ${area.clientWidth} ${area.clientHeight}`);
+    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52627a"></path></marker></defs>`;
+
+    DGRState.coups.forEach(c => {
+      const s = DGRState.fns.find(f => f.id === c.source_function_id);
+      const t = DGRState.fns.find(f => f.id === c.target_function_id);
+      if (!s || !t) return;
+      const a = this.getNodeCenter(s), b = this.getNodeCenter(t);
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.max(1, Math.sqrt(dx*dx + dy*dy));
+      const sx = a.x + dx/len*88, sy = a.y + dy/len*56;
+      const tx = b.x - dx/len*88, ty = b.y - dy/len*56;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', sx); line.setAttribute('y1', sy); line.setAttribute('x2', tx); line.setAttribute('y2', ty);
+      line.setAttribute('stroke', c.line_type === 'critical' ? '#c0392b' : '#52627a');
+      line.setAttribute('stroke-width', c.line_type === 'critical' ? '3' : '2');
+      if (c.line_type === 'variable') line.setAttribute('stroke-dasharray', '7 5');
+      line.setAttribute('marker-end', 'url(#arrow-fram)');
+      svg.appendChild(line);
+      if (c.label) {
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', (sx+tx)/2); text.setAttribute('y', (sy+ty)/2 - 6);
+        text.setAttribute('text-anchor', 'middle'); text.setAttribute('font-size', '10'); text.setAttribute('fill', '#5d6678');
+        text.textContent = c.label;
+        svg.appendChild(text);
+      }
+    });
+
+    DGRState.fns.forEach(fn => {
+      const div = document.createElement('div');
+      div.className = 'fram-node';
+      div.style.left = `${fn.x}px`; div.style.top = `${fn.y}px`;
+      div.dataset.id = fn.id;
+      div.innerHTML = `<div class="hex">${this.esc(fn.name)}</div><div class="port p-i">I</div><div class="port p-o">O</div><div class="port p-p">P</div><div class="port p-r">R</div><div class="port p-c">C</div><div class="port p-t">T</div><div class="fram-node-actions"><button class="fram-mini-btn" type="button">✏️ Editar</button><button class="fram-mini-btn" type="button">🗑️</button></div>`;
+      div.querySelectorAll('button')[0].onclick = (ev) => { ev.stopPropagation(); this.editFn(fn.id); document.getElementById('fn-name').focus(); };
+      div.querySelectorAll('button')[1].onclick = (ev) => { ev.stopPropagation(); this.deleteFn(fn.id); };
+      this.bindNodeDrag(div, fn.id);
+      nodes.appendChild(div);
+    });
+  },
+
+  bindNodeDrag(el, fnId) {
+    let dragging = false, startX = 0, startY = 0, baseX = 0, baseY = 0, moved = false;
+    const onMove = (e) => {
+      if (!dragging) return;
+      e.preventDefault();
+      moved = true;
+      const pt = e.touches ? e.touches[0] : e;
+      const area = document.getElementById('fram-map-area');
+      const fn = DGRState.fns.find(f => f.id === fnId);
+      if (!area || !fn) return;
+      const maxX = Math.max(0, area.clientWidth - el.offsetWidth);
+      const maxY = Math.max(0, area.clientHeight - el.offsetHeight);
+      fn.x = Math.max(0, Math.min(maxX, baseX + pt.clientX - startX));
+      fn.y = Math.max(0, Math.min(maxY, baseY + pt.clientY - startY));
+      el.style.left = fn.x + 'px'; el.style.top = fn.y + 'px';
+      this.renderFramMapLinesOnly();
+    };
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = false; el.classList.remove('dragging');
+      document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onUp);
+      if (moved) { DGRHistory.push(); this.saveToLocalStorage(true); }
+    };
+    const onDown = (e) => {
+      if (e.target.closest('button')) return;
+      e.preventDefault();
+      const pt = e.touches ? e.touches[0] : e;
+      const fn = DGRState.fns.find(f => f.id === fnId); if (!fn) return;
+      DGRHistory.push();
+      dragging = true; moved = false; startX = pt.clientX; startY = pt.clientY; baseX = fn.x || 0; baseY = fn.y || 0;
+      el.classList.add('dragging');
+      document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
+      document.addEventListener('touchmove', onMove, {passive:false}); document.addEventListener('touchend', onUp);
+    };
+    el.addEventListener('mousedown', onDown);
+    el.addEventListener('touchstart', onDown, {passive:false});
+  },
+
+  renderFramMapLinesOnly() {
+    const svg = document.getElementById('fram-map-svg');
+    const area = document.getElementById('fram-map-area');
+    if (!svg || !area) return;
+    svg.setAttribute('width', area.clientWidth); svg.setAttribute('height', area.clientHeight);
+    svg.setAttribute('viewBox', `0 0 ${area.clientWidth} ${area.clientHeight}`);
+    svg.innerHTML = `<defs><marker id="arrow-fram" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52627a"></path></marker></defs>`;
+    DGRState.coups.forEach(c => {
+      const s = DGRState.fns.find(f => f.id === c.source_function_id), t = DGRState.fns.find(f => f.id === c.target_function_id);
+      if (!s || !t) return;
+      const a = this.getNodeCenter(s), b = this.getNodeCenter(t), dx = b.x-a.x, dy = b.y-a.y, len = Math.max(1, Math.sqrt(dx*dx+dy*dy));
+      const sx=a.x+dx/len*88, sy=a.y+dy/len*56, tx=b.x-dx/len*88, ty=b.y-dy/len*56;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', sx); line.setAttribute('y1', sy); line.setAttribute('x2', tx); line.setAttribute('y2', ty);
+      line.setAttribute('stroke', c.line_type === 'critical' ? '#c0392b' : '#52627a'); line.setAttribute('stroke-width', c.line_type === 'critical' ? '3' : '2');
+      if (c.line_type === 'variable') line.setAttribute('stroke-dasharray', '7 5');
+      line.setAttribute('marker-end', 'url(#arrow-fram)'); svg.appendChild(line);
+    });
+  },
+
   // ── OPERAÇÕES DE ENTIDADES (CRUD) ──
   saveFn() {
     const name = document.getElementById('fn-name').value.trim();
@@ -712,7 +812,7 @@ const DGRManager = {
       if (fn) { fn.name = name; fn.description = desc; }
     } else {
       const nid = this.uid();
-      DGRState.fns.push({ id: nid, name, description: desc });
+      DGRState.fns.push({ id: nid, name, description: desc, x: 40 + (DGRState.fns.length % 4) * 220, y: 45 + Math.floor(DGRState.fns.length / 4) * 150 });
       DGRState.params[nid] = { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.2,mp:0.4,mx:0.7} };
       DGRState.subs[nid] = {};
       [...TAXO.RE.items, ...TAXO.RX.items, ...TAXO.MR.items].forEach(i => {
@@ -742,7 +842,7 @@ const DGRManager = {
     DGRState.vars = DGRState.vars.filter(v => v.affected_function_id !== id);
     DGRState.mechs = DGRState.mechs.filter(m => m.controlled_function_id !== id);
     DGRState.resEvs = DGRState.resEvs.filter(r => r.initial_function_id !== id);
-    delete DGRState.params[id]; delete DGRState.subs[id]; delete DGRState.mcRes[id]; delete DGRState.positions[id];
+    delete DGRState.params[id]; delete DGRState.subs[id]; delete DGRState.mcRes[id];
     DGRHistory.push();
     this.refreshUI();
   },
@@ -781,8 +881,6 @@ const DGRManager = {
     const src = document.getElementById('conn-src').value;
     const tgt = document.getElementById('conn-tgt').value;
     const type = document.getElementById('conn-type').value;
-    const srcPort = document.getElementById('conn-src-port').value;
-    const tgtPort = document.getElementById('conn-tgt-port').value;
     const lbl = document.getElementById('conn-lbl').value.trim();
     const id = document.getElementById('edit-conn-id').value;
     if (!src || !tgt || src === tgt) { alert('Parâmetros lógicos inválidos.'); return; }
@@ -790,9 +888,9 @@ const DGRManager = {
     DGRHistory.push();
     if (id) {
       const c = DGRState.coups.find(x => x.id === id);
-      if (c) { c.source_function_id = src; c.target_function_id = tgt; c.line_type = type; c.source_port = srcPort; c.target_port = tgtPort; c.label = lbl; }
+      if (c) { c.source_function_id = src; c.target_function_id = tgt; c.line_type = type; c.label = lbl; }
     } else {
-      DGRState.coups.push({ id: this.uid(), source_function_id: src, target_function_id: tgt, source_port: srcPort, target_port: tgtPort, line_type: type, label: lbl });
+      DGRState.coups.push({ id: this.uid(), source_function_id: src, target_function_id: tgt, line_type: type, label: lbl });
     }
     this.clearConnForm();
     DGRHistory.push();
@@ -806,8 +904,6 @@ const DGRManager = {
     document.getElementById('conn-src').value = c.source_function_id;
     document.getElementById('conn-tgt').value = c.target_function_id;
     document.getElementById('conn-type').value = c.line_type;
-    document.getElementById('conn-src-port').value = c.source_port || 'output';
-    document.getElementById('conn-tgt-port').value = c.target_port || 'input';
     document.getElementById('conn-lbl').value = c.label || '';
     document.getElementById('connh3').textContent = "Editar Conexão";
     document.getElementById('btn-cancel-conn').style.display = "inline-block";
@@ -823,8 +919,6 @@ const DGRManager = {
   clearConnForm() {
     document.getElementById('edit-conn-id').value = '';
     document.getElementById('conn-lbl').value = '';
-    document.getElementById('conn-src-port').value = 'output';
-    document.getElementById('conn-tgt-port').value = 'input';
     document.getElementById('connh3').textContent = "Adicionar Conexão";
     document.getElementById('btn-cancel-conn').style.display = "none";
   },
@@ -841,7 +935,7 @@ const DGRManager = {
         <div class="item-card">
           <div class="item-card-body">
             <div class="item-card-title">${this.esc(s)} ➔ ${this.esc(t)}</div>
-            <div class="item-card-sub">${this.portLabel(c.source_port || 'output')} ➔ ${this.portLabel(c.target_port || 'input')} | Relação: <b>${c.line_type}</b> | ${this.esc(c.label)}</div>
+            <div class="item-card-sub">Relação: <b>${c.line_type}</b> | ${this.esc(c.label)}</div>
           </div>
           <div class="item-card-actions">
             <button class="rtab" onclick="DGRManager.editConn('${c.id}')">✏️ Editar</button>
@@ -1270,14 +1364,10 @@ const DGRManager = {
 
   renderCharts(hasRes) {
     const sorted = DGRState.fns.filter(f => DGRState.mcRes[f.id]).sort((a, b) => DGRState.mcRes[b.id].p95 - DGRState.mcRes[a.id].p95);
-    ['ch-vfr', 'ch-donut', 'ch-hist', 'ch-iis'].forEach(id => {
+    ['ch-vfr', 'ch-donut', 'ch-hist', 'ch-heat', 'ch-iis'].forEach(id => {
       document.getElementById(id).style.display = (hasRes && sorted.length) ? 'block' : 'none';
       document.getElementById(id + '-empty').style.display = (hasRes && sorted.length) ? 'none' : 'block';
     });
-    const hasMap = DGRState.fns.length > 0;
-    document.getElementById('ch-heat').style.display = hasMap ? 'block' : 'none';
-    document.getElementById('ch-heat-empty').style.display = hasMap ? 'none' : 'block';
-    if (hasMap) this.drawFramMap();
 
     this.drawStaticVarsChart();
     if (!hasRes || !sorted.length) return;
@@ -1327,7 +1417,16 @@ const DGRManager = {
         const bh = (v / maxB) * (cv.height - 20); g.fillStyle = this.vColor(bi / 10); g.fillRect(bi * bw, cv.height - bh - 5, bw - 1, bh);
       });
     }
-    // MAPA SISTÊMICO FRAM já desenhado por drawFramMap()
+    // CH-HEATMAP
+    {
+      const cv = document.getElementById('ch-heat'); const g = cv.getContext('2d');
+      cv.width = cv.parentElement.offsetWidth - 40; g.clearRect(0,0,cv.width,cv.height);
+      g.strokeStyle = '#e0e0ea'; g.strokeRect(20,20,cv.width-40,cv.height-40);
+      sorted.forEach(f => {
+        const r = DGRState.mcRes[f.id]; const x = 20 + r.ip * (cv.width-50); const y = cv.height - 20 - (r.mean / 2) * (cv.height-50);
+        g.beginPath(); g.arc(x,y,6,0,Math.PI*2); g.fillStyle = this.vColor(r.p95); g.fill();
+      });
+    }
     // CH-IIS
     {
       const cv = document.getElementById('ch-iis'); const g = cv.getContext('2d');
@@ -1342,248 +1441,6 @@ const DGRManager = {
         g.fillStyle = '#1a1a2e'; g.font = '10px sans-serif'; g.fillText(fn.name.substring(0,18), 15, y + bH/2 + 3);
       });
     }
-  },
-
-
-  resetFramLayout() {
-    DGRHistory.push();
-    DGRState.positions = {};
-    DGRHistory.push();
-    this.drawFramMap('fram-map', 640);
-  },
-
-  bindFramDrag() {
-    const cv = document.getElementById('fram-map');
-    if (!cv || cv.dataset.dragReady === '1') return;
-    cv.dataset.dragReady = '1';
-    cv.style.cursor = 'grab';
-    let draggingId = null;
-    let hasMoved = false;
-
-    const getMouse = (ev) => {
-      const rect = cv.getBoundingClientRect();
-      const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
-      const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
-      return { x: (clientX - rect.left) * (cv.width / rect.width), y: (clientY - rect.top) * (cv.height / rect.height) };
-    };
-
-    const hitNode = (pt) => {
-      const layout = this.getFramLayout(cv);
-      for (let i = layout.fns.length - 1; i >= 0; i--) {
-        const fn = layout.fns[i];
-        const n = layout.pos[fn.id];
-        if (!n) continue;
-        const dx = Math.abs(pt.x - n.x), dy = Math.abs(pt.y - n.y);
-        if (dx <= layout.rx + 12 && dy <= layout.ry + 12) return fn.id;
-      }
-      return null;
-    };
-
-    const moveTo = (ev) => {
-      if (!draggingId) return;
-      ev.preventDefault();
-      const pt = getMouse(ev);
-      const margin = 45;
-      const x = Math.max(margin, Math.min(cv.width - margin, pt.x));
-      const y = Math.max(margin, Math.min(cv.height - margin, pt.y));
-      DGRState.positions[draggingId] = { x: +(x / cv.width).toFixed(4), y: +(y / cv.height).toFixed(4) };
-      hasMoved = true;
-      this.drawFramMap('fram-map', 640);
-    };
-
-    const stop = () => {
-      if (draggingId && hasMoved) {
-        DGRHistory.push();
-        this.saveToLocalStorageSilent();
-      }
-      draggingId = null;
-      hasMoved = false;
-      cv.style.cursor = 'grab';
-    };
-
-    cv.addEventListener('mousedown', (ev) => {
-      const id = hitNode(getMouse(ev));
-      if (!id) return;
-      DGRHistory.push();
-      draggingId = id;
-      cv.style.cursor = 'grabbing';
-      ev.preventDefault();
-    });
-    window.addEventListener('mousemove', moveTo);
-    window.addEventListener('mouseup', stop);
-
-    cv.addEventListener('touchstart', (ev) => {
-      const id = hitNode(getMouse(ev));
-      if (!id) return;
-      DGRHistory.push();
-      draggingId = id;
-      cv.style.cursor = 'grabbing';
-      ev.preventDefault();
-    }, { passive: false });
-    window.addEventListener('touchmove', moveTo, { passive: false });
-    window.addEventListener('touchend', stop);
-  },
-
-  getFramLayout(cv) {
-    const fns = DGRState.fns;
-    const cols = Math.max(1, Math.ceil(Math.sqrt(fns.length * 1.5)));
-    const rows = Math.ceil(fns.length / cols);
-    const padX = 95, padY = 70;
-    const usableW = Math.max(200, cv.width - padX * 2);
-    const usableH = Math.max(160, cv.height - padY * 2);
-    const cellW = usableW / cols;
-    const cellH = usableH / Math.max(1, rows);
-    const rx = Math.min(58, Math.max(42, cellW * 0.32));
-    const ry = Math.min(44, Math.max(32, cellH * 0.30));
-    const pos = {};
-    fns.forEach((fn, i) => {
-      const saved = DGRState.positions[fn.id];
-      if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
-        pos[fn.id] = { x: saved.x * cv.width, y: saved.y * cv.height };
-        return;
-      }
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = padX + cellW * (col + 0.5) + (row % 2 ? Math.min(18, cellW * .08) : 0);
-      const y = padY + cellH * (row + 0.5);
-      pos[fn.id] = { x, y };
-    });
-    return { fns, pos, rx, ry };
-  },
-
-  saveToLocalStorageSilent() {
-    try { localStorage.setItem('dgr_autosave', DGRState.serialize()); } catch(e) {}
-  },
-
-  drawFramMap(canvasId = 'ch-heat', canvasHeight = 280) {
-    const cv = document.getElementById(canvasId);
-    if (!cv) return;
-    const g = cv.getContext('2d');
-    cv.width = Math.max(600, cv.parentElement.offsetWidth || 900);
-    cv.height = canvasHeight;
-    g.clearRect(0, 0, cv.width, cv.height);
-
-    const fns = DGRState.fns;
-    if (!fns.length) {
-      g.fillStyle = '#8b93a7';
-      g.font = '14px sans-serif';
-      g.textAlign = 'center';
-      g.fillText('Nenhuma função cadastrada. Use o botão Nova Função no topo.', cv.width/2, cv.height/2);
-      return;
-    }
-
-    const layout = this.getFramLayout(cv);
-    const pos = layout.pos;
-    const rx = layout.rx;
-    const ry = layout.ry;
-
-    const portPoint = (node, port) => {
-      const map = {
-        input: [-rx, 0],
-        output: [rx, 0],
-        precondition: [-rx * 0.50, -ry],
-        control: [rx * 0.50, -ry],
-        resource: [-rx * 0.50, ry],
-        time: [rx * 0.50, ry]
-      };
-      const d = map[port] || map.output;
-      return { x: node.x + d[0], y: node.y + d[1] };
-    };
-
-    const drawArrow = (x1, y1, x2, y2, color, dashed, width, label) => {
-      g.save();
-      g.strokeStyle = color;
-      g.fillStyle = color;
-      g.lineWidth = width;
-      if (dashed) g.setLineDash([6, 4]);
-      const mx = (x1 + x2) / 2;
-      const c1x = mx, c1y = y1;
-      const c2x = mx, c2y = y2;
-      g.beginPath();
-      g.moveTo(x1, y1);
-      g.bezierCurveTo(c1x, c1y, c2x, c2y, x2, y2);
-      g.stroke();
-      g.setLineDash([]);
-      const ang = Math.atan2(y2 - c2y, x2 - c2x);
-      const ah = 8;
-      g.beginPath();
-      g.moveTo(x2, y2);
-      g.lineTo(x2 - ah * Math.cos(ang - Math.PI / 6), y2 - ah * Math.sin(ang - Math.PI / 6));
-      g.lineTo(x2 - ah * Math.cos(ang + Math.PI / 6), y2 - ah * Math.sin(ang + Math.PI / 6));
-      g.closePath();
-      g.fill();
-      if (label) {
-        g.font = '9px sans-serif';
-        g.fillStyle = '#5a5a7a';
-        g.textAlign = 'center';
-        g.fillText(String(label).substring(0, 24), mx, (y1 + y2) / 2 - 5);
-      }
-      g.restore();
-    };
-
-    DGRState.coups.forEach(c => {
-      const a = pos[c.source_function_id], b = pos[c.target_function_id];
-      if (!a || !b) return;
-      const p1 = portPoint(a, c.source_port || 'output');
-      const p2 = portPoint(b, c.target_port || 'input');
-      const color = c.line_type === 'critical' ? '#c0392b' : c.line_type === 'variable' ? '#854f0b' : '#6b7280';
-      drawArrow(p1.x, p1.y, p2.x, p2.y, color, c.line_type === 'variable', c.line_type === 'critical' ? 2.4 : 1.5, c.label || '');
-    });
-
-    const ports = [
-      ['I', 'input'], ['O', 'output'], ['P', 'precondition'], ['C', 'control'], ['R', 'resource'], ['T', 'time']
-    ];
-
-    fns.forEach(fn => {
-      const n = pos[fn.id];
-      const r = DGRState.mcRes[fn.id];
-      const color = r ? this.vColor(r.p95) : '#4778e8';
-      const fill = r ? (r.p95 >= 0.70 ? '#fdecea' : r.p95 >= 0.50 ? '#faeeda' : r.p95 >= 0.30 ? '#eef2ff' : '#e8f8f0') : '#ffffff';
-      const pts = [
-        [n.x-rx*0.5,n.y-ry], [n.x+rx*0.5,n.y-ry], [n.x+rx,n.y],
-        [n.x+rx*0.5,n.y+ry], [n.x-rx*0.5,n.y+ry], [n.x-rx,n.y]
-      ];
-      g.beginPath();
-      pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
-      g.closePath();
-      g.fillStyle = fill;
-      g.strokeStyle = color;
-      g.lineWidth = 2;
-      g.fill();
-      g.stroke();
-
-      ports.forEach(([abbr, port]) => {
-        const pp = portPoint(n, port);
-        g.beginPath();
-        g.arc(pp.x, pp.y, 7, 0, Math.PI * 2);
-        g.fillStyle = '#fff';
-        g.strokeStyle = color;
-        g.lineWidth = 1.3;
-        g.fill(); g.stroke();
-        g.fillStyle = color;
-        g.font = 'bold 8px sans-serif';
-        g.textAlign = 'center';
-        g.fillText(abbr, pp.x, pp.y + 3);
-      });
-
-      g.fillStyle = '#1a1a2e';
-      g.font = 'bold 10px sans-serif';
-      g.textAlign = 'center';
-      const words = String(fn.name || '').split(/\s+/);
-      const lines = [];
-      let line = '';
-      words.forEach(w => { const t = (line + ' ' + w).trim(); if (t.length > 16 && line) { lines.push(line); line = w; } else line = t; });
-      if (line) lines.push(line);
-      lines.slice(0,3).forEach((ln, li) => g.fillText(ln.length > 18 ? ln.substring(0,17)+'…' : ln, n.x, n.y - 10 + li*11));
-      g.font = '9px sans-serif';
-      g.fillStyle = color;
-      g.fillText(r ? `P95 ${this.pct(r.p95,0)}` : 'sem simulação', n.x, n.y + 24);
-    });
-
-    g.fillStyle = '#5a5a7a';
-    g.font = '9px sans-serif';
-    g.textAlign = 'left';
-    g.fillText('Arraste qualquer função para reposicioná-la. Extremos FRAM: I=Input, O=Output, P=Precondition, R=Resource, C=Control, T=Time', 8, cv.height - 8);
   },
 
   drawStaticVarsChart() {
@@ -1670,9 +1527,9 @@ const DGRManager = {
     reader.readAsText(file); e.target.value = '';
   },
 
-  saveToLocalStorage() {
+  saveToLocalStorage(silent = false) {
     localStorage.setItem('dgr_autosave', DGRState.serialize());
-    alert('Autosave atualizado localmente!');
+    if (!silent) alert('Autosave atualizado localmente!');
   },
 
   loadData() {
@@ -1752,7 +1609,7 @@ const DGRManager = {
     const charts = [
       { id: 'ch-vfr', title: 'VFR por Função (P95 — Limite Crítico)' },
       { id: 'ch-hist', title: 'Histograma da Distribuição Agregada' },
-      { id: 'ch-heat', title: 'Mapa Sistêmico FRAM — Funções e Acoplamentos' },
+      { id: 'ch-heat', title: 'Mapa de Calor das Funções' },
       { id: 'ch-iis', title: 'Índice de Impacto Sistêmico' }
     ];
 
