@@ -130,7 +130,7 @@ textarea.fi{resize:vertical;min-height:55px}
 
 
 /* ── FRAM FUNCTION MAP ── */
-.fram-top-tools{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:start;margin-bottom:14px}
+.fram-top-tools{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;margin-bottom:14px}
 .fram-map-card{background:#fff;border:1px solid #dfe3ee;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04);margin-bottom:14px}
 .fram-map-toolbar{height:44px;background:#f8f9fd;border-bottom:1px solid #e6e9f2;display:flex;align-items:center;justify-content:space-between;padding:0 12px;gap:8px}
 .fram-map-title{font-size:13px;font-weight:700;color:#1a1a2e}
@@ -357,39 +357,17 @@ textarea.fi{resize:vertical;min-height:55px}
               </div>
             </div>
 
-            <div class="form-card">
-              <h3 id="resh3">Registrar Cenário de Ressonância</h3>
-              <input type="hidden" id="edit-res-id">
-              <label class="fl">Título do Cenário</label>
-              <input type="text" class="fi" id="res-title" placeholder="Ex: Instabilidade de Link WAN">
-              <label class="fl">Função Propagadora Inicial</label>
-              <select class="fi" id="res-src"></select>
-              <label class="fl">Impacto Operacional Estimado</label>
-              <select class="fi" id="res-impact">
-                <option value="baixo">Baixo</option>
-                <option value="moderado" selected>Moderado</option>
-                <option value="alto">Alto</option>
-                <option value="critico">Crítico</option>
-              </select>
-              <div class="brow">
-                <button class="bsav" onclick="DGRManager.saveResonanceEvent()">Salvar Cenário</button>
-                <button class="bdel" id="btn-cancel-res" onclick="DGRManager.clearResForm()" style="display:none">Cancelar</button>
-              </div>
-            </div>
           </div>
 
 
 
 
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
             <div>
               <div class="dash-section"><h3>Funções cadastradas</h3><div class="item-list" id="fn-list-target"></div></div>
             </div>
             <div>
               <div class="dash-section"><h3>Conexões cadastradas</h3><div class="item-list" id="conn-list-target"></div></div>
-            </div>
-            <div>
-              <div class="dash-section"><h3>Cenários de ressonância</h3><div class="item-list" id="res-list-target"></div></div>
             </div>
           </div>
         </div>
@@ -569,7 +547,6 @@ const DGRState = {
   coups: [],
   vars: [],
   mechs: [],
-  resEvs: [],
   params: {},
   subs: {},
   mcRes: {},
@@ -579,7 +556,7 @@ const DGRState = {
   serialize() {
     return JSON.stringify({
       fns: this.fns, coups: this.coups, vars: this.vars, mechs: this.mechs,
-      resEvs: this.resEvs, params: this.params, subs: this.subs, mcRes: this.mcRes, mcN: this.mcN
+      params: this.params, subs: this.subs, mcRes: this.mcRes, mcN: this.mcN
     });
   },
 
@@ -589,7 +566,6 @@ const DGRState = {
     this.coups = d.coups || [];
     this.vars = d.vars || [];
     this.mechs = d.mechs || [];
-    this.resEvs = d.resEvs || [];
     this.params = d.params || {};
     this.subs = d.subs || {};
     this.mcRes = d.mcRes || {};
@@ -662,7 +638,6 @@ const DGRManager = {
     this.syncSelectBoxes();
     this.renderFunctions();
     this.renderConnections();
-    this.renderResonances();
     this.renderEndogenous();
     this.renderExogenous();
     this.renderMechs();
@@ -685,6 +660,24 @@ const DGRManager = {
   vColor(v) { return v >= 0.70 ? '#c0392b' : v >= 0.50 ? '#854f0b' : v >= 0.30 ? '#4778e8' : '#0f6e56'; },
   critInfo(v) { return v >= 0.70 ? {cls:'cb-c', lbl:'Crítica'} : v >= 0.50 ? {cls:'cb-a', lbl:'Alta'} : v >= 0.30 ? {cls:'cb-m', lbl:'Moderada'} : {cls:'cb-b', lbl:'Baixa'}; },
 
+  countSelectedTaxonomy(taxoKey) {
+    return Object.values(DGRState.subs || {}).reduce((total, fnSubs) => {
+      return total + Object.entries(fnSubs || {}).filter(([code, v]) => v && v.sel === true && String(code).startsWith(taxoKey + '-')).length;
+    }, 0);
+  },
+
+  countRE() {
+    return DGRState.vars.filter(v => ['endogena','re'].includes(String(v.category || '').toLowerCase())).length + this.countSelectedTaxonomy('RE');
+  },
+
+  countRX() {
+    return DGRState.vars.filter(v => ['exogena','rx'].includes(String(v.category || '').toLowerCase())).length + this.countSelectedTaxonomy('RX');
+  },
+
+  countMR() {
+    return DGRState.mechs.length + this.countSelectedTaxonomy('MR');
+  },
+
   getCouplingDegree(fnId) {
     return DGRState.coups.filter(c => c.source_function_id === fnId || c.target_function_id === fnId).length;
   },
@@ -696,7 +689,6 @@ const DGRManager = {
 
     document.getElementById('conn-src').innerHTML = html;
     document.getElementById('conn-tgt').innerHTML = html;
-    document.getElementById('res-src').innerHTML = html;
     document.getElementById('endo-fn').innerHTML = html;
     document.getElementById('exo-fn').innerHTML = html;
     document.getElementById('mr-fn').innerHTML = html;
@@ -737,7 +729,7 @@ const DGRManager = {
   hasFunctionVariability(fnId) {
     // Variabilidade visual: qualquer RE ou RX cadastrada manualmente OU selecionada na taxonomia.
     const hasRegistered = DGRState.vars.some(v =>
-      v.affected_function_id === fnId && ['endogena','exogena','RE','RX'].includes(String(v.category || '').toLowerCase())
+      v.affected_function_id === fnId && ['endogena','exogena','re','rx'].includes(String(v.category || '').toLowerCase())
     );
     const hasTaxonomy = Object.entries(DGRState.subs[fnId] || {}).some(([code, v]) =>
       v && v.sel === true && (String(code).startsWith('RE-') || String(code).startsWith('RX-'))
@@ -995,7 +987,6 @@ const DGRManager = {
     DGRState.coups = DGRState.coups.filter(c => c.source_function_id !== id && c.target_function_id !== id);
     DGRState.vars = DGRState.vars.filter(v => v.affected_function_id !== id);
     DGRState.mechs = DGRState.mechs.filter(m => m.controlled_function_id !== id);
-    DGRState.resEvs = DGRState.resEvs.filter(r => r.initial_function_id !== id);
     delete DGRState.params[id]; delete DGRState.subs[id]; delete DGRState.mcRes[id];
     DGRHistory.push();
     this.refreshUI();
@@ -1100,71 +1091,6 @@ const DGRManager = {
           <div class="item-card-actions">
             <button class="rtab" onclick="DGRManager.editConn('${c.id}')">✏️ Editar</button>
             <button class="bdel" onclick="DGRManager.deleteConn('${c.id}')">🗑️ Excluir</button>
-          </div>
-        </div>`;
-    });
-    target.innerHTML = html;
-  },
-
-  saveResonanceEvent() {
-    const title = document.getElementById('res-title').value.trim();
-    const src = document.getElementById('res-src').value;
-    const impact = document.getElementById('res-impact').value;
-    const id = document.getElementById('edit-res-id').value;
-    if (!title || !src) return;
-
-    DGRHistory.push();
-    if (id) {
-      const r = DGRState.resEvs.find(x => x.id === id);
-      if (r) { r.title = title; r.initial_function_id = src; r.operational_impact = impact; }
-    } else {
-      DGRState.resEvs.push({ id: this.uid(), title, initial_function_id: src, operational_impact: impact });
-    }
-    this.clearResForm();
-    DGRHistory.push();
-    this.refreshUI();
-  },
-
-  editRes(id) {
-    const r = DGRState.resEvs.find(x => x.id === id);
-    if (!r) return;
-    document.getElementById('edit-res-id').value = r.id;
-    document.getElementById('res-title').value = r.title;
-    document.getElementById('res-src').value = r.initial_function_id;
-    document.getElementById('res-impact').value = r.operational_impact;
-    document.getElementById('resh3').textContent = "Editar Cenário";
-    document.getElementById('btn-cancel-res').style.display = "inline-block";
-  },
-
-  deleteRes(id) {
-    DGRHistory.push();
-    DGRState.resEvs = DGRState.resEvs.filter(r => r.id !== id);
-    DGRHistory.push();
-    this.refreshUI();
-  },
-
-  clearResForm() {
-    document.getElementById('edit-res-id').value = '';
-    document.getElementById('res-title').value = '';
-    document.getElementById('resh3').textContent = "Registrar Cenário de Ressonância";
-    document.getElementById('btn-cancel-res').style.display = "none";
-  },
-
-  renderResonances() {
-    const target = document.getElementById('res-list-target');
-    if (!DGRState.resEvs.length) { target.innerHTML = `<div class="empty">Nenhum cenário de ressonância.</div>`; return; }
-    let html = '';
-    DGRState.resEvs.forEach(r => {
-      const s = DGRState.fns.find(f => f.id === r.initial_function_id)?.name || '?';
-      html += `
-        <div class="item-card">
-          <div class="item-card-body">
-            <div class="item-card-title">${this.esc(r.title)}</div>
-            <div class="item-card-sub">Gatilho: <b>${this.esc(s)}</b> | Impacto: <span class="cbadge cb-a">${r.operational_impact}</span></div>
-          </div>
-          <div class="item-card-actions">
-            <button class="rtab" onclick="DGRManager.editRes('${r.id}')">✏️ Editar</button>
-            <button class="bdel" onclick="DGRManager.deleteRes('${r.id}')">🗑️ Excluir</button>
           </div>
         </div>`;
     });
@@ -1409,9 +1335,14 @@ const DGRManager = {
           const row = document.createElement('div');
           row.className = 'subcat-item-row';
           row.onclick = () => {
+            DGRHistory.push();
             DGRState.subs[fn.id][item.code].sel = !DGRState.subs[fn.id][item.code].sel;
             this.recalcParams(fn.id);
+            DGRHistory.push();
+            this.saveToLocalStorage(true);
             this.renderTaxonomyAccordion(taxoKey, containerId);
+            this.renderKPIs(DGRState.fns.some(f => DGRState.mcRes[f.id]));
+            this.drawStaticVarsChart();
           };
 
           row.innerHTML = `
@@ -1429,9 +1360,9 @@ const DGRManager = {
               <div class="subcat-val-cell"><label>Máximo</label><input type="number" class="pinp" step="0.01" value="${sv.mx}"></div>`;
             
             const inputs = vals.querySelectorAll('input');
-            inputs[0].oninput = (e) => { DGRState.subs[fn.id][item.code].mn = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)); this.recalcParams(fn.id); };
-            inputs[1].oninput = (e) => { DGRState.subs[fn.id][item.code].mp = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)); this.recalcParams(fn.id); };
-            inputs[2].oninput = (e) => { DGRState.subs[fn.id][item.code].mx = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)); this.recalcParams(fn.id); };
+            inputs[0].oninput = (e) => { DGRState.subs[fn.id][item.code].mn = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)); this.recalcParams(fn.id); this.saveToLocalStorage(true); };
+            inputs[1].oninput = (e) => { DGRState.subs[fn.id][item.code].mp = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)); this.recalcParams(fn.id); this.saveToLocalStorage(true); };
+            inputs[2].oninput = (e) => { DGRState.subs[fn.id][item.code].mx = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0)); this.recalcParams(fn.id); this.saveToLocalStorage(true); };
             itemDiv.appendChild(vals);
           }
           grpDiv.appendChild(itemDiv);
@@ -1509,9 +1440,9 @@ const DGRManager = {
     const stats = [
       { val: DGRState.fns.length, lbl: 'Funções FRAM', color: '#4778e8' },
       { val: DGRState.coups.length, lbl: 'Acoplamentos', color: '#185fa5' },
-      { val: DGRState.vars.filter(v => v.category === 'endogena').length, lbl: 'Perturbações RE', color: '#854f0b' },
-      { val: DGRState.vars.filter(v => v.category === 'exogena').length, lbl: 'Perturbações RX', color: '#c0392b' },
-      { val: DGRState.mechs.length, lbl: 'Mecanismos MR', color: '#0f6e56' },
+      { val: this.countRE(), lbl: 'Perturbações RE', color: '#854f0b' },
+      { val: this.countRX(), lbl: 'Perturbações RX', color: '#c0392b' },
+      { val: this.countMR(), lbl: 'Mecanismos MR', color: '#0f6e56' },
       { val: hasRes ? this.pct(avgVFR) : '-', lbl: 'VFR Média P95', color: hasRes ? this.vColor(avgVFR) : '#9898b0' },
       { val: hasRes ? this.pct(maxLC) : '-', lbl: 'Limite Crítico Máx. (P95)', color: hasRes ? this.vColor(maxLC) : '#9898b0' },
       { val: hasRes ? this.pct(avgProbCrit) : '-', lbl: 'Prob. Criticidade Média', color: hasRes ? this.vColor(avgProbCrit) : '#9898b0' },
@@ -1625,9 +1556,9 @@ const DGRManager = {
     const cv = document.getElementById('ch-vars'); const g = cv.getContext('2d');
     cv.width = cv.parentElement.offsetWidth - 40; g.clearRect(0,0,cv.width,cv.height);
     const items = [
-      { lbl: 'Perturbações RE', val: DGRState.vars.filter(v => v.category === 'endogena').length, col: '#854f0b' },
-      { lbl: 'Perturbações RX', val: DGRState.vars.filter(v => v.category === 'exogena').length, col: '#c0392b' },
-      { lbl: 'Mecanismos MR', val: DGRState.mechs.length, col: '#0f6e56' }
+      { lbl: 'Perturbações RE', val: this.countRE(), col: '#854f0b' },
+      { lbl: 'Perturbações RX', val: this.countRX(), col: '#c0392b' },
+      { lbl: 'Mecanismos MR', val: this.countMR(), col: '#0f6e56' }
     ];
     const maxV = Math.max(...items.map(i => i.val), 1);
     items.forEach((item, i) => {
@@ -1732,7 +1663,7 @@ const DGRManager = {
 
   clearAll() {
     if (!confirm('Zerar modelo atual?')) return;
-    DGRState.fns=[]; DGRState.coups=[]; DGRState.vars=[]; DGRState.mechs=[]; DGRState.resEvs=[]; DGRState.params={}; DGRState.subs={}; DGRState.mcRes={};
+    DGRState.fns=[]; DGRState.coups=[]; DGRState.vars=[]; DGRState.mechs=[]; DGRState.params={}; DGRState.subs={}; DGRState.mcRes={};
     localStorage.removeItem('dgr_autosave');
     this.refreshUI();
   },
