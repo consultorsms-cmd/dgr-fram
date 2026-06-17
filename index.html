@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>DGR-FRAM Modeler & Simulator - Avaliação Qualitativa v10</title>
+<title>DGR-FRAM Modeler & Simulator - v10.1 EXPORTAÇÃO PDF CORRIGIDA</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -180,7 +180,7 @@ textarea.fi{resize:vertical;min-height:55px}
   <div id="topbar">
     <div class="logo-area">
       <div class="title">DGR-FRAM</div>
-      <div class="sub">Modeler & Simulator • Avaliação qualitativa Mínima/Média/Máxima</div>
+      <div class="sub">Modeler & Simulator • v10.1 PDF corrigido • Σ, RF Total, Saturação e gráficos vetoriais</div>
     </div>
     <div class="actions">
       <button class="gbtn" onclick="DGRManager.saveToLocalStorage()">💾 Salvar</button>
@@ -1030,7 +1030,7 @@ const DGRManager = {
       path.setAttribute('d', `M ${a.x} ${a.y} C ${a.x+dx*0.42} ${a.y+curve}, ${a.x+dx*0.58} ${b.y-curve}, ${b.x} ${b.y}`);
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', '#cc0000');
-      path.setAttribute('stroke-width', '2.25');
+      path.setAttribute('stroke-width', '1.85');
       path.setAttribute('stroke-opacity', '0.78');
       path.setAttribute('marker-end', 'url(#arrow-critical)');
       svg.appendChild(path);
@@ -2439,7 +2439,7 @@ const DGRManager = {
     });
     if (oldPageForCharts && oldPageForCharts !== 'mc') this.switchPage(oldPageForCharts);
 
-    doc.save('dgr-fram-analytics.pdf');
+    doc.save('dgr-fram-analytics-corrigido.pdf');
   }
 };
 
