@@ -11,17 +11,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:#f0f0f5;color:#1a1a2
 #app{display:flex;height:100vh;overflow:hidden}
 
 /* ── NAV SIDEBAR ── */
-#nav{width:220px;background:#1f2532;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;border-right:1px solid #303747}
-#nav-logo{padding:18px 16px 14px;border-bottom:1px solid #303747}
+#nav{width:200px;background:#1e1e2e;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+#nav-logo{padding:18px 16px 14px;border-bottom:1px solid #2e2e42}
 #nav-logo .title{font-size:15px;font-weight:700;color:#fff;letter-spacing:.02em}
-#nav-logo .sub{font-size:11px;color:#9aa4b8;margin-top:2px}
-#nav-items{padding:10px 0;flex:1;overflow-y:auto}
-.nav-item{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:0 9px 9px 0;cursor:pointer;color:#a8b0c0;font-size:14px;font-weight:600;transition:all .15s;margin:2px 0;user-select:none}
-.nav-item:hover{background:#2b3344;color:#fff}
-.nav-item.act{background:#4778e8;color:#fff;box-shadow:inset 4px 0 0 rgba(255,255,255,.28)}
+#nav-logo .sub{font-size:11px;color:#6868a0;margin-top:2px}
+#nav-items{padding:10px 8px;flex:1;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;color:#8888b0;font-size:13px;font-weight:500;transition:all .15s;margin-bottom:2px;user-select:none}
+.nav-item:hover{background:#2a2a3e;color:#c0c0e0}
+.nav-item.act{background:#534AB7;color:#fff}
 .nav-item svg{flex-shrink:0;opacity:.8}
 .nav-item.act svg{opacity:1}
-#nav-bottom{display:none}
+#nav-bottom{padding:10px 8px;border-top:1px solid #2e2e42}
 .nav-tool{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;color:#6868a0;font-size:12px;transition:all .12s;margin-bottom:2px}
 .nav-tool:hover{background:#2a2a3e;color:#a0a0c8}
 .nav-tool.r:hover{color:#e85555}
@@ -34,19 +34,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#f0f0f5;color:#1a1a2
 .tbtn:hover{background:#ebebef;color:#1a1a2e;border-color:#b0b0c0}
 .tbtn.on{background:#eeedfe;color:#534AB7;border-color:#534AB7;font-weight:600}
 .tbtn.r{color:#c0392b;border-color:#c0392b;background:#fdecea}
-.iconbar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#fff;border-bottom:1px solid #e0e0ea;flex-shrink:0;flex-wrap:wrap}
-.ibtn{width:32px;height:30px;display:flex;align-items:center;justify-content:center;border:none;background:#fff;border-radius:6px;cursor:pointer;color:#3f3f5f;font-size:17px;transition:all .12s}
-.ibtn:hover{background:#f0f0f5;color:#534AB7}
-.ibtn.on{background:#eeedfe;color:#534AB7;box-shadow:0 0 0 1px #534AB7 inset}
-.ibtn.sep{border-left:1px solid #e0e0ea;border-radius:0;width:1px;padding:0;margin:0 4px;pointer-events:none}
-.tbtn.connect-main{border-color:#534AB7;color:#534AB7;background:#fff;font-weight:600}
-.nav-sec{font-size:10px;color:#5d6475;text-transform:uppercase;letter-spacing:.08em;padding:12px 14px 6px}
-#nav-bottom{padding:8px 0 0;border-top:1px solid #2e3442}
-.nav-tool{display:flex;align-items:center;gap:12px;padding:11px 16px;cursor:pointer;color:#a9afbd;font-size:13px;font-weight:600;transition:all .12s;border-top:1px solid transparent}
-.nav-tool:hover{background:#252b36;color:#fff}
-.nav-tool.r{color:#ff7373}
-.nav-tool.r:hover{background:#2b2228;color:#ff8c8c}
-.nav-tool svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
 .ifl{display:flex;align-items:center;gap:4px;padding:5px 9px;font-size:12px;border:1px solid #d0d0da;border-radius:5px;cursor:pointer;background:#fff;color:#5a5a7a;white-space:nowrap;transition:all .1s}
 .ifl:hover{background:#ebebef}
 #mstat{font-size:11px;color:#5a5a7a;padding:3px 0}
@@ -204,16 +191,16 @@ textarea.fi{resize:vertical;min-height:60px}
 <div id="nav">
   <div id="nav-logo">
     <div class="title">DGR-FRAM</div>
-    <div class="sub">Analyze · DGR-FRAM</div>
+    <div class="sub">Modeler v1.5</div>
   </div>
   <div id="nav-items">
-    <div class="nav-item act" id="ni-painel" onclick="goTo('painel')">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      Painel
+    <div class="nav-item act" id="ni-mc" onclick="goTo('mc')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M2 20h20M4 20V10l8-8 8 8v10"/><path d="M9 20v-6h6v6"/></svg>
+      Monte Carlo
     </div>
     <div class="nav-item" id="ni-fram" onclick="goTo('fram')">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/></svg>
-      Funções
+      Diagrama FRAM
     </div>
     <div class="nav-item" id="ni-endo" onclick="goTo('endo')">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
@@ -227,48 +214,39 @@ textarea.fi{resize:vertical;min-height:60px}
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       Mecanismos de Resiliência
     </div>
-    <div class="nav-item" id="ni-mc" onclick="goTo('mc')">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M2 20h20M4 20V10l8-8 8 8v10"/><path d="M9 20v-6h6v6"/></svg>
-      Monte Carlo
-    </div>
+
   </div>
   <div id="nav-bottom">
-    <div class="nav-sec">Dados</div>
-    <div class="nav-tool" onclick="expProject()"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 19h14"/></svg>Exportar Projeto</div>
-    <label class="nav-tool"><svg viewBox="0 0 24 24"><path d="M12 21V9m0 0l-4 4m4-4l4 4"/><path d="M5 5h14"/></svg>Importar Projeto<input type="file" accept=".dgrfram,.json" onchange="impProject(event)" style="display:none"></label>
-    <div class="nav-tool r" onclick="clearAll()"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M7 6l1 14h8l1-14"/><path d="M10 10v6M14 10v6"/></svg>Apagar Tudo</div>
-    <div class="nav-tool" onclick="expPDF()"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h6"/></svg>Exportar PDF</div>
+    <div class="nav-tool r" onclick="clearAll()">⊘ Limpar tudo</div>
   </div>
-
 </div>
 
 <!-- CONTENT -->
 <div id="content">
 
   <!-- FRAM toolbar -->
-  <div id="frambar" class="iconbar" style="display:none">
-    <button class="ibtn" title="Exportar PNG" onclick="expPNG()">▧</button>
-    <button class="ibtn" title="Exportar PDF" onclick="expPDF()">▤</button>
-    <span class="ibtn sep"></span>
-    <button class="ibtn" title="Ajustar visualização" onclick="fitView()">↙</button>
-    <button class="ibtn" title="Zoom +" onclick="zoomCanvas(1.15)">⊕</button>
-    <span class="ibtn sep"></span>
-    <button class="ibtn" title="Desfazer" onclick="undoLast()">↶</button>
-    <button class="ibtn" title="Refazer" onclick="redoLast()">↷</button>
-    <span class="ibtn sep"></span>
+  <div id="frambar" style="display:none">
     <button class="tbtn on" id="bsel" onclick="setMode('select')">↖ Selecionar</button>
-    <button class="tbtn" onclick="openConnectPanel()">＋ Gerenciar Conexões</button>
     <button class="tbtn" id="bera" onclick="setMode('erase')">✕ Apagar</button>
+    <span style="width:1px;height:18px;background:#e0e0ea;flex-shrink:0"></span>
+    <button class="tbtn" onclick="doUndo()" title="Desfazer (Ctrl+Z)">↩ Desfazer</button>
+    <button class="tbtn" onclick="doRedo()" title="Refazer (Ctrl+Y)">↪ Refazer</button>
     <span style="width:1px;height:18px;background:#e0e0ea;flex-shrink:0"></span>
     <button class="tbtn" onclick="addFn()">＋ Função</button>
     <button class="tbtn" onclick="addResFromBar()">∿ Ressonância</button>
+    <span style="width:1px;height:18px;background:#e0e0ea;flex-shrink:0"></span>
+    <button class="tbtn" onclick="expJSON()">⬇ JSON</button>
+    <button class="tbtn" onclick="expPNG()">⬇ PNG</button>
+    <button class="tbtn" onclick="expPDF()">⬇ PDF</button>
+    <label class="ifl" style="font-size:12px">⬆ JSON<input type="file" accept=".json" onchange="impJSON(event)" style="display:none"></label>
+    <label class="ifl" style="font-size:12px">⬆ XFMV<input type="file" accept=".xfmv" onchange="impXFMV(event)" style="display:none"></label>
     <span id="mstat" style="font-size:11px;color:#5a5a7a;margin-left:4px"></span>
   </div>
 
   <!-- SCREENS -->
 
   <!-- PAINEL -->
-  <div class="screen act scroll-screen" id="s-painel">
+  <div class="screen scroll-screen" id="s-painel">
     <div style="max-width:980px;width:100%">
       <div class="page-title">Painel DGR-FRAM</div>
       <div class="page-sub">Dashboard visual do modelo — Dataprev como Infraestrutura Crítica Digital</div>
@@ -345,7 +323,7 @@ textarea.fi{resize:vertical;min-height:60px}
       <span style="color:#534AB7;font-size:12px">As subcategorias selecionadas aqui alimentam automaticamente o parâmetro <b>VE</b> no Monte Carlo.</span></div>
       <!-- Subcategory selector by function -->
       <div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:18px 20px;margin-bottom:18px">
-        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar subcategorias RE por função</h3>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar Subcategorias RE por Função</h3>
         <div id="endo-subcat-sel"></div>
       </div>
       <!-- Variabilidade form -->
@@ -361,7 +339,7 @@ textarea.fi{resize:vertical;min-height:60px}
       <div class="page-sub">Ressonância por Perturbações Exógenas — variabilidade de fronteira entre funções e ecossistema (RX)<br>
       <span style="color:#534AB7;font-size:12px">As subcategorias selecionadas aqui alimentam automaticamente o parâmetro <b>VX</b> no Monte Carlo.</span></div>
       <div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:18px 20px;margin-bottom:18px">
-        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar subcategorias RX por função</h3>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar Subcategorias RX por Função</h3>
         <div id="exo-subcat-sel"></div>
       </div>
       <div class="inline-form" id="exo-form"></div>
@@ -376,7 +354,7 @@ textarea.fi{resize:vertical;min-height:60px}
       <div class="page-sub">Capacidades dinâmicas que amortecem variabilidade e garantem continuidade operacional (MR)<br>
       <span style="color:#534AB7;font-size:12px">As subcategorias selecionadas aqui alimentam automaticamente o parâmetro <b>AR</b> no Monte Carlo.</span></div>
       <div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:18px 20px;margin-bottom:18px">
-        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar subcategorias MR por função</h3>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:14px;color:#1a1a2e">Selecionar Subcategorias MR por Função</h3>
         <div id="mr-subcat-sel"></div>
       </div>
       <div class="inline-form" id="mr-form"></div>
@@ -385,7 +363,7 @@ textarea.fi{resize:vertical;min-height:60px}
   </div>
 
   <!-- MONTE CARLO -->
-  <div class="screen scroll-screen" id="s-mc">
+  <div class="screen act scroll-screen" id="s-mc">
     <div style="max-width:960px;width:100%">
       <div class="page-title">Simulação Monte Carlo</div>
       <div class="page-sub"><b>VFR = (VE + VX) × (1 − AR)</b> &nbsp;·&nbsp; LC = P95 &nbsp;·&nbsp; IP = saídas ÷ máx_saídas &nbsp;·&nbsp; IIS = VFR × IP<br>
@@ -489,13 +467,20 @@ const TIPOS_MR=['Barreira Técnica (Fail-Safe)','Protocolo de Resposta','Capacid
 // ══════════════════════════════════════════
 let fns=[], coups=[], vars=[], mechs=[], resEvs=[];
 let params={}, subs={}, mcRes={};
+// Undo/redo history
+let _history=[], _future=[], _pauseHistory=false;
+function _snapshot(){if(_pauseHistory)return;_history.push(JSON.stringify({fns,coups,vars,mechs,resEvs,params,subs}));if(_history.length>50)_history.shift();_future=[];}
+function doUndo(){if(!_history.length)return;_future.push(JSON.stringify({fns,coups,vars,mechs,resEvs,params,subs}));const s=JSON.parse(_history.pop());_pauseHistory=true;({fns,coups,vars,mechs,resEvs,params,subs}=s);_pauseHistory=false;draw();if(curPage==='mc')renderMC();}
+function doRedo(){if(!_future.length)return;_history.push(JSON.stringify({fns,coups,vars,mechs,resEvs,params,subs}));const s=JSON.parse(_future.pop());_pauseHistory=true;({fns,coups,vars,mechs,resEvs,params,subs}=s);_pauseHistory=false;draw();if(curPage==='mc')renderMC();}
+// Keyboard shortcuts
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='z'&&!e.shiftKey){e.preventDefault();doUndo();}if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.key==='z'&&e.shiftKey))){e.preventDefault();doRedo();}});
 let mcN=5000, rankBy='p95', mcActiveFn=null;
 let mode='select', selFn=null;
 let dragFn=null,dragOX=0,dragOY=0;
 let panX=0,panY=0,scale=1,isPan=false,pSX=0,pSY=0;
-let connSrc=null,connPend=null,connSrcFn=null,connTgtFn=null,connDrag=false;
+let connSrc=null,connPend=null,connSrcFn=null,connTgtFn=null;
 let hovFn=null,hovCoup=null,animT=0,animOn=false;
-let curPage='painel';
+let curPage='mc';
 // editing ids
 let editVarId=null, editMechId=null;
 let _vxExtra=[];
@@ -511,7 +496,7 @@ function goTo(page){
   document.getElementById('s-'+page).classList.add('act');
   document.getElementById('frambar').style.display=page==='fram'?'flex':'none';
   if(page==='fram'){setTimeout(resize,10);}
-  if(page==='painel') renderPainel();
+  // painel removed
   if(page==='endo'){editVarId=null;renderSubcatSelector('RE','endo-subcat-sel');renderEndoForm();renderEndoList();}
   if(page==='exo'){editVarId=null;renderSubcatSelector('RX','exo-subcat-sel');renderExoForm();renderExoList();}
   if(page==='mr'){editMechId=null;renderSubcatSelector('MR','mr-subcat-sel');renderMrForm();renderMrList();}
@@ -654,7 +639,7 @@ function hitCoup(mx,my){
 // ══════════════════════════════════════════
 C.addEventListener('mousedown',onDown);
 C.addEventListener('mousemove',onMove);
-C.addEventListener('mouseup',onUp);
+C.addEventListener('mouseup',()=>{if(dragFn)_snapshot();dragFn=null;isPan=false;});
 C.addEventListener('wheel',e=>{e.preventDefault();const d=e.deltaY>0?.88:1.14;panX=(panX-e.offsetX)*d+e.offsetX;panY=(panY-e.offsetY)*d+e.offsetY;scale=Math.max(0.2,Math.min(3,scale*d));draw();},{passive:false});
 C.addEventListener('dblclick',e=>{const[wx,wy]=s2w(e.offsetX,e.offsetY);const fn=fns.find(f=>inHex(wx,wy,f.x,f.y));if(fn)openFnPanel(fn);});
 
@@ -669,26 +654,9 @@ function onDown(e){
     if(fn){dragFn=fn;dragOX=wx-fn.x;dragOY=wy-fn.y;selFn=fn;openFnPanel(fn);draw();}
     else{dragFn=null;selFn=null;document.getElementById('fnpanel').style.display='none';isPan=true;pSX=e.offsetX-panX;pSY=e.offsetY-panY;draw();}
   } else if(mode==='connect'){
-    if(fn){
-      connSrc=fn;
-      connPend={x:e.offsetX,y:e.offsetY};
-      connDrag=true;
-      document.getElementById('fnpanel').style.display='none';
-      draw();
-    } else {connSrc=null;connPend=null;connDrag=false;draw();}
+    if(fn){if(!connSrc){connSrc=fn;connPend=null;document.getElementById('fnpanel').style.display='none';draw();}else if(fn.id!==connSrc.id){openConnModal(connSrc,fn);}else{connSrc=null;connPend=null;draw();}}
+    else{connSrc=null;connPend=null;draw();}
   }
-}
-function onUp(e){
-  if(mode==='connect'&&connSrc){
-    const[wx,wy]=s2w(e.offsetX,e.offsetY);
-    const tgt=fns.find(f=>inHex(wx,wy,f.x,f.y));
-    if(tgt&&tgt.id!==connSrc.id){
-      openConnModal(connSrc,tgt);
-    }
-    connDrag=false;connPend=null;draw();
-    return;
-  }
-  dragFn=null;isPan=false;
 }
 function onMove(e){
   const[wx,wy]=s2w(e.offsetX,e.offsetY);
@@ -700,7 +668,7 @@ function onMove(e){
   if(fn){
     tip.style.display='block';tip.style.left=(e.offsetX+14)+'px';tip.style.top=(e.offsetY-10)+'px';
     const hasV=vars.some(v=>v.affected_function_id===fn.id);
-    tip.innerHTML=`<b>${esc(fn.name)}</b>${hasV?'<br>⚡ Tem variabilidades':''}${mode==='connect'?(connSrc?'<br><span style="color:#0f6e56">Arraste até o destino</span>':'<br><span style="color:#0f6e56">Arraste da origem</span>'):''}${mode==='erase'?'<br><span style="color:#c0392b">Clique para apagar</span>':''}`;
+    tip.innerHTML=`<b>${esc(fn.name)}</b>${hasV?'<br>⚡ Tem variabilidades':''}${mode==='connect'?(connSrc?'<br><span style="color:#0f6e56">Clique → destino</span>':'<br><span style="color:#0f6e56">Clique → origem</span>'):''}${mode==='erase'?'<br><span style="color:#c0392b">Clique para apagar</span>':''}`;
   } else if(c&&mode==='erase'){
     const s=fns.find(f=>f.id===c.source_function_id),t=fns.find(f=>f.id===c.target_function_id);
     tip.style.display='block';tip.style.left=(e.offsetX+14)+'px';tip.style.top=(e.offsetY-10)+'px';
@@ -714,10 +682,16 @@ function onMove(e){
 // ══════════════════════════════════════════
 function setMode(m){
   mode=m;connSrc=null;connPend=null;hovCoup=null;dragFn=null;isPan=false;
-  if(m==='connect')document.getElementById('fnpanel').style.display='none';
-  ['bsel','bera'].forEach(id=>{const el=document.getElementById(id); if(el) el.classList.remove('on');});
-  const activeId={select:'bsel',erase:'bera'}[m]; const activeEl=activeId?document.getElementById(activeId):null; if(activeEl) activeEl.classList.add('on');
-  document.getElementById('mstat').textContent=m==='erase'?'Clique para apagar':'';
+  if(m==='connect'){
+    document.getElementById('fnpanel').style.display='none';
+    // If not already on FRAM, navigate there
+    if(curPage!=='fram') goTo('fram');
+  }
+  ['bsel','bera'].forEach(id=>document.getElementById(id)&&document.getElementById(id).classList.remove('on'));
+  const mapBtn={select:'bsel',connect:'bsel',erase:'bera'};
+  if(document.getElementById(mapBtn[m]))document.getElementById(mapBtn[m]).classList.add('on');
+  const ms=document.getElementById('mstat');
+  if(ms)ms.textContent=m==='connect'?'Modo conectar — clique na origem e depois no destino':m==='erase'?'Clique para apagar':'';
   draw();
 }
 
@@ -731,13 +705,12 @@ function initSubs(id){if(!subs[id])subs[id]={};[...TAXO.RE.items,...TAXO.RX.item
 function addFn(){
   const cx=(CW.offsetWidth/2-panX)/scale,cy=(CW.offsetHeight/2-panY)/scale;
   const fn={id:uid(),name:'Nova função',description:'',input:'',output:'',precondition:'',resource:'',control:'',time:'',criticality:3,coupling_degree:3,style:'red',x:cx+(Math.random()-.5)*120,y:cy+(Math.random()-.5)*80};
-  fns.push(fn);initP(fn.id);initSubs(fn.id);selFn=fn;openFnPanel(fn);draw();
+  fns.push(fn);_snapshot();initP(fn.id);initSubs(fn.id);selFn=fn;openFnPanel(fn);draw();
 }
 
 function openFnPanel(fn){
   document.getElementById('fnpanel').style.display='block';
   document.getElementById('fnptitle').textContent=fn.name;
-  const asps=[{k:'input',l:'I — Input',c:AC.I},{k:'output',l:'O — Output',c:AC.O},{k:'precondition',l:'P — Precondição',c:AC.P},{k:'resource',l:'R — Recurso',c:AC.R},{k:'control',l:'C — Controle',c:AC.C},{k:'time',l:'T — Tempo',c:AC.T}];
   document.getElementById('fnpbody').innerHTML=`
 <label class="fl">Nome</label><input class="fi" id="fpn" value="${esc(fn.name)}">
 <label class="fl">Descrição</label><textarea class="fi" id="fpd">${esc(fn.description||'')}</textarea>
@@ -748,8 +721,6 @@ function openFnPanel(fn){
   <button class="ftb${fn.style==='grey'?' sh':''}" onclick="setStl('${fn.id}','grey',this)"><span style="width:10px;height:10px;border-radius:3px;background:#6a6a88;display:inline-block;flex-shrink:0"></span>Humana</button>
   <button class="ftb${fn.style==='white'?' st2':''}" onclick="setStl('${fn.id}','white',this)"><span style="width:10px;height:10px;transform:rotate(45deg);background:#534AB7;display:inline-block;flex-shrink:0"></span>Tecnológica</button>
 </div>
-<div class="dv"></div>
-${asps.map(a=>`<label class="fl" style="color:${a.c}">${a.l}</label><input class="fi" id="fp${a.k}" value="${esc(fn[a.k]||'')}">`).join('')}
 <div class="dv"></div>
 <label class="fl">Criticidade</label>
 <div class="cgrd">
@@ -764,6 +735,7 @@ ${asps.map(a=>`<label class="fl" style="color:${a.c}">${a.l}</label><input class
 </div><input type="hidden" id="fpcoup" value="${fn.coupling_degree||3}">
 <div class="brow">
   <button class="bsav" onclick="saveFn('${fn.id}')">Salvar</button>
+  <button class="tbtn" onclick="setMode('connect')" title="Clique neste botão e depois em outra função no diagrama para criar acoplamento" style="background:#e1f5ee;color:#0f6e56;border-color:#0f6e56">⟿ Conectar</button>
   <button class="bdel" onclick="delFn('${fn.id}')">Excluir</button>
 </div>`;
 }
@@ -773,13 +745,12 @@ function setD2(id,v,btn){const fn=fns.find(f=>f.id===id);if(!fn)return;fn.coupli
 function saveFn(id){
   const fn=fns.find(f=>f.id===id);if(!fn)return;
   fn.name=document.getElementById('fpn').value||fn.name;fn.description=document.getElementById('fpd').value;
-  fn.input=document.getElementById('fpinput').value;fn.output=document.getElementById('fpoutput').value;
-  fn.precondition=document.getElementById('fpprecondition').value;fn.resource=document.getElementById('fpresource').value;
-  fn.control=document.getElementById('fpcontrol').value;fn.time=document.getElementById('fptime').value;
   fn.criticality=+document.getElementById('fpcrit').value||3;fn.coupling_degree=+document.getElementById('fpcoup').value||3;
+  _snapshot();
   document.getElementById('fnptitle').textContent=fn.name;draw();
 }
 function delFn(id){
+  _snapshot();
   fns=fns.filter(f=>f.id!==id);coups=coups.filter(c=>c.source_function_id!==id&&c.target_function_id!==id);
   vars=vars.filter(v=>v.affected_function_id!==id);
   if(selFn&&selFn.id===id){selFn=null;document.getElementById('fnpanel').style.display='none';}
@@ -789,48 +760,6 @@ function delFn(id){
 // ══════════════════════════════════════════
 // COUPLINGS
 // ══════════════════════════════════════════
-
-function openConnectPanel(){
-  if(fns.length<2){alert('Adicione pelo menos duas funções para criar uma conexão.');return;}
-  const opts=fns.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('');
-  const connRows=coups.length?coups.map(c=>{
-    const src=fns.find(f=>f.id===c.source_function_id),tgt=fns.find(f=>f.id===c.target_function_id);
-    return `<div class="item-card" style="cursor:default"><div class="item-card-body"><div class="item-card-title">${esc(src?.name||'?')} <span style="color:#9898b0">(${c.source_aspect||'O'})</span> → ${esc(tgt?.name||'?')} <span style="color:#9898b0">(${c.target_aspect||'I'})</span></div><div class="item-card-sub">${esc(c.label||'Sem rótulo')} · ${esc(c.line_type||'normal')}</div></div><div class="item-card-actions"><button class="ico-btn" title="Excluir conexão" onclick="delConn('${c.id}')">🗑</button></div></div>`;
-  }).join(''):`<div class="empty" style="padding:18px 8px"><p>Nenhuma conexão cadastrada.</p></div>`;
-  document.getElementById('fnptitle').textContent='Gerenciar conexões';
-  document.getElementById('fnpbody').innerHTML=`
-<label class="fl">Função de ORIGEM</label>
-<select class="fi" id="cp-src" onchange="if(document.getElementById('cp-tgt').value===this.value){document.getElementById('cp-tgt').selectedIndex=(this.selectedIndex+1)%document.getElementById('cp-tgt').options.length}">${opts}</select>
-<label class="fl">Aspecto de origem</label>
-<select class="fi" id="cp-sa"><option value="O" selected>O — Output</option><option value="I">I — Input</option><option value="P">P — Precondição</option><option value="R">R — Recurso</option><option value="C">C — Controle</option><option value="T">T — Tempo</option></select>
-<label class="fl">Função de DESTINO</label>
-<select class="fi" id="cp-tgt">${opts}</select>
-<label class="fl">Aspecto de destino</label>
-<select class="fi" id="cp-ta"><option value="I" selected>I — Input</option><option value="O">O — Output</option><option value="P">P — Precondição</option><option value="R">R — Recurso</option><option value="C">C — Controle</option><option value="T">T — Tempo</option></select>
-<label class="fl">Rótulo da conexão</label><input class="fi" id="cp-lbl" placeholder="Ex.: alimenta, controla, informa">
-<label class="fl">Tipo de linha</label><select class="fi" id="cp-type"><option value="normal">Normal</option><option value="variable">Variável / tracejada</option><option value="critical">Crítica / vermelha</option></select>
-<div class="brow"><button class="bsav" onclick="saveConnFromPanel()">Criar conexão</button><button class="bdel" onclick="document.getElementById('fnpanel').style.display='none'">Fechar</button></div>
-<div class="dv"></div>
-<div style="font-size:13px;font-weight:600;margin-bottom:8px">Conexões cadastradas</div>
-<div class="item-list" style="gap:6px;margin-bottom:0">${connRows}</div>`;
-  const tgt=document.getElementById('cp-tgt'); if(tgt.options.length>1)tgt.selectedIndex=1;
-  document.getElementById('fnpanel').style.display='block';
-}
-function saveConnFromPanel(){
-  const s=document.getElementById('cp-src').value,t=document.getElementById('cp-tgt').value;
-  if(!s||!t||s===t){alert('Escolha duas funções diferentes.');return;}
-  coups.push({id:uid(),source_function_id:s,target_function_id:t,source_aspect:document.getElementById('cp-sa').value,target_aspect:document.getElementById('cp-ta').value,label:document.getElementById('cp-lbl').value,line_type:document.getElementById('cp-type').value,created_date:new Date().toISOString()});
-  selFn=fns.find(f=>f.id===s)||null;
-  draw();
-  openConnectPanel();
-}
-function delConn(id){
-  if(!confirm('Excluir esta conexão?')) return;
-  coups=coups.filter(c=>c.id!==id);
-  draw();
-  openConnectPanel();
-}
-
 function openConnModal(src,tgt){
   connSrcFn=src;connTgtFn=tgt;
   document.getElementById('cinfo').textContent='De: '+src.name+' → Para: '+tgt.name;
@@ -839,6 +768,7 @@ function openConnModal(src,tgt){
 }
 function confirmConn(){
   if(!connSrcFn||!connTgtFn)return;
+  _snapshot();
   coups.push({id:uid(),source_function_id:connSrcFn.id,target_function_id:connTgtFn.id,source_aspect:document.getElementById('csrc').value,target_aspect:document.getElementById('ctgt').value,label:document.getElementById('clbl').value,line_type:document.getElementById('ctype').value,created_date:new Date().toISOString()});
   document.getElementById('ov').classList.remove('show');connSrcFn=null;connTgtFn=null;connSrc=null;connPend=null;draw();
 }
@@ -1172,7 +1102,7 @@ let openSubcatFn={}; // which fn is expanded per page
 
 function renderSubcatSelector(taxoKey,containerId){
   if(!fns.length){
-    document.getElementById(containerId).innerHTML='<div style="color:#9898b0;font-size:13px;padding:8px 0">Adicione funções na aba Funções primeiro.</div>';
+    document.getElementById(containerId).innerHTML='<div style="color:#9898b0;font-size:13px;padding:8px 0">Adicione funções no Diagrama FRAM primeiro.</div>';
     return;
   }
   const T=TAXO[taxoKey];
@@ -1447,7 +1377,7 @@ function vColor(v){if(v>=.70)return'#c0392b';if(v>=.50)return'#854f0b';if(v>=.30
 function pct(v,d=1){return(v*100).toFixed(d)+'%';}
 
 function renderMC(){
-  if(!fns.length){document.getElementById('mc-inner').innerHTML='<div class="empty"><p>Adicione funções na aba Funções primeiro.</p></div>';return;}
+  if(!fns.length){document.getElementById('mc-inner').innerHTML='<div class="empty"><p>Adicione funções no Diagrama FRAM primeiro.</p></div>';return;}
   const hasRes=fns.some(fn=>mcRes[fn.id]);const maxOD=maxOutDeg();
   fns.forEach(fn=>{initP(fn.id);initSubs(fn.id);});
   let h=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
@@ -1551,12 +1481,12 @@ ${Object.entries({mean:'VFR média',p95:'P95',probCrit:'Prob. Criticidade',iis:'
 // ══════════════════════════════════════════
 // EXPORT / IMPORT
 // ══════════════════════════════════════════
-function expProject(){
-  const d={meta:{version:'1.6',created:new Date().toISOString(),tool:'DGR-FRAM Analyze'},
+function expJSON(){
+  const d={meta:{version:'1.5',created:new Date().toISOString(),tool:'DGR-FRAM Modeler'},
     functions:fns,layouts:fns.map(fn=>({function_id:fn.id,x:Math.round(fn.x),y:Math.round(fn.y),id:uid()})),
     couplings:coups,variabilities:vars,mechanisms:mechs,resonanceEvents:resEvs,
     params,subs,monteCarlo:Object.keys(mcRes).length?mcRes:null};
-  dl(JSON.stringify(d,null,2),'application/json','dgr-fram-projeto.dgrfram');
+  dl(JSON.stringify(d,null,2),'application/json','dgr-fram-model.json');
 }
 function expPNG(){
   let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infinity;
@@ -1625,16 +1555,14 @@ function expPDF(){
   doc.save('dgr-fram-relatorio.pdf');
 }
 function dl(c,m,f){const b=new Blob([c],{type:m});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=f;a.click();URL.revokeObjectURL(u);}
-function expJSON(){expProject();}
-function impProject(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{loadData(JSON.parse(ev.target.result));alert('Projeto importado com sucesso.');}catch(err){alert('Arquivo de projeto inválido: '+err.message);}e.target.value='';};r.readAsText(f);}
-function impJSON(e){impProject(e);}
+function impJSON(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{loadData(JSON.parse(ev.target.result));}catch(err){alert('JSON inválido: '+err.message);}e.target.value='';};r.readAsText(f);}
 function loadData(d){
   fns=(d.functions||[]).map(fn=>{const l=(d.layouts||[]).find(l=>l.function_id===fn.id)||{x:300,y:300};return{...fn,x:fn.x??l.x??300,y:fn.y??l.y??300,style:fn.style||'red'};});
   coups=d.couplings||[];vars=d.variabilities||[];mechs=d.mechanisms||[];resEvs=d.resonanceEvents||[];
   params=d.params||{};subs=d.subs||{};mcRes=d.monteCarlo||{};
   fns.forEach(fn=>{initP(fn.id);initSubs(fn.id);});selFn=null;connSrc=null;
   if(fns.length){let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infinity;fns.forEach(fn=>{mnX=Math.min(mnX,fn.x);mnY=Math.min(mnY,fn.y);mxX=Math.max(mxX,fn.x);mxY=Math.max(mxY,fn.y);});const bW=mxX-mnX+HR*4,bH=mxY-mnY+HR*4;scale=Math.min((CW.offsetWidth||800)/bW,(CW.offsetHeight||600)/bH,1.3);panX=(CW.offsetWidth||800)/2-(mnX+(mxX-mnX)/2)*scale;panY=(CW.offsetHeight||600)/2-(mnY+(mxY-mnY)/2)*scale;}
-  goTo('painel');
+  goTo('mc');
 }
 function impXFMV(e){
   const f=e.target.files[0];if(!f)return;
@@ -1646,7 +1574,7 @@ function impXFMV(e){
     }catch(err){alert('Erro XFMV: '+err.message);}e.target.value='';
   };r.readAsText(f);
 }
-function clearAll(){if(!confirm('Limpar todo o modelo?'))return;fns=[];coups=[];vars=[];mechs=[];resEvs=[];params={};subs={};mcRes={};selFn=null;animOn=false;connSrc=null;goTo('painel');}
+function clearAll(){if(!confirm('Limpar todo o modelo?'))return;fns=[];coups=[];vars=[];mechs=[];resEvs=[];params={};subs={};mcRes={};selFn=null;animOn=false;connSrc=null;goTo('mc');}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 // roundRect polyfill for older browsers
@@ -1656,7 +1584,7 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
   };
 }
 // Redraw painel on resize if visible
-window.addEventListener('resize',()=>{if(curPage==='painel')renderPainel();});
+window.addEventListener('resize',()=>{if(curPage==='mc')renderMC();});
 
 // ══════════════════════════════════════════
 // SAMPLE DATA
@@ -1697,181 +1625,5 @@ loadData({
   },
 });
 </script>
-
-<script>
-(function(){
-  // =====================================================
-  // DGR-FRAM — Exportar/Importar Projeto + Desfazer/Refazer
-  // Patch robusto: cria botões visíveis e funções globais.
-  // =====================================================
-
-  function safeClone(obj){
-    try { return JSON.parse(JSON.stringify(obj)); }
-    catch(e){ return obj; }
-  }
-
-  function getProjectState(){
-    return {
-      version: "DGR-FRAM .dgrfram v1",
-      exported_at: new Date().toISOString(),
-      fns: safeClone(window.fns || []),
-      coups: safeClone(window.coups || []),
-      vars: safeClone(window.vars || []),
-      mechs: safeClone(window.mechs || []),
-      resEvs: safeClone(window.resEvs || []),
-      params: safeClone(window.params || {}),
-      subs: safeClone(window.subs || {}),
-      mcRes: safeClone(window.mcRes || {}),
-      mcResults: safeClone(window.mcResults || {}),
-      avaliacoes: safeClone(window.avaliacoes || {}),
-      govM: safeClone(window.govM || [])
-    };
-  }
-
-  function restoreProjectState(d){
-    window.fns = d.fns || d.functions || [];
-    window.coups = d.coups || d.couplings || [];
-    window.vars = d.vars || d.variabilities || [];
-    window.mechs = d.mechs || d.mechanisms || [];
-    window.resEvs = d.resEvs || d.resonanceEvents || [];
-    window.params = d.params || {};
-    window.subs = d.subs || {};
-    window.mcRes = d.mcRes || {};
-    window.mcResults = d.mcResults || {};
-    window.avaliacoes = d.avaliacoes || {};
-    window.govM = d.govM || [];
-
-    try { if (typeof draw === "function") draw(); } catch(e){}
-    try { if (typeof renderPainel === "function" && window.curPage === "painel") renderPainel(); } catch(e){}
-    try { if (typeof renderMC === "function" && window.curPage === "mc") renderMC(); } catch(e){}
-    try { if (typeof renderEndoList === "function") renderEndoList(); } catch(e){}
-    try { if (typeof renderExoList === "function") renderExoList(); } catch(e){}
-    try { if (typeof renderMrList === "function") renderMrList(); } catch(e){}
-  }
-
-  window.exportarProjetoDGR = function(){
-    const data = getProjectState();
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json;charset=utf-8"});
-    const a = document.createElement("a");
-    const dt = new Date().toISOString().slice(0,10);
-    a.href = URL.createObjectURL(blob);
-    a.download = "dgr-fram-projeto-" + dt + ".dgrfram";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
-  };
-
-  window.importarProjetoDGR = function(input){
-    const file = input && input.files && input.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = function(ev){
-      try{
-        pushHistoryDGR();
-        const data = JSON.parse(ev.target.result);
-        restoreProjectState(data);
-        pushHistoryDGR();
-        alert("Projeto importado com sucesso.");
-      }catch(e){
-        alert("Erro ao importar projeto: " + e.message);
-      }
-      input.value = "";
-    };
-    reader.readAsText(file);
-  };
-
-  let undoStackDGR = [];
-  let redoStackDGR = [];
-  let restoringDGR = false;
-
-  function stateStringDGR(){ return JSON.stringify(getProjectState()); }
-
-  window.pushHistoryDGR = function(){
-    if(restoringDGR) return;
-    const s = stateStringDGR();
-    if(undoStackDGR.length && undoStackDGR[undoStackDGR.length-1] === s) return;
-    undoStackDGR.push(s);
-    if(undoStackDGR.length > 80) undoStackDGR.shift();
-    redoStackDGR = [];
-  };
-
-  window.desfazerDGR = function(){
-    if(undoStackDGR.length < 2){
-      alert("Não há ação anterior para desfazer.");
-      return;
-    }
-    restoringDGR = true;
-    const atual = undoStackDGR.pop();
-    redoStackDGR.push(atual);
-    restoreProjectState(JSON.parse(undoStackDGR[undoStackDGR.length-1]));
-    restoringDGR = false;
-  };
-
-  window.refazerDGR = function(){
-    if(!redoStackDGR.length){
-      alert("Não há ação para refazer.");
-      return;
-    }
-    restoringDGR = true;
-    const prox = redoStackDGR.pop();
-    undoStackDGR.push(prox);
-    restoreProjectState(JSON.parse(prox));
-    restoringDGR = false;
-  };
-
-  function wrapHistory(name){
-    const old = window[name];
-    if(typeof old !== "function" || old.__dgrWrapped) return;
-    const wrapped = function(){
-      pushHistoryDGR();
-      const ret = old.apply(this, arguments);
-      setTimeout(pushHistoryDGR, 0);
-      return ret;
-    };
-    wrapped.__dgrWrapped = true;
-    window[name] = wrapped;
-  }
-
-  function makeTool(html){
-    const div = document.createElement("div");
-    div.innerHTML = html.trim();
-    return div.firstElementChild;
-  }
-
-  function injectButtons(){
-    // Menu lateral: Exportar/Importar Projeto sempre visíveis
-    const nav = document.getElementById("nav-bottom") || document.getElementById("nav");
-    if(nav && !document.getElementById("btn-exportar-projeto-dgr")){
-      const bloco = document.createElement("div");
-      bloco.innerHTML = `
-        <div style="font-size:10px;letter-spacing:.08em;color:#6b7280;text-transform:uppercase;padding:6px 10px;margin-top:4px">Projeto</div>
-        <div class="nav-tool" id="btn-exportar-projeto-dgr" onclick="exportarProjetoDGR()">💾 Exportar Projeto (.dgrfram)</div>
-        <label class="nav-tool" id="btn-importar-projeto-dgr">📂 Importar Projeto (.dgrfram)
-          <input type="file" accept=".dgrfram,.json,application/json" onchange="importarProjetoDGR(this)" style="display:none">
-        </label>
-      `;
-      nav.insertBefore(bloco, nav.firstChild);
-    }
-
-    // Barra superior/FRAM: botões Desfazer/Refazer sempre visíveis
-    const bar = document.getElementById("frambar") || document.querySelector("#content");
-    if(bar && !document.getElementById("btn-desfazer-dgr")){
-      const undoBtn = makeTool(`<button class="tbtn" id="btn-desfazer-dgr" type="button" onclick="desfazerDGR()" title="Desfazer">↶ Desfazer</button>`);
-      const redoBtn = makeTool(`<button class="tbtn" id="btn-refazer-dgr" type="button" onclick="refazerDGR()" title="Refazer">↷ Refazer</button>`);
-      bar.insertBefore(redoBtn, bar.firstChild);
-      bar.insertBefore(undoBtn, bar.firstChild);
-    }
-  }
-
-  window.addEventListener("load", function(){
-    injectButtons();
-    ["addFn","saveFn","delFn","confirmConn","clearAll","saveVar","delVar","saveMech","delMech","runMC","loadData"].forEach(wrapHistory);
-    setTimeout(pushHistoryDGR, 300);
-  });
-
-})();
-</script>
-
 </body>
 </html>
