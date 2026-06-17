@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>DGR-FRAM Modeler & Simulator - Avaliação Qualitativa v10</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;height:100%;overflow:hidden;background:#f0f0f5;color:#1a1a2e;font-family:"Segoe UI",system-ui,sans-serif;font-size:13px}
@@ -848,11 +849,11 @@ const DGRManager = {
   calculateNetworkResonance() {
     const ids = DGRState.fns.map(f => f.id);
     if (!ids.length) return;
-    const base = {}, incoming = {}, emitted = {}, centrality = {}, rf = {};
+    const base = {}, incoming = {}, direct = {}, indirect = {}, emitted = {}, centrality = {}, rf = {};
     ids.forEach(id => {
       const r = DGRState.mcRes[id] || {};
       base[id] = Math.max(0, +(r.p95 || r.mean || 0));
-      incoming[id] = 0; emitted[id] = 0; centrality[id] = 0;
+      incoming[id] = 0; direct[id] = 0; indirect[id] = 0; emitted[id] = 0; centrality[id] = 0;
     });
 
     // Centralidade FRAM: saída direta + alcance a jusante ponderado por tipo de acoplamento.
@@ -874,8 +875,8 @@ const DGRManager = {
     });
     const maxCent = Math.max(1e-6, ...Object.values(centrality));
 
-    // RF em cascata: a VFR de cada função se propaga por múltiplas camadas da rede.
-    // Não há normalização do IIS para 100%; IIS_i = VFR_i + RF_i pode ultrapassar 100%.
+    // RF em cascata: direta (ordem 1) + indireta (ordens 2..n).
+    // IIS_i = VFR_i + RF_i, sem normalização oculta.
     let signal = {...base};
     const decay = 0.68;
     for (let k = 0; k < 10; k++) {
@@ -885,25 +886,37 @@ const DGRManager = {
         const out = DGRState.coups.filter(x => x.source_function_id === c.source_function_id).length || 1;
         const w = this.couplingWeight(c);
         const transfer = (signal[c.source_function_id] || 0) * w * decay / Math.sqrt(out);
+        if (transfer <= 0) return;
         next[c.target_function_id] += transfer;
         emitted[c.source_function_id] += transfer / (k + 1);
       });
-      ids.forEach(id => incoming[id] += next[id] / (k + 1));
+      ids.forEach(id => {
+        const weighted = next[id] / (k + 1);
+        incoming[id] += weighted;
+        if (k === 0) direct[id] += weighted;
+        else indirect[id] += weighted;
+      });
       signal = next;
       if (Object.values(signal).reduce((a,b)=>a+b,0) < 1e-5) break;
     }
 
+    const maxIncoming = Math.max(1e-6, ...Object.values(incoming));
+    const maxEmitted = Math.max(1e-6, ...Object.values(emitted).map(v => v * 0.75));
     ids.forEach(id => {
       const vfr = Math.max(0, +(base[id] || 0));
-      rf[id] = Math.max(0, incoming[id] * 0.75);
+      const rfDirect = Math.max(0, direct[id] * 0.75);
+      const rfIndirect = Math.max(0, indirect[id] * 0.75);
+      rf[id] = rfDirect + rfIndirect;
       const r = DGRState.mcRes[id] || {};
       const rawIIS = Math.max(0, vfr + rf[id]);
       DGRState.mcRes[id] = {...r,
         centrality: centrality[id] / maxCent,
         incomingResonance: incoming[id],
-        incomingResonanceNorm: incoming[id] / Math.max(1e-6, ...Object.values(incoming)),
+        incomingResonanceNorm: incoming[id] / maxIncoming,
+        directResonance: rfDirect,
+        indirectResonance: rfIndirect,
         emittedResonance: emitted[id] * 0.75,
-        emittedResonanceNorm: (emitted[id] * 0.75) / Math.max(1e-6, ...Object.values(emitted).map(v => v * 0.75)),
+        emittedResonanceNorm: (emitted[id] * 0.75) / maxEmitted,
         functionalResonance: rf[id],
         rawIIS,
         iis: rawIIS,
@@ -912,7 +925,6 @@ const DGRManager = {
       };
     });
   },
-
   computePropagationMatrix(nodes = DGRState.fns, maxDepth = 5) {
     // Matriz destino x origem com propagação direta e indireta em cascata.
     const ids = nodes.map(f => f.id);
@@ -1676,7 +1688,9 @@ const DGRManager = {
   calcIGR() {
     const rows = this.resultRows();
     if (!rows.length) return 0;
-    return Math.min(1, rows.reduce((a,x) => a + Math.min(1, x.iis), 0) / rows.length);
+    // Fórmula explícita solicitada: IGR = Σ IIS_i / N.
+    // Não há normalização oculta; se IIS_i ultrapassar 100%, o IGR também pode ultrapassar 100%.
+    return rows.reduce((a,x) => a + Math.max(0, x.iis), 0) / rows.length;
   },
 
   networkDiagnostics() {
@@ -1695,9 +1709,10 @@ const DGRManager = {
     const maxObj = obj => Object.entries(obj).sort((a,b)=>b[1]-a[1])[0] || [null,0];
     const [emId, emVal] = maxObj(outScore);
     const [recId, recVal] = maxObj(inScore);
+    const byCentrality = [...rows].sort((a,b) => (b.r.centrality || 0) - (a.r.centrality || 0));
     return {
-      rows, byP95, byIIS, byRF,
-      maiorP95: byP95[0], maiorIIS: byIIS[0], maiorRF: byRF[0],
+      rows, byP95, byIIS, byRF, byCentrality,
+      maiorP95: byP95[0], maiorIIS: byIIS[0], maiorRF: byRF[0], maiorCentralidade: byCentrality[0],
       emissor: { id:emId, name:fnName(emId), value:emVal },
       receptor: { id:recId, name:fnName(recId), value:recVal },
       igr: this.calcIGR()
@@ -1749,7 +1764,7 @@ const DGRManager = {
     const igrInfo = this.igrClass(d.igr);
     const rfTxt = crit ? ` A função ${crit.fn.name} apresenta o maior IIS (${this.pct(crit.iis)}), composto por VFR/P95 de ${this.pct(crit.vfr)} e RF de ${this.pct(crit.rf)}.` : '';
     const satTxt = crit && crit.saturation ? ' O IIS ultrapassa 100% sem normalização e indica Saturação Sistêmica.' : '';
-    return `O Índice Global de Resiliência/Risco do sistema (IGR) é ${this.pct(d.igr)}, classificado como ${igrInfo.lbl}.${rfTxt}${satTxt} O principal receptor de variabilidade é ${d.receptor.name} (${this.pct(d.receptor.value)}), enquanto o principal emissor é ${d.emissor.name} (${this.pct(d.emissor.value)}). Priorize intervenções nas funções com maior IIS e nas rotas críticas de propagação.`;
+    return `O Índice Global de Resiliência/Risco do sistema (IGR = Σ IISᵢ/N) é ${this.pct(d.igr)}, classificado como ${igrInfo.lbl}.${rfTxt}${satTxt} O principal receptor de variabilidade é ${d.receptor.name} (${this.pct(d.receptor.value)}), enquanto o principal emissor é ${d.emissor.name} (${this.pct(d.emissor.value)}). Priorize intervenções nas funções com maior IIS e nas rotas críticas de propagação.`;
   },
 
   renderAdvancedAnalytics(hasRes) {
@@ -1772,7 +1787,8 @@ const DGRManager = {
       card('Maior RF Recebido', this.esc(d.maiorRF?.fn.name || '-'), d.maiorRF ? this.pct(d.maiorRF.rf) : '-', '#c0392b'),
       card('Maior Emissor', this.esc(d.emissor.name), this.pct(d.emissor.value), '#854f0b'),
       card('Maior Receptor', this.esc(d.receptor.name), this.pct(d.receptor.value), '#0f6e56'),
-      `<div class="adv-card" style="grid-column:1/-1"><div class="adv-title">RF recebida e emitida por função</div><table class="adv-table"><thead><tr><th>Função</th><th>RF recebida</th><th>RF emitida</th><th>IIS</th><th>Classe</th></tr></thead><tbody>${d.rows.sort((a,b)=>b.iis-a.iis).map(x=>`<tr><td>${this.esc(x.fn.name)}</td><td>${this.pct(x.rf)}</td><td>${this.pct(x.r.emittedResonance || 0)}</td><td><b>${this.pct(x.iis)}</b></td><td><span class="cbadge ${x.crit.cls}">${x.crit.lbl}</span></td></tr>`).join('')}</tbody></table></div>`,
+      card('Maior Centralidade', this.esc(d.maiorCentralidade?.fn.name || '-'), d.maiorCentralidade ? this.pct(d.maiorCentralidade.r.centrality || 0) : '-', '#4778e8'),
+      `<div class="adv-card" style="grid-column:1/-1"><div class="adv-title">RF recebida e emitida por função</div><table class="adv-table"><thead><tr><th>Função</th><th>RF recebida</th><th>RF emitida</th><th>RF total</th><th>IIS</th><th>Classe</th></tr></thead><tbody>${d.rows.sort((a,b)=>b.iis-a.iis).map(x=>`<tr><td>${this.esc(x.fn.name)}</td><td>${this.pct(x.rf)}</td><td>${this.pct(x.r.emittedResonance || 0)}</td><td>${this.pct((x.r.directResonance || 0) + (x.r.indirectResonance || 0))}</td><td><b>${this.pct(x.iis)}</b></td><td><span class="cbadge ${x.crit.cls}">${x.crit.lbl}</span></td></tr>`).join('')}</tbody></table></div>`,
       `<div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Interpretação automática</div><div class="adv-text">${this.esc(this.autoInterpretationText())}</div></div>`
     ].join('');
     const routes = this.findCriticalRoutes(3);
@@ -2185,7 +2201,7 @@ const DGRManager = {
     doc.setTextColor(0,0,0);
   },
 
-  exportPDF() {
+  async exportPDF() {
     if (!window.jspdf) return;
     // Garante que o PDF use o motor atual, não resultados antigos em cache.
     if (DGRState.fns.some(f => DGRState.mcRes[f.id])) {
@@ -2201,7 +2217,7 @@ const DGRManager = {
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 15, 25);
     doc.text('Modelo: Beta-PERT (minima, media, maxima); VT = VE + VX; VFR = VT x (1 - AR); IIS = VFR + RF, sem normalizacao para 100%; Limite Critico = P95.', 15, 31);
-    doc.text('Formula do IGR: IGR = media[ min(1, IIS_i) ]; IIS_i = VFR_i + RF_i. O truncamento vale apenas para o indice global.', 15, 36);
+    doc.text('Formula do IGR: IGR = Σ IIS_i / N; IIS_i = VFR_i + RF_i. Sem normalizacao oculta.', 15, 36);
     doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text(`IGR do Sistema: ${this.pct(d.igr)} (${igrInfo.lbl})`, 15, 42);
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(doc.splitTextToSize(this.autoInterpretationText(), 260), 15, 49);
     let y = 66;
@@ -2215,15 +2231,15 @@ const DGRManager = {
     y += 3; doc.line(15,y,285,y); y += 5; doc.setFont('helvetica','normal');
     sortedP95.forEach((x,i) => { if (y > 188) { doc.addPage(); y = 18; } const r = x.r; doc.text(`${i+1}. ${x.fn.name}`.slice(0,56), 15, y); doc.text(this.pct(r.mean), 108, y); doc.text(this.pct(r.p90), 136, y); doc.text(this.pct(r.p95), 160, y); doc.text(this.pct(x.rf), 184, y); doc.text(this.pct(r.p99), 207, y); doc.text(this.pct(r.probCrit), 232, y); doc.text(this.pct(x.iis), 262, y); y += 6; });
     doc.addPage(); y = 18; doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text('Diagnóstico Automático da Rede FRAM', 15, y); y += 8; doc.setFont('helvetica','normal'); doc.setFontSize(9);
-    [`Maior IIS: ${d.maiorIIS?.fn.name || '-'} (${d.maiorIIS ? this.pct(d.maiorIIS.iis) : '-'})`, `Maior RF recebido: ${d.maiorRF?.fn.name || '-'} (${d.maiorRF ? this.pct(d.maiorRF.rf) : '-'})`, `Maior P95: ${d.maiorP95?.fn.name || '-'} (${d.maiorP95 ? this.pct(d.maiorP95.vfr) : '-'})`, `Maior emissor de variabilidade: ${d.emissor.name} (${this.pct(d.emissor.value)})`, `Maior receptor de variabilidade: ${d.receptor.name} (${this.pct(d.receptor.value)})`].forEach(line => { doc.text(line, 15, y); y += 6; });
+    [`Maior IIS: ${d.maiorIIS?.fn.name || '-'} (${d.maiorIIS ? this.pct(d.maiorIIS.iis) : '-'})`, `Maior RF recebido: ${d.maiorRF?.fn.name || '-'} (${d.maiorRF ? this.pct(d.maiorRF.rf) : '-'})`, `Maior P95: ${d.maiorP95?.fn.name || '-'} (${d.maiorP95 ? this.pct(d.maiorP95.vfr) : '-'})`, `Maior emissor de variabilidade: ${d.emissor.name} (${this.pct(d.emissor.value)})`, `Maior receptor de variabilidade: ${d.receptor.name} (${this.pct(d.receptor.value)})`, `Maior centralidade FRAM: ${d.maiorCentralidade?.fn.name || '-'} (${d.maiorCentralidade ? this.pct(d.maiorCentralidade.r.centrality || 0) : '-'})`].forEach(line => { doc.text(line, 15, y); y += 6; });
     y += 5; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Rotas críticas de ressonância', 15, y); y += 7; doc.setFont('helvetica','normal'); doc.setFontSize(9);
     const routes = this.findCriticalRoutes(3); if (!routes.length) { doc.text('Nenhuma rota crítica identificada.', 15, y); y += 6; }
     routes.forEach((r,i) => { const t = `Rota ${i+1}: ${r.names.join(' → ')} | Intensidade: ${this.pct(Math.min(1,r.score))}`; doc.text(doc.splitTextToSize(t, 260), 15, y); y += 8; });
     y += 4; if (y > 145) { doc.addPage(); y = 18; }
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('RF recebida e emitida por função', 15, y); y += 7; doc.setFontSize(8);
-    ['Função','RF Recebida','RF Emitida','VFR/P95','IIS = VFR + RF','Classe'].forEach((h,i)=> doc.text(h, [15,116,145,174,203,242][i], y));
+    ['Função','RF Direta','RF Indireta','RF Recebida','RF Emitida','IIS','Classe'].forEach((h,i)=> doc.text(h, [15,96,124,154,184,214,242][i], y));
     y += 3; doc.line(15,y,285,y); y += 5; doc.setFont('helvetica','normal');
-    sortedIIS.forEach(x => { if (y > 188) { doc.addPage(); y = 18; } doc.text(x.fn.name.slice(0,52), 15, y); doc.text(this.pct(x.rf), 116, y); doc.text(this.pct(x.r.emittedResonance || 0), 145, y); doc.text(this.pct(x.vfr), 174, y); doc.text(this.pct(x.iis), 203, y); this.pdfCritLabel(doc, 242, y, x.crit); y += 6; });
+    sortedIIS.forEach(x => { if (y > 188) { doc.addPage(); y = 18; } doc.text(x.fn.name.slice(0,38), 15, y); doc.text(this.pct(x.r.directResonance || 0), 96, y); doc.text(this.pct(x.r.indirectResonance || 0), 124, y); doc.text(this.pct(x.rf), 154, y); doc.text(this.pct(x.r.emittedResonance || 0), 184, y); doc.text(this.pct(x.iis), 214, y); this.pdfCritLabel(doc, 242, y, x.crit); y += 6; });
     y += 4; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Efeito dos Mecanismos de Resiliência (antes/depois)', 15, y); y += 7; doc.setFontSize(8);
     ['Função','Sem MR','Com MR','Redução'].forEach((h,i)=> doc.text(h, [15,150,180,210][i], y)); y += 3; doc.line(15,y,245,y); y += 5; doc.setFont('helvetica','normal');
     const effectsPDF = this.resilienceEffects();
@@ -2235,6 +2251,7 @@ const DGRManager = {
     doc.setFont('helvetica','normal'); doc.setFontSize(10);
     const principalRota = routes[0] ? routes[0].names.join(' → ') : '-';
     [
+      `IIS = VFR + RF; RF = propagação direta + indireta; IGR = Σ IIS_i / N`,
       `IGR do sistema: ${this.pct(d.igr)} (${igrInfo.lbl})`,
       `Maior IIS: ${d.maiorIIS?.fn.name || '-'} (${d.maiorIIS ? this.pct(d.maiorIIS.iis) : '-'})${d.maiorIIS?.saturation ? ' — Saturação Sistêmica' : ''}`,
       `Maior P95: ${d.maiorP95?.fn.name || '-'} (${d.maiorP95 ? this.pct(d.maiorP95.vfr) : '-'})`,
@@ -2269,6 +2286,28 @@ const DGRManager = {
         doc.setTextColor(0,0,0);
       });
     });
+
+    // Captura opcional da visualização real do mapa FRAM da tela (hexágonos, senoides, escudos e rotas).
+    if (window.html2canvas) {
+      const oldPage = DGRState.curPage;
+      try {
+        this.switchPage('fram');
+        await new Promise(res => setTimeout(res, 180));
+        const area = document.getElementById('fram-map-area');
+        if (area) {
+          doc.addPage();
+          doc.setFont('helvetica','bold'); doc.setFontSize(13);
+          doc.text('Mapa FRAM Completo — captura da interface', 15, 18);
+          const canvas = await html2canvas(area, {backgroundColor:'#ffffff', scale:2, useCORS:true});
+          const img = canvas.toDataURL('image/png', 1.0);
+          doc.addImage(img, 'PNG', 15, 25, pageW - 30, Math.min(pageH - 35, (pageW - 30) * canvas.height / canvas.width));
+        }
+      } catch(e) {
+        // fallback vetorial abaixo
+      } finally {
+        this.switchPage(oldPage || 'mc');
+      }
+    }
 
     this.drawFramMapPDF(doc, pageW, pageH);
     const charts = [{ id: 'ch-vfr', title: 'VFR por Função (P95 — Limite Crítico)' },{ id: 'ch-hist', title: 'Histograma da Distribuição Agregada' },{ id: 'ch-heat', title: 'Propagação da Variabilidade na Rede FRAM' },{ id: 'ch-iis', title: 'IIS = VFR + RF (sem normalização)' }];
