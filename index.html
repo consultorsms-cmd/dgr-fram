@@ -616,6 +616,7 @@ const DGRHistory = {
 // ══════════════════════════════════════════
 const DGRManager = {
   init() {
+    this.removeLegacyResonanceUI();
     this.loadData();
     DGRHistory.push();
     window.addEventListener('resize', () => { if(DGRState.curPage === 'mc') this.renderCharts(); });
@@ -652,6 +653,23 @@ const DGRManager = {
       this.renderCharts(hasRes);
       this.renderMCPanel(hasRes);
     }
+  },
+
+
+  removeLegacyResonanceUI() {
+    // Remove qualquer bloco antigo de cadastro manual de cenário de ressonância que tenha ficado em cache.
+    ['res-src','res-title','res-impact','res-list-target','edit-res-id'].forEach(id => {
+      const el = document.getElementById(id);
+      const card = el ? el.closest('.form-card,.dash-section') : null;
+      if (card) card.remove();
+    });
+    document.querySelectorAll('h3').forEach(h => {
+      if ((h.textContent || '').toLowerCase().includes('registrar cenário de ressonância') ||
+          (h.textContent || '').toLowerCase().includes('cenários de ressonância')) {
+        const card = h.closest('.form-card,.dash-section');
+        if (card) card.remove();
+      }
+    });
   },
 
   uid() { return 'id' + Math.random().toString(36).slice(2,8) + Date.now().toString(36); },
@@ -1510,30 +1528,81 @@ const DGRManager = {
         const bh = (v / maxB) * (cv.height - 20); g.fillStyle = this.vColor(bi / 10); g.fillRect(bi * bw, cv.height - bh - 5, bw - 1, bh);
       });
     }
-    // CH-PROPAGATION: visualização explícita da propagação da variabilidade na rede FRAM
+    // CH-HEATMAP: mapa de calor da propagação da variabilidade na rede FRAM
     {
       const cv = document.getElementById('ch-heat'); const g = cv.getContext('2d');
       cv.width = cv.parentElement.offsetWidth - 40; g.clearRect(0,0,cv.width,cv.height);
-      const margin = 26, left = 128, top = 26;
-      const rows = sorted.slice(0, Math.max(1, Math.min(sorted.length, 10)));
-      const rowH = Math.max(14, (cv.height - 52) / Math.max(1, rows.length));
-      g.fillStyle = '#1a1a2e'; g.font = 'bold 10px sans-serif';
-      g.fillText('Função receptora', 10, 14);
-      g.fillText('Ressonância recebida pela rede', left, 14);
-      rows.forEach((fn, i) => {
-        const r = DGRState.mcRes[fn.id]; const y = top + i * rowH;
-        const w = (r.incomingResonanceNorm || 0) * (cv.width - left - 62);
-        g.fillStyle = '#1a1a2e'; g.font = '10px sans-serif'; g.textAlign = 'right';
-        g.fillText(fn.name.substring(0,18), left - 8, y + 10);
-        g.textAlign = 'left';
-        g.fillStyle = '#f0f0f5'; g.fillRect(left, y, cv.width-left-62, 12);
-        g.fillStyle = this.vColor(r.functionalResonance || r.p95); g.fillRect(left, y, Math.max(2,w), 12);
-        g.fillStyle = '#1a1a2e'; g.font = 'bold 9px sans-serif';
-        g.fillText(this.pct(r.functionalResonance || r.p95), cv.width - 54, y + 10);
+      const nodes = sorted.slice(0, Math.max(1, Math.min(sorted.length, 8)));
+      const n = nodes.length;
+      const left = 118, top = 34, right = 14, bottom = 34;
+      const gridW = Math.max(80, cv.width - left - right);
+      const gridH = Math.max(60, cv.height - top - bottom);
+      const cellW = gridW / n;
+      const cellH = gridH / n;
+
+      const propagation = Array.from({length:n}, () => Array(n).fill(0));
+      let maxVal = 0;
+      DGRState.coups.forEach(c => {
+        const si = nodes.findIndex(f => f.id === c.source_function_id);
+        const ti = nodes.findIndex(f => f.id === c.target_function_id);
+        if (si < 0 || ti < 0) return;
+        const srcRes = DGRState.mcRes[c.source_function_id] || {};
+        const val = (srcRes.functionalResonance || srcRes.p95 || 0) * this.couplingWeight(c);
+        propagation[ti][si] += val;
+        maxVal = Math.max(maxVal, propagation[ti][si]);
       });
+      maxVal = Math.max(maxVal, 0.0001);
+
+      g.fillStyle = '#1a1a2e'; g.font = 'bold 10px sans-serif'; g.textAlign = 'left';
+      g.fillText('Destino \\ Origem', 10, 16);
+      g.fillText('Mapa de calor da propagação', left, 16);
+
+      // Cabeçalhos das colunas: origens
+      nodes.forEach((fn, j) => {
+        const x = left + j * cellW + cellW/2;
+        g.save();
+        g.translate(x, top - 6);
+        g.rotate(-0.55);
+        g.fillStyle = '#4c5570'; g.font = '9px sans-serif'; g.textAlign = 'left';
+        g.fillText(fn.name.substring(0, 12), 0, 0);
+        g.restore();
+      });
+
+      // Linhas e células
+      nodes.forEach((fn, i) => {
+        const y = top + i * cellH;
+        g.fillStyle = '#4c5570'; g.font = '9px sans-serif'; g.textAlign = 'right';
+        g.fillText(fn.name.substring(0, 18), left - 8, y + cellH/2 + 3);
+        nodes.forEach((_, j) => {
+          const x = left + j * cellW;
+          const val = propagation[i][j];
+          const norm = val / maxVal;
+          const alpha = DGRState.coups.length ? (0.10 + norm * 0.86) : 0.06;
+          const color = val >= 0.70 ? `rgba(192,57,43,${alpha})` : val >= 0.50 ? `rgba(133,79,11,${alpha})` : val >= 0.30 ? `rgba(71,120,232,${alpha})` : `rgba(15,110,86,${alpha})`;
+          g.fillStyle = val > 0 ? color : '#f5f6fa';
+          g.fillRect(x, y, Math.max(1, cellW - 2), Math.max(1, cellH - 2));
+          if (cellW > 38 && cellH > 18 && val > 0) {
+            g.fillStyle = norm > 0.55 ? '#fff' : '#1a1a2e';
+            g.font = 'bold 8px sans-serif'; g.textAlign = 'center';
+            g.fillText(Math.round(val*100), x + cellW/2, y + cellH/2 + 3);
+          }
+        });
+      });
+
+      // Legenda
+      const lx = left, ly = cv.height - 18, lw = Math.min(180, gridW * 0.45);
+      const grad = g.createLinearGradient(lx, ly, lx + lw, ly);
+      grad.addColorStop(0, 'rgba(15,110,86,.25)');
+      grad.addColorStop(.5, 'rgba(133,79,11,.65)');
+      grad.addColorStop(1, 'rgba(192,57,43,.95)');
+      g.fillStyle = grad; g.fillRect(lx, ly, lw, 8);
+      g.fillStyle = '#6b7280'; g.font = '9px sans-serif'; g.textAlign = 'left';
+      g.fillText('baixa', lx, ly + 20);
+      g.textAlign = 'right'; g.fillText('alta', lx + lw, ly + 20);
+
       if (!DGRState.coups.length) {
         g.fillStyle = '#8b91a5'; g.textAlign = 'center'; g.font = '12px sans-serif';
-        g.fillText('Cadastre conexões para visualizar a propagação em rede.', cv.width/2, cv.height/2);
+        g.fillText('Cadastre conexões para ativar o mapa de calor da propagação.', cv.width/2, cv.height/2);
       }
     }
     // CH-IIS
