@@ -702,6 +702,7 @@ const DGRManager = {
   uid() { return 'id' + Math.random().toString(36).slice(2,8) + Date.now().toString(36); },
   esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); },
   pct(v, d = 1) { return (v * 100).toFixed(d) + '%'; },
+  hexToRgb(hex) { const m = String(hex || '').match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i); return m ? {r:parseInt(m[1],16),g:parseInt(m[2],16),b:parseInt(m[3],16)} : null; },
   vColor(v) { return v >= 0.70 ? '#c0392b' : v >= 0.50 ? '#f59e0b' : v >= 0.30 ? '#eab308' : '#0f6e56'; },
   critInfo(v) { return v >= 0.70 ? {cls:'cb-c', lbl:'🔴 Crítica'} : v >= 0.50 ? {cls:'cb-a', lbl:'🟠 Alta'} : v >= 0.30 ? {cls:'cb-m', lbl:'🟡 Moderada'} : {cls:'cb-b', lbl:'🟢 Baixa'}; },
 
@@ -901,8 +902,8 @@ const DGRManager = {
         centrality: centrality[id] / maxCent,
         incomingResonance: incoming[id],
         incomingResonanceNorm: incoming[id] / Math.max(1e-6, ...Object.values(incoming)),
-        emittedResonance: emitted[id],
-        emittedResonanceNorm: emitted[id] / Math.max(1e-6, ...Object.values(emitted)),
+        emittedResonance: emitted[id] * 0.75,
+        emittedResonanceNorm: (emitted[id] * 0.75) / Math.max(1e-6, ...Object.values(emitted).map(v => v * 0.75)),
         functionalResonance: rf[id],
         rawIIS,
         iis: rawIIS,
@@ -910,6 +911,33 @@ const DGRManager = {
         state: rawIIS > 1 ? 'Saturação Sistêmica' : 'Normal'
       };
     });
+  },
+
+  computePropagationMatrix(nodes = DGRState.fns, maxDepth = 5) {
+    // Matriz destino x origem com propagação direta e indireta em cascata.
+    const ids = nodes.map(f => f.id);
+    const idx = Object.fromEntries(ids.map((id, i) => [id, i]));
+    const n = ids.length;
+    const matrix = Array.from({length:n}, () => Array(n).fill(0));
+    ids.forEach(originId => {
+      let signal = {}; ids.forEach(id => signal[id] = 0);
+      const originRes = DGRState.mcRes[originId] || {};
+      signal[originId] = Math.max(0, +(originRes.p95 || originRes.mean || 0));
+      for (let depth = 1; depth <= maxDepth; depth++) {
+        const next = {}; ids.forEach(id => next[id] = 0);
+        DGRState.coups.forEach(c => {
+          if (!(c.source_function_id in idx) || !(c.target_function_id in idx)) return;
+          const out = DGRState.coups.filter(x => x.source_function_id === c.source_function_id).length || 1;
+          const transfer = (signal[c.source_function_id] || 0) * this.couplingWeight(c) * Math.pow(0.68, depth) / Math.sqrt(out);
+          if (transfer <= 0) return;
+          next[c.target_function_id] += transfer;
+          matrix[idx[c.target_function_id]][idx[originId]] += transfer / depth;
+        });
+        signal = next;
+        if (Object.values(signal).reduce((a,b)=>a+b,0) < 1e-5) break;
+      }
+    });
+    return matrix;
   },
 
   getPortPoint(fn, aspect = 'O') {
@@ -1652,14 +1680,10 @@ const DGRManager = {
     const byRF = [...rows].sort((a,b) => b.rf - a.rf);
     const outScore = {};
     const inScore = {};
-    DGRState.fns.forEach(f => { outScore[f.id]=0; inScore[f.id]=0; });
-    DGRState.coups.forEach(c => {
-      const src = DGRState.mcRes[c.source_function_id] || {};
-      const srcRes = DGRState.mcRes[c.source_function_id] || {};
-      const tgtRes = DGRState.mcRes[c.target_function_id] || {};
-      const val = ((srcRes.p95 || 0) + (srcRes.functionalResonance || 0)) * this.couplingWeight(c);
-      outScore[c.source_function_id] = (outScore[c.source_function_id] || 0) + val;
-      inScore[c.target_function_id] = (inScore[c.target_function_id] || 0) + val + (tgtRes.functionalResonance || 0) * 0.25;
+    DGRState.fns.forEach(f => {
+      const r = DGRState.mcRes[f.id] || {};
+      outScore[f.id] = +(r.emittedResonance || 0);
+      inScore[f.id] = +(r.functionalResonance || 0);
     });
     const fnName = id => (DGRState.fns.find(f => f.id === id) || {}).name || '-';
     const maxObj = obj => Object.entries(obj).sort((a,b)=>b[1]-a[1])[0] || [null,0];
@@ -1718,7 +1742,7 @@ const DGRManager = {
     const crit = d.maiorIIS;
     const igrInfo = this.igrClass(d.igr);
     const rfTxt = crit ? ` A função ${crit.fn.name} apresenta o maior IIS (${this.pct(crit.iis)}), composto por VFR/P95 de ${this.pct(crit.vfr)} e RF de ${this.pct(crit.rf)}.` : '';
-    const satTxt = crit && crit.saturation ? ' O maior IIS foi normalizado para 100% e indica Saturação Sistêmica.' : '';
+    const satTxt = crit && crit.saturation ? ' O IIS ultrapassa 100% sem normalização e indica Saturação Sistêmica.' : '';
     return `O Índice Global de Resiliência/Risco do sistema (IGR) é ${this.pct(d.igr)}, classificado como ${igrInfo.lbl}.${rfTxt}${satTxt} O principal receptor de variabilidade é ${d.receptor.name} (${this.pct(d.receptor.value)}), enquanto o principal emissor é ${d.emissor.name} (${this.pct(d.emissor.value)}). Priorize intervenções nas funções com maior IIS e nas rotas críticas de propagação.`;
   },
 
@@ -1850,18 +1874,8 @@ const DGRManager = {
       const cellW = gridW / n;
       const cellH = gridH / n;
 
-      const propagation = Array.from({length:n}, () => Array(n).fill(0));
-      let maxVal = 0;
-      DGRState.coups.forEach(c => {
-        const si = nodes.findIndex(f => f.id === c.source_function_id);
-        const ti = nodes.findIndex(f => f.id === c.target_function_id);
-        if (si < 0 || ti < 0) return;
-        const srcRes = DGRState.mcRes[c.source_function_id] || {};
-        const val = (srcRes.functionalResonance || srcRes.p95 || 0) * this.couplingWeight(c);
-        propagation[ti][si] += val;
-        maxVal = Math.max(maxVal, propagation[ti][si]);
-      });
-      maxVal = Math.max(maxVal, 0.0001);
+      const propagation = this.computePropagationMatrix(nodes, 5);
+      let maxVal = Math.max(0.0001, ...propagation.flat());
 
       g.fillStyle = '#1a1a2e'; g.font = 'bold 10px sans-serif'; g.textAlign = 'left';
       g.fillText('Destino \\ Origem', 10, 16);
@@ -2046,7 +2060,7 @@ const DGRManager = {
     doc.setFont('helvetica','bold'); doc.setFontSize(13);
     doc.text('Mapa FRAM Completo', 15, 18);
     doc.setFont('helvetica','normal'); doc.setFontSize(8);
-    doc.text('Vermelho: função com RE/RX; Verde: função com MR; Preto: função comum. Setas indicam acoplamentos estruturais.', 15, 24);
+    doc.text('Cores por classe IIS: 🟢 Baixa, 🟡 Moderada, 🟠 Alta, 🔴 Crítica. Senoide = RE/RX; escudo = MR. Rotas críticas em vermelho.', 15, 24);
     if (!DGRState.fns.length) { doc.text('Nenhuma função cadastrada.', 15, 36); return; }
     const xs = DGRState.fns.map(f => f.x || 0), ys = DGRState.fns.map(f => f.y || 0);
     const minX = Math.min(...xs), minY = Math.min(...ys), maxX = Math.max(...xs) + 125, maxY = Math.max(...ys) + 112;
@@ -2070,17 +2084,57 @@ const DGRManager = {
       doc.text(`${Math.round(intensity*100)}%`, (a.x+b.x)/2, (a.y+b.y)/2 - 1, {align:'center'});
       doc.setTextColor(0,0,0);
     });
+    // Sobreposição das rotas críticas diretamente no mapa exportado.
+    const routeEdgesPDF = new Map();
+    if (DGRState.fns.some(f => DGRState.mcRes[f.id])) {
+      this.findCriticalRoutes(3).forEach(r => {
+        for (let i = 0; i < r.path.length - 1; i++) {
+          const key = r.path[i] + '>' + r.path[i+1];
+          routeEdgesPDF.set(key, Math.max(routeEdgesPDF.get(key) || 0, Math.min(1.5, r.score)));
+        }
+      });
+    }
+    DGRState.coups.forEach(c => {
+      const key = c.source_function_id + '>' + c.target_function_id;
+      if (!routeEdgesPDF.has(key)) return;
+      const s = DGRState.fns.find(f => f.id === c.source_function_id), t = DGRState.fns.find(f => f.id === c.target_function_id);
+      if (!s || !t) return;
+      const a = center(s), b = center(t);
+      doc.setDrawColor(204,0,0); doc.setLineWidth(1.4);
+      doc.line(a.x, a.y, b.x, b.y);
+      const ang = Math.atan2(b.y-a.y, b.x-a.x), ah = 4.0;
+      doc.line(b.x, b.y, b.x - ah*Math.cos(ang-.45), b.y - ah*Math.sin(ang-.45));
+      doc.line(b.x, b.y, b.x - ah*Math.cos(ang+.45), b.y - ah*Math.sin(ang+.45));
+      doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(204,0,0);
+      doc.text(`rota crítica ${Math.round(routeEdgesPDF.get(key)*100)}%`, (a.x+b.x)/2, (a.y+b.y)/2 + 3, {align:'center'});
+      doc.setTextColor(0,0,0);
+    });
     DGRState.fns.forEach(f => {
       const x = mapX(f.x || 0), y = mapY(f.y || 0), w = 118 * scale, h = 104 * scale;
       const pts = [[x+w*.245,y+h*.05],[x+w*.755,y+h*.05],[x+w*.958,y+h*.5],[x+w*.755,y+h*.95],[x+w*.245,y+h*.95],[x+w*.042,y+h*.5]];
       const col = this.nodeColor(f);
-      if (col === '#cc0000') doc.setDrawColor(204,0,0); else if (col === '#138a2e') doc.setDrawColor(19,138,46); else doc.setDrawColor(17,24,39);
+      const rgb = this.hexToRgb ? this.hexToRgb(col) : null;
+      if (rgb) doc.setDrawColor(rgb.r, rgb.g, rgb.b); else doc.setDrawColor(17,24,39);
       doc.setFillColor(255,255,255); doc.setLineWidth(1.2);
       doc.lines(pts.slice(1).map((p,i)=>[p[0]-pts[i][0],p[1]-pts[i][1]]).concat([[pts[0][0]-pts[5][0], pts[0][1]-pts[5][1]]]), pts[0][0], pts[0][1], [1,1], 'FD');
       doc.setFont('helvetica','bold'); doc.setFontSize(Math.max(5, 8*scale)); doc.setTextColor(20,20,35);
       const label = doc.splitTextToSize(f.name, Math.max(18, w-8)); doc.text(label.slice(0,2), x+w/2, y+h/2-2, {align:'center'});
       doc.setFontSize(Math.max(5, 7*scale));
-      if (this.hasFunctionVariability(f.id)) doc.text('~', x+w/2, y+h*.72, {align:'center'}); else if (this.hasFunctionMR(f.id)) doc.text('MR', x+w/2, y+h*.72, {align:'center'});
+      if (this.hasFunctionVariability(f.id)) {
+        doc.setDrawColor(224,0,0); doc.setLineWidth(0.8);
+        const sx = x + w*.25, sy = y + h*.72, sw = w*.50;
+        let px = sx, py = sy;
+        for (let k=1;k<=24;k++) {
+          const nx = sx + sw*k/24;
+          const ny = sy + Math.sin(k/24*Math.PI*4) * h*.055;
+          doc.line(px, py, nx, ny); px = nx; py = ny;
+        }
+      }
+      if (this.hasFunctionMR(f.id)) {
+        doc.setFont('helvetica','bold'); doc.setTextColor(19,138,46);
+        doc.text('🛡', x+w*.72, y+h*.75, {align:'center'});
+        doc.setTextColor(0,0,0);
+      }
     });
     doc.setTextColor(0,0,0);
   },
