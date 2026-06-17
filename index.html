@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>DGR-FRAM Modeler & Simulator - v10.4 GRAFICOS VISIVEIS E PDF CORRIGIDO</title>
+<title>DGR-FRAM Modeler & Simulator - v10.7 PDF COMPLETO SEM VARIABILIDADES</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -184,7 +184,7 @@ textarea.fi{resize:vertical;min-height:55px}
   <div id="topbar">
     <div class="logo-area">
       <div class="title">DGR-FRAM</div>
-      <div class="sub">Modeler & Simulator • v10.5 • todos os gráficos visíveis • Σ • RF Total • Saturação</div>
+      <div class="sub">Modeler & Simulator • v10.7 • PDF completo • sem painel de variabilidades • Σ • RF Total</div>
     </div>
     <div class="actions">
       <button class="gbtn" onclick="DGRManager.saveToLocalStorage()">💾 Salvar</button>
@@ -2051,14 +2051,64 @@ const DGRManager = {
       g.fillText('Células = influência acumulada direta + indireta em cascata.', 34, height-28);
       return canvas;
     }
+    if (kind === 'donut') {
+      title('Distribuição de Criticidade Estrutural');
+      const vals = rows.map(x => x.vfr || 0);
+      const cats = [
+        { label:'Crítica (≥70%)', color:'#c0392b', n: vals.filter(v => v >= 0.70).length },
+        { label:'Alta (50–70%)', color:'#f59e0b', n: vals.filter(v => v >= 0.50 && v < 0.70).length },
+        { label:'Moderada (30–50%)', color:'#eab308', n: vals.filter(v => v >= 0.30 && v < 0.50).length },
+        { label:'Baixa (<30%)', color:'#0f6e56', n: vals.filter(v => v < 0.30).length }
+      ];
+      const total = Math.max(1, vals.length);
+      const cx = width * 0.33, cy = height * 0.54, R = Math.min(width, height) * 0.30, r = R * 0.53;
+      let a = -Math.PI / 2;
+      cats.forEach(c => {
+        if (c.n <= 0) return;
+        const sweep = (c.n / total) * Math.PI * 2;
+        const a2 = a + sweep;
+        const x1 = cx + R * Math.cos(a),  y1 = cy + R * Math.sin(a);
+        const x2 = cx + R * Math.cos(a2), y2 = cy + R * Math.sin(a2);
+        const x3 = cx + r * Math.cos(a2), y3 = cy + r * Math.sin(a2);
+        const x4 = cx + r * Math.cos(a),  y4 = cy + r * Math.sin(a);
+        const large = sweep > Math.PI ? 1 : 0;
+        g.beginPath();
+        g.moveTo(x1, y1);
+        g.arc(cx, cy, R, a, a2, false);
+        g.lineTo(x3, y3);
+        g.arc(cx, cy, r, a2, a, true);
+        g.closePath();
+        g.fillStyle = c.color;
+        g.fill();
+        a = a2;
+      });
+      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(cx, cy, r*0.92, 0, Math.PI*2); g.fill();
+      g.textAlign = 'center'; g.fillStyle = '#1a1a2e'; g.font = '800 64px Segoe UI, Arial, sans-serif'; g.fillText(String(total), cx, cy - 4);
+      g.font = '24px Segoe UI, Arial, sans-serif'; g.fillStyle = '#6b7280'; g.fillText('funções', cx, cy + 38);
+      const lx = width * 0.62, ly = height * 0.30;
+      cats.forEach((c,i) => {
+        const y = ly + i * 72;
+        const pct = Math.round((c.n/total)*100);
+        g.fillStyle = c.color; g.fillRect(lx, y - 24, 34, 34);
+        g.fillStyle = '#1a1a2e'; g.textAlign = 'left'; g.font = '700 28px Segoe UI, Arial, sans-serif';
+        g.fillText(`${c.label}: ${c.n} (${pct}%)`, lx + 50, y + 3);
+      });
+      g.fillStyle = '#6b7280'; g.font = '20px Segoe UI, Arial, sans-serif'; g.textAlign = 'left';
+      g.fillText('Classificação conforme P95/VFR das funções simuladas.', 34, height - 30);
+      return canvas;
+    }
     if (kind === 'hist') {
       title('Histograma da Distribuição Agregada');
       const bins = Array(20).fill(0); rows.forEach(x => (x.r.hist || []).forEach((v,i)=>{ if(i<20) bins[i]+=v; }));
+      if (bins.reduce((a,b)=>a+b,0) <= 0) {
+        rows.forEach(x => { const bi = Math.max(0, Math.min(19, Math.floor((x.vfr || 0) * 19))); bins[bi] += 1; });
+      }
       const maxB = Math.max(1, ...bins); const left=60, top=90, bottom=70, gap=6, barW=(width-left-40)/bins.length;
       bins.forEach((v,i)=>{
         const bh = (v/maxB)*(height-top-bottom); const x=left+i*barW, y=height-bottom-bh;
         g.fillStyle = this.vColor(i/19); g.fillRect(x, y, Math.max(4, barW-gap), bh);
       });
+      g.strokeStyle = '#d9dde8'; g.lineWidth = 2; g.beginPath(); g.moveTo(left, height-bottom); g.lineTo(width-40, height-bottom); g.stroke();
       g.fillStyle = '#6b7280'; g.font = '18px Segoe UI, Arial, sans-serif';
       g.fillText('Baixa', left, height-28); g.fillText('Crítica', width-120, height-28);
       return canvas;
@@ -2398,6 +2448,7 @@ const DGRManager = {
     await new Promise(res => setTimeout(res, 80));
     const charts = [
       { kind: 'vfr', title: 'VFR por Função (P95 — Limite Crítico)' },
+      { kind: 'donut', title: 'Distribuição de Criticidade Estrutural' },
       { kind: 'hist', title: 'Histograma da Distribuição Agregada' },
       { kind: 'heat', title: 'Propagação da Variabilidade na Rede FRAM' },
       { kind: 'iis', title: 'IIS = VFR + RF (sem normalização)' }
@@ -2415,7 +2466,7 @@ const DGRManager = {
     });
     if (oldPageForCharts && oldPageForCharts !== 'mc') this.switchPage(oldPageForCharts);
 
-    doc.save('dgr-fram-analytics-corrigido.pdf');
+    doc.save('dgr-fram-analytics-v10-7-pdf-completo.pdf');
   }
 };
 
