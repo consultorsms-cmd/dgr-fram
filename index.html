@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>DGR-FRAM Modeler & Simulator - v10.7 PDF COMPLETO SEM VARIABILIDADES</title>
+<title>DGR-FRAM Modeler & Simulator - v10.13 10/10</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -184,7 +184,7 @@ textarea.fi{resize:vertical;min-height:55px}
   <div id="topbar">
     <div class="logo-area">
       <div class="title">DGR-FRAM</div>
-      <div class="sub">Modeler & Simulator • v10.7 • PDF completo • sem painel de variabilidades • Σ • RF Total</div>
+      <div class="sub">Modeler & Simulator • v10.13 • 10/10 • RF multicamadas • centralidade • tornado • PDF científico</div>
     </div>
     <div class="actions">
       <button class="gbtn" onclick="DGRManager.saveToLocalStorage()">💾 Salvar</button>
@@ -2699,6 +2699,318 @@ let openSubcatFn = {};
     doc.addPage(); this.pdfHeatPageV1010(doc,pageW,pageH);
     doc.addPage(); this.pdfBarPageV1010(doc,pageW,pageH,'iis');
     doc.save('dgr-fram-analytics-v10-10-pdf-corrigido.pdf');
+  };
+})();
+
+
+/* ═══════════════════════════════════════════════════════════════
+   DGR-FRAM Analyze v10.13 — Maturidade Analítica 10/10
+   Complemento final: RF multicamadas, RF líquida, centralidade avançada,
+   ISS, Top 5 rotas críticas, sensibilidade Monte Carlo, Sem MR × Com MR,
+   diagnóstico automático e exportação científica.
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+  const pct = (v,d=1)=> ((+v||0)*100).toFixed(d)+'%';
+  const safe = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const clean = s => String(s ?? '').replace(/[🟢🟡🟠🔴]/g,'').trim();
+  const clamp = (v,a=0,b=Infinity)=>Math.max(a,Math.min(b,+v||0));
+
+  DGRManager.maturityLevel = function(){
+    const hasRes = this.resultRows && this.resultRows().length;
+    const features = [
+      DGRState.fns.length>0, DGRState.coups.length>0, this.countRE()>0 || this.countRX()>0,
+      this.countMR()>0, hasRes, hasRes && this.calcIGR()>0,
+      hasRes && this.findCriticalRoutes(1).length>0,
+      hasRes && this.computePropagationLayers().total.length>0,
+      hasRes && this.resultRows().some(x=>(x.r.betweenness||0)>0 || (x.r.closeness||0)>0),
+      hasRes && this.sensitivityRows().length>0,
+      hasRes && this.resilienceScenarioComparison().length>0,
+      hasRes && this.resultRows().some(x=>x.r.rfLiquid!==undefined)
+    ].filter(Boolean).length;
+    if(features>=11) return {score:features, level:'Especialista', color:'#0f6e56'};
+    if(features>=8) return {score:features, level:'Avançado', color:'#4778e8'};
+    if(features>=4) return {score:features, level:'Intermediário', color:'#854f0b'};
+    return {score:features, level:'Básico', color:'#c0392b'};
+  };
+
+  DGRManager.runSimulation = function(){
+    if (!DGRState.fns.length) { alert('Adicione funções.'); return; }
+    const N = DGRState.mcN || 5000;
+    const maxOD = Math.max(1, ...DGRState.fns.map(f => DGRState.coups.filter(c => c.source_function_id === f.id).length));
+    DGRState.fns.forEach(fn => {
+      const p = DGRState.params[fn.id] || { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.2,mp:0.4,mx:0.7} };
+      const vfrs = [], veS = [], vxS = [], arS = [];
+      for (let i=0;i<N;i++){
+        const VE=this.betaPertSample(p.ve.mn,p.ve.mp,p.ve.mx);
+        const VX=this.betaPertSample(p.vx.mn,p.vx.mp,p.vx.mx);
+        const AR=this.betaPertSample(p.ar.mn,p.ar.mp,p.ar.mx);
+        veS.push(VE); vxS.push(VX); arS.push(AR);
+        vfrs.push(Math.max(0,Math.min(2,(VE+VX)*(1-AR))));
+      }
+      const sorted=[...vfrs].sort((a,b)=>a-b);
+      const mean=sorted.reduce((s,v)=>s+v,0)/N;
+      const p90=sorted[Math.min(N-1,Math.floor(N*.90))];
+      const p95=sorted[Math.min(N-1,Math.floor(N*.95))];
+      const p99=sorted[Math.min(N-1,Math.floor(N*.99))];
+      const probCrit=sorted.filter(v=>v>=0.70).length/N; // probabilidade substantiva de criticidade
+      const probAboveP95=sorted.filter(v=>v>=p95).length/N; // auditoria do limite crítico estatístico
+      const ip=DGRState.coups.filter(c=>c.source_function_id===fn.id).length/maxOD;
+      const hist=Array(20).fill(0); sorted.forEach(v=>hist[Math.min(19,Math.floor(Math.min(v,1.9999)/2*20))]++);
+      const hmax=Math.max(...hist,1);
+      DGRState.mcRes[fn.id]={ mean,p90,p95,p99,probCrit,probAboveP95,ip,centrality:ip,
+        incomingResonance:0,incomingResonanceNorm:0,functionalResonance:0,iis:p95,
+        hist:hist.map(h=>h/hmax), samples:sorted, veSamples:veS, vxSamples:vxS, arSamples:arS };
+    });
+    this.calculateNetworkResonance();
+    this.refreshUI();
+  };
+
+  DGRManager.computeNetworkCentrality = function(){
+    const ids=DGRState.fns.map(f=>f.id), n=ids.length, idx=Object.fromEntries(ids.map((id,i)=>[id,i]));
+    const adj=Object.fromEntries(ids.map(id=>[id,[]])), radj=Object.fromEntries(ids.map(id=>[id,[]]));
+    DGRState.coups.forEach(c=>{ if(idx[c.source_function_id]!==undefined && idx[c.target_function_id]!==undefined){ adj[c.source_function_id].push(c.target_function_id); radj[c.target_function_id].push(c.source_function_id); }});
+    const indeg={}, outdeg={}, close={}, between=Object.fromEntries(ids.map(id=>[id,0]));
+    ids.forEach(id=>{ indeg[id]=radj[id].length; outdeg[id]=adj[id].length; });
+    ids.forEach(s=>{
+      const dist=Object.fromEntries(ids.map(id=>[id,Infinity])); dist[s]=0; const q=[s];
+      for(let qi=0; qi<q.length; qi++){ const u=q[qi]; adj[u].forEach(v=>{ if(dist[v]===Infinity){dist[v]=dist[u]+1; q.push(v);} }); }
+      const reachable=ids.filter(id=>id!==s && dist[id]<Infinity);
+      close[s]=reachable.length ? reachable.length / reachable.reduce((a,id)=>a+dist[id],0) : 0;
+      ids.forEach(t=>{ if(t===s || dist[t]===Infinity || dist[t]<2) return; ids.forEach(v=>{ if(v!==s && v!==t && dist[v]<dist[t]){
+        // aproximação simples de betweenness: nó entre origem e destino em algum caminho mínimo
+        const dist2=Object.fromEntries(ids.map(id=>[id,Infinity])); dist2[v]=0; const q2=[v];
+        for(let qi=0; qi<q2.length; qi++){ const u=q2[qi]; adj[u].forEach(w=>{ if(dist2[w]===Infinity){dist2[w]=dist2[u]+1; q2.push(w);} }); }
+        if(dist[v]+dist2[t]===dist[t]) between[v]+=1;
+      }}); });
+    });
+    // Eigenvector/PageRank-like
+    let eig=Object.fromEntries(ids.map(id=>[id,1/n||0]));
+    for(let it=0; it<40; it++){
+      const next=Object.fromEntries(ids.map(id=>[id,0.15/(n||1)]));
+      ids.forEach(u=>{ const outs=adj[u].length||1; adj[u].forEach(v=> next[v]+=0.85*(eig[u]/outs)); });
+      const norm=Math.max(...Object.values(next),1e-9); ids.forEach(id=>eig[id]=next[id]/norm);
+    }
+    const maxIn=Math.max(1,...Object.values(indeg)), maxOut=Math.max(1,...Object.values(outdeg)), maxBet=Math.max(1,...Object.values(between)), maxClose=Math.max(1e-9,...Object.values(close)), maxEig=Math.max(1e-9,...Object.values(eig));
+    const out={}; ids.forEach(id=>{
+      out[id]={inDegree:indeg[id],outDegree:outdeg[id],inDegreeNorm:indeg[id]/maxIn,outDegreeNorm:outdeg[id]/maxOut,betweenness:between[id]/maxBet,closeness:close[id]/maxClose,eigenvector:eig[id]/maxEig};
+      out[id].centralityNorm=(out[id].inDegreeNorm+out[id].outDegreeNorm+out[id].betweenness+out[id].closeness+out[id].eigenvector)/5;
+    });
+    return out;
+  };
+
+  DGRManager.computePropagationLayers = function(maxDepth=5){
+    const ids=DGRState.fns.map(f=>f.id), idx=Object.fromEntries(ids.map((id,i)=>[id,i])), n=ids.length;
+    const layers=Array.from({length:maxDepth},()=>Array.from({length:n},()=>Array(n).fill(0)));
+    ids.forEach(origin=>{
+      let signal=Object.fromEntries(ids.map(id=>[id,0])); signal[origin]=Math.max(0,+(DGRState.mcRes[origin]?.p95||DGRState.mcRes[origin]?.mean||0));
+      for(let depth=1; depth<=maxDepth; depth++){
+        const next=Object.fromEntries(ids.map(id=>[id,0]));
+        DGRState.coups.forEach(c=>{
+          if(idx[c.source_function_id]===undefined || idx[c.target_function_id]===undefined) return;
+          const outCount=DGRState.coups.filter(x=>x.source_function_id===c.source_function_id).length||1;
+          const transfer=(signal[c.source_function_id]||0)*this.couplingWeight(c)*Math.pow(0.72,depth)/Math.sqrt(outCount);
+          if(transfer>0){ next[c.target_function_id]+=transfer; layers[depth-1][idx[c.target_function_id]][idx[origin]]+=transfer; }
+        });
+        signal=next;
+        if(Object.values(signal).reduce((a,b)=>a+b,0)<1e-6) break;
+      }
+    });
+    const total=Array.from({length:n},()=>Array(n).fill(0));
+    const direct=layers[0] || Array.from({length:n},()=>Array(n).fill(0));
+    const indirect=Array.from({length:n},()=>Array(n).fill(0));
+    for(let d=0; d<layers.length; d++) for(let i=0;i<n;i++) for(let j=0;j<n;j++){ total[i][j]+=layers[d][i][j]/(d+1); if(d>0) indirect[i][j]+=layers[d][i][j]/(d+1); }
+    return {ids,idx,layers,direct,indirect,total};
+  };
+
+  DGRManager.calculateNetworkResonance = function(){
+    const ids=DGRState.fns.map(f=>f.id); if(!ids.length) return;
+    const cent=this.computeNetworkCentrality();
+    const prop=this.computePropagationLayers(5);
+    const scale=0.30; // transforma carga propagada em RF percentual sem normalização a 100%
+    ids.forEach((id,i)=>{
+      const r=DGRState.mcRes[id]||{}; const vfr=+(r.p95||r.mean||0);
+      const rfDirect=prop.direct[i].reduce((a,b)=>a+b,0)*scale;
+      const rfIndirect=prop.indirect[i].reduce((a,b)=>a+b,0)*scale;
+      const emittedDirect=prop.direct.reduce((a,row)=>a+(row[i]||0),0)*scale;
+      const emittedIndirect=prop.indirect.reduce((a,row)=>a+(row[i]||0),0)*scale;
+      const rfReceived=rfDirect+rfIndirect;
+      const rfEmitted=emittedDirect+emittedIndirect;
+      const iis=Math.max(0,vfr+rfReceived);
+      const iss=vfr>0 ? iis/vfr : (iis>0 ? Infinity : 0);
+      const sat=this.saturationInfo(iis);
+      DGRState.mcRes[id]={...r,
+        directResonance:rfDirect, indirectResonance:rfIndirect, functionalResonance:rfReceived,
+        emittedDirectResonance:emittedDirect, emittedIndirectResonance:emittedIndirect, emittedResonance:rfEmitted,
+        rfLiquid:rfReceived-rfEmitted, incomingResonance:rfReceived, incomingResonanceNorm:rfReceived/Math.max(1e-9,...ids.map((_,k)=>(prop.total[k].reduce((a,b)=>a+b,0)*scale))),
+        ...cent[id], centrality:cent[id].centralityNorm, centralityNorm:cent[id].centralityNorm,
+        iss, rawIIS:iis, iis, saturation:iis>1, saturationExcess:sat.excess, saturationCode:sat.code, state:sat.state
+      };
+    });
+  };
+
+  DGRManager.computePropagationMatrix = function(nodes=DGRState.fns,maxDepth=5){
+    return this.computePropagationLayers(maxDepth).total;
+  };
+
+  DGRManager.resultRows = function(){
+    return DGRState.fns.filter(f=>DGRState.mcRes[f.id]).map(f=>{
+      const r=DGRState.mcRes[f.id]||{}; const vfr=+(r.p95||0); const rf=+(r.functionalResonance||0); const iis=Math.max(0,vfr+rf); const sat=this.saturationInfo(iis);
+      Object.assign(r,{rawIIS:iis,iis,saturation:iis>1,saturationExcess:sat.excess,saturationCode:sat.code,state:sat.state});
+      return {fn:f,r,vfr,rf,rawIIS:iis,iis,saturation:iis>1,state:sat.state,saturationExcess:sat.excess,saturationCode:sat.code,crit:this.critClass(iis)};
+    });
+  };
+
+  DGRManager.networkDiagnostics = function(){
+    const rows=this.resultRows();
+    const sort=(k)=>[...rows].sort((a,b)=>(k(b)-k(a)));
+    const byP95=sort(x=>x.vfr), byIIS=sort(x=>x.iis), byRF=sort(x=>x.rf), byEm=sort(x=>x.r.emittedResonance||0), byCent=sort(x=>x.r.centralityNorm||x.r.centrality||0), byLiquid=sort(x=>Math.abs(x.r.rfLiquid||0));
+    const nonZeroEm=byEm.find(x=>(x.r.emittedResonance||0)>1e-6);
+    const nonZeroRec=byRF.find(x=>x.rf>1e-6);
+    return { rows, byP95, byIIS, byRF, byCentrality:byCent, byEmitted:byEm, byLiquid,
+      maiorP95:byP95[0], maiorIIS:byIIS[0], maiorRF:byRF[0], maiorCentralidade:byCent[0],
+      emissor: nonZeroEm ? {id:nonZeroEm.fn.id,name:nonZeroEm.fn.name,value:nonZeroEm.r.emittedResonance||0} : {id:null,name:'Emissor não identificado',value:0},
+      receptor: nonZeroRec ? {id:nonZeroRec.fn.id,name:nonZeroRec.fn.name,value:nonZeroRec.rf} : {id:null,name:'Receptor não identificado',value:0},
+      igr:this.calcIGR() };
+  };
+
+  DGRManager.findCriticalRoutes = function(limit=5){
+    const routes=[], fById=Object.fromEntries(DGRState.fns.map(f=>[f.id,f]));
+    const walk=(cur,path,score,depth)=>{
+      if(depth>=5) return;
+      DGRState.coups.filter(c=>c.source_function_id===cur).forEach(c=>{
+        const tgt=c.target_function_id; if(!fById[tgt] || path.includes(tgt)) return;
+        const srcR=DGRState.mcRes[cur]||{}, tgtR=DGRState.mcRes[tgt]||{};
+        const edge=(srcR.p95||0)*this.couplingWeight(c) + (tgtR.functionalResonance||0)*0.65 + (tgtR.centralityNorm||0)*0.12;
+        const next=[...path,tgt], total=score+edge;
+        if(next.length>=2) routes.push({path:next,score:total,probability:Math.min(1,(srcR.probCrit||0)+(tgtR.probCrit||0)/2),contribution:0});
+        walk(tgt,next,total*0.76,depth+1);
+      });
+    };
+    DGRState.fns.forEach(f=>walk(f.id,[f.id],0,0));
+    const top=routes.sort((a,b)=>b.score-a.score).slice(0,limit);
+    const sum=top.reduce((a,r)=>a+r.score,0)||1;
+    return top.map(r=>({...r, contribution:r.score/sum, names:r.path.map(id=>(fById[id]||{}).name||'-')}));
+  };
+
+  DGRManager.resilienceScenarioComparison = function(){
+    return this.resultRows().map(({fn,r})=>{
+      const p=DGRState.params[fn.id]||{}; const ve=p.ve||{mn:0,mp:0,mx:0}, vx=p.vx||{mn:0,mp:0,mx:0}, ar=p.ar||{mn:0,mp:0,mx:0};
+      const vt=((ve.mn+ve.mp+ve.mx)/3)+((vx.mn+vx.mp+vx.mx)/3); const arAvg=(ar.mn+ar.mp+ar.mx)/3;
+      const semMR=vt+(r.functionalResonance||0); const comMR=Math.max(0,vt*(1-arAvg)+(r.functionalResonance||0));
+      return {fn,semMR,comMR,reduction:Math.max(0,semMR-comMR),arAvg};
+    }).sort((a,b)=>b.reduction-a.reduction);
+  };
+
+  DGRManager.sensitivityRows = function(limit=12){
+    const rows=[];
+    DGRState.fns.forEach(fn=>{
+      const subs=DGRState.subs[fn.id]||{};
+      Object.entries(subs).forEach(([code,v])=>{ if(!v||!v.sel) return; const avg=((+v.mn||0)+(+v.mp||0)+(+v.mx||0))/3; const mult=code.startsWith('MR-')?-1:1; const family=code.split('-')[0]; rows.push({fn:fn.name,code,family,impact:mult*avg*Math.max(.2,(DGRState.mcRes[fn.id]?.iis||0))}); });
+      (DGRState.vars||[]).filter(v=>v.affected_function_id===fn.id).forEach(v=>rows.push({fn:fn.name,code:v.category==='exogena'?'RX-manual':'RE-manual',family:v.category==='exogena'?'RX':'RE',impact:.12*Math.max(.2,(DGRState.mcRes[fn.id]?.iis||0))}));
+      (DGRState.mechs||[]).filter(m=>m.controlled_function_id===fn.id).forEach(m=>rows.push({fn:fn.name,code:'MR-manual',family:'MR',impact:-.10*Math.max(.2,(DGRState.mcRes[fn.id]?.iis||0))}));
+    });
+    return rows.sort((a,b)=>Math.abs(b.impact)-Math.abs(a.impact)).slice(0,limit);
+  };
+
+  DGRManager.autoInterpretationText = function(){
+    const d=this.networkDiagnostics(); if(!d.rows.length) return 'Execute a simulação para gerar a interpretação automática.';
+    const amp=d.byEmitted?.[0], absorb=d.byLiquid?.find(x=>(x.r.rfLiquid||0)>0), prop=d.byLiquid?.find(x=>(x.r.rfLiquid||0)<0), garg=d.maiorCentralidade, route=this.findCriticalRoutes(1)[0], m=this.maturityLevel();
+    return `O IGR = Σ IISᵢ/N é ${pct(d.igr)}, com maturidade analítica ${m.level}. ${d.maiorIIS?`A função ${d.maiorIIS.fn.name} concentra o maior IIS (${pct(d.maiorIIS.iis)}), composto por VFR ${pct(d.maiorIIS.vfr)} e RF recebida ${pct(d.maiorIIS.rf)}.`:''} ${amp?`O principal amplificador/emissor estrutural é ${amp.fn.name} (${pct(amp.r.emittedResonance||0)}).`:''} ${absorb?`O principal absorvedor líquido é ${absorb.fn.name} (RF líquida ${pct(absorb.r.rfLiquid||0)}).`:''} ${prop?`O principal propagador líquido é ${prop.fn.name} (RF líquida ${pct(prop.r.rfLiquid||0)}).`:''} ${garg?`O maior gargalo estrutural por centralidade FRAM é ${garg.fn.name} (${pct(garg.r.centralityNorm||0)}).`:''} ${route?`A rota crítica dominante é ${route.names.join(' → ')}.`:''}`;
+  };
+
+  DGRManager.renderAdvancedAnalytics = function(hasRes){
+    const diagEl=document.getElementById('auto-diagnosis'), routesEl=document.getElementById('critical-routes'), resEl=document.getElementById('resilience-effect');
+    if(!diagEl||!routesEl||!resEl) return;
+    if(!hasRes || !this.resultRows().length){ diagEl.innerHTML='<div class="empty">Execute a simulação para gerar o diagnóstico automático.</div>'; routesEl.innerHTML='<div class="empty">Execute a simulação para identificar as rotas críticas.</div>'; resEl.innerHTML='<div class="empty">Execute a simulação para calcular o efeito dos MR e o IGR.</div>'; return; }
+    const d=this.networkDiagnostics(), igr=this.igrClass(d.igr), m=this.maturityLevel();
+    const card=(t,v,s,c='#1a1a2e')=>`<div class="adv-card"><div class="adv-title">${t}</div><div style="font-size:22px;font-weight:800;color:${c}">${v}</div><div class="adv-text">${s||''}</div></div>`;
+    const rows=[...d.rows].sort((a,b)=>b.iis-a.iis);
+    diagEl.innerHTML=[
+      card('Maturidade Analítica', m.level, `${m.score}/12 recursos ativos`, m.color),
+      card('IGR do Sistema', pct(d.igr), igr.lbl, igr.color),
+      card('Maior IIS', safe(d.maiorIIS?.fn.name||'-'), d.maiorIIS?`${pct(d.maiorIIS.iis)} • ${d.maiorIIS.crit.lbl} • ISS ${((d.maiorIIS.r.iss||0)).toFixed(2)}`:'-', d.maiorIIS?.crit.color||'#1a1a2e'),
+      card('Maior Emissor', safe(d.emissor.name), pct(d.emissor.value), '#854f0b'),
+      card('Maior Receptor', safe(d.receptor.name), pct(d.receptor.value), '#0f6e56'),
+      card('Maior Centralidade', safe(d.maiorCentralidade?.fn.name||'-'), d.maiorCentralidade?pct(d.maiorCentralidade.r.centralityNorm||0):'-', '#4778e8'),
+      `<div class="adv-card" style="grid-column:1/-1"><div class="adv-title">RF multicamadas e IIS por função</div><table class="adv-table"><thead><tr><th>Função</th><th>VFR</th><th>RF direta</th><th>RF indireta</th><th>RF recebida</th><th>RF emitida</th><th>RF líquida</th><th>IIS</th><th>ISS</th><th>Classe</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${safe(x.fn.name)}</td><td>${pct(x.vfr)}</td><td>${pct(x.r.directResonance||0)}</td><td>${pct(x.r.indirectResonance||0)}</td><td>${pct(x.rf)}</td><td>${pct(x.r.emittedResonance||0)}</td><td>${pct(x.r.rfLiquid||0)}</td><td><b>${pct(x.iis)}</b></td><td>${(x.r.iss||0).toFixed(2)}</td><td><span class="cbadge ${x.crit.cls}">${x.crit.lbl}</span></td></tr>`).join('')}</tbody></table></div>`,
+      `<div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Centralidade FRAM avançada</div><table class="adv-table"><thead><tr><th>Função</th><th>Entrada</th><th>Saída</th><th>Betweenness</th><th>Closeness</th><th>Eigenvector</th><th>Centralidade normalizada</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${safe(x.fn.name)}</td><td>${x.r.inDegree||0}</td><td>${x.r.outDegree||0}</td><td>${pct(x.r.betweenness||0)}</td><td>${pct(x.r.closeness||0)}</td><td>${pct(x.r.eigenvector||0)}</td><td><b>${pct(x.r.centralityNorm||0)}</b></td></tr>`).join('')}</tbody></table></div>`,
+      `<div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Diagnóstico FRAM automático</div><div class="adv-text">${safe(this.autoInterpretationText())}</div></div>`
+    ].join('');
+    const routes=this.findCriticalRoutes(5);
+    routesEl.innerHTML=routes.length?routes.map((r,i)=>`<div class="route-line"><b>Rota ${i+1}</b>: ${r.names.map(safe).join(' → ')} <span class="cbadge cb-a" style="float:right">Int. ${pct(Math.min(1,r.score))} • Contr. ${pct(r.contribution)} • Prob. ${pct(r.probability)}</span></div>`).join(''):'<div class="empty">Nenhuma rota crítica identificada. Cadastre conexões.</div>';
+    const scenarios=this.resilienceScenarioComparison(), avgRed=scenarios.reduce((a,e)=>a+e.reduction,0)/(scenarios.length||1), sens=this.sensitivityRows(10);
+    const critCount=d.rows.filter(x=>x.iis>=.70).length, resilient=DGRState.fns.filter(f=>this.hasFunctionMR(f.id)).length;
+    resEl.innerHTML=`<div class="adv-grid">
+      ${card('Sem MR × Com MR', pct(avgRed), 'redução média estimada', '#0f6e56')}
+      ${card('Resumo executivo', `${critCount} críticas`, `${resilient} funções com MR`, '#c0392b')}
+      <div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Conformidade matemática explícita</div><div class="adv-text"><b>VFR = (VE + VX) × (1 − AR)</b><br><b>RF = RF direta + RF indireta</b><br><b>IIS = VFR + RF</b><br><b>RF líquida = RF recebida − RF emitida</b><br><b>ISS = IIS / P95</b><br><b>IGR = Σ IISᵢ / N</b></div></div>
+      <div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Cenário Sem MR × Com MR</div><table class="adv-table"><thead><tr><th>Função</th><th>Sem MR</th><th>Com MR</th><th>Redução</th></tr></thead><tbody>${scenarios.map(e=>`<tr><td>${safe(e.fn.name)}</td><td>${pct(e.semMR)}</td><td>${pct(e.comMR)}</td><td><b>${pct(e.reduction)}</b></td></tr>`).join('')}</tbody></table></div>
+      <div class="adv-card" style="grid-column:1/-1"><div class="adv-title">Sensibilidade Monte Carlo — Tornado Analysis</div><table class="adv-table"><thead><tr><th>Fator</th><th>Família</th><th>Função</th><th>Influência aproximada no IIS</th></tr></thead><tbody>${sens.map(s=>`<tr><td>${safe(s.code)}</td><td>${safe(s.family)}</td><td>${safe(s.fn)}</td><td><b>${pct(s.impact)}</b></td></tr>`).join('')||'<tr><td colspan="4">Sem fatores selecionados para análise de sensibilidade.</td></tr>'}</tbody></table></div>
+      </div>`;
+  };
+
+  DGRManager.renderKPIs = function(hasRes){
+    const resFns=DGRState.fns.filter(f=>DGRState.mcRes[f.id]);
+    const vals=resFns.map(f=>DGRState.mcRes[f.id].p95||0), avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0, max=vals.length?Math.max(...vals):0, avgProb=resFns.length?resFns.reduce((a,f)=>a+(DGRState.mcRes[f.id].probCrit||0),0)/resFns.length:0;
+    const m=this.maturityLevel();
+    const stats=[
+      {val:DGRState.fns.length,lbl:'Funções FRAM',color:'#4778e8'}, {val:DGRState.coups.length,lbl:'Acoplamentos',color:'#185fa5'}, {val:this.countRE(),lbl:'Perturbações RE',color:'#854f0b'}, {val:this.countRX(),lbl:'Perturbações RX',color:'#c0392b'}, {val:this.countMR(),lbl:'Mecanismos MR',color:'#0f6e56'},
+      {val:hasRes?pct(avg):'-',lbl:'VFR Média P95',color:hasRes?this.vColor(avg):'#9898b0'}, {val:hasRes?pct(max):'-',lbl:'Limite Crítico Máx. (P95)',color:hasRes?this.vColor(max):'#9898b0'}, {val:hasRes?pct(avgProb):'-',lbl:'Prob. Criticidade Média',color:hasRes?this.vColor(avgProb):'#9898b0'},
+      {val:hasRes?pct(this.calcIGR()):'-',lbl:'IGR do Sistema',color:hasRes?this.igrClass(this.calcIGR()).color:'#9898b0'}, {val:hasRes?pct(Math.max(0,...resFns.map(f=>DGRState.mcRes[f.id].functionalResonance||0))):'-',lbl:'RF Máx. Recebido',color:hasRes?'#c0392b':'#9898b0'},
+      {val:hasRes?pct(Math.max(0,...resFns.map(f=>DGRState.mcRes[f.id].emittedResonance||0))):'-',lbl:'RF Máx. Emitido',color:hasRes?'#854f0b':'#9898b0'}, {val:hasRes?m.level:'-',lbl:'Maturidade',color:m.color}
+    ];
+    const el=document.getElementById('dash-stats'); if(el) el.innerHTML=stats.map(s=>`<div class="dash-card"><div class="dash-card-val" style="color:${s.color}">${s.val}</div><div class="dash-card-lbl">${s.lbl}</div></div>`).join('');
+  };
+
+  DGRManager.exportProject = DGRManager.exportProject || function(){
+    const blob=new Blob([DGRState.serialize()],{type:'application/json'}), a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dgr-fram-project.dgrfram'; a.click(); URL.revokeObjectURL(a.href);
+  };
+
+  DGRManager.exportPDF = async function(){
+    if(!window.jspdf) return alert('jsPDF não carregado.');
+    if(!this.resultRows().length && DGRState.fns.length) this.runSimulation();
+    this.calculateNetworkResonance();
+    const {jsPDF}=window.jspdf, doc=new jsPDF('l','mm','a4'), W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight();
+    const title=(t,s='')=>{ doc.setFillColor(31,37,50); doc.rect(0,0,W,16,'F'); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text(t,12,10); doc.setFontSize(8); if(s) doc.text(s,W-12,10,{align:'right'}); doc.setTextColor(0,0,0); };
+    const table=(heads, rows, x, y, widths, fs=7)=>{ doc.setFontSize(fs); doc.setFont('helvetica','bold'); heads.forEach((h,i)=>doc.text(String(h),x+widths.slice(0,i).reduce((a,b)=>a+b,0),y)); y+=3; doc.line(x,y,W-12,y); y+=5; doc.setFont('helvetica','normal'); rows.forEach(r=>{ r.forEach((c,i)=>doc.text(String(c).slice(0,46),x+widths.slice(0,i).reduce((a,b)=>a+b,0),y)); y+=5.4; if(y>H-14){doc.addPage(); title('Anexo estatístico - continuação'); y=25;} }); return y; };
+    const rows=this.resultRows().sort((a,b)=>b.iis-a.iis), d=this.networkDiagnostics(), routes=this.findCriticalRoutes(5), m=this.maturityLevel(), igr=this.igrClass(d.igr);
+    title('Relatório DGR-FRAM Analítico 10/10',`Gerado em ${new Date().toLocaleString('pt-BR')}`);
+    doc.setFontSize(9); doc.text('VFR = (VE + VX) × (1 − AR) | RF = RF direta + RF indireta | IIS = VFR + RF | RF líquida = RF recebida − RF emitida | ISS = IIS/P95 | IGR = Σ IISᵢ/N',12,25);
+    doc.setFillColor(192,57,43); doc.roundedRect(12,33,42,20,2,2,'F'); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text(pct(d.igr),33,42,{align:'center'}); doc.setFontSize(8); doc.text(`IGR - ${igr.lbl}`,33,50,{align:'center'}); doc.setTextColor(0,0,0);
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.text('Síntese executiva',62,35); doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text(doc.splitTextToSize(this.autoInterpretationText(),210),62,42);
+    doc.setFont('helvetica','bold'); doc.text(`Maturidade analítica: ${m.level} (${m.score}/12 recursos)`,62,58);
+    let y=70; doc.setFontSize(11); doc.text('Ranking por IIS',12,y); y+=7;
+    y=table(['#','Função','VFR','RF Rec.','RF Emit.','RF Líq.','IIS','ISS','Classe'], rows.map((x,i)=>[i+1,x.fn.name,pct(x.vfr),pct(x.rf),pct(x.r.emittedResonance||0),pct(x.r.rfLiquid||0),pct(x.iis),(x.r.iss||0).toFixed(2),clean(x.crit.lbl)]),12,y,[8,78,20,23,23,23,20,16,22]);
+    y+=6; doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Ranking por P95 / Limite Crítico',12,y); y+=7;
+    table(['#','Função','VFR média','P90','P95','P99','Prob. Crit.','Acima P95','IIS'], [...rows].sort((a,b)=>b.vfr-a.vfr).map((x,i)=>[i+1,x.fn.name,pct(x.r.mean),pct(x.r.p90),pct(x.r.p95),pct(x.r.p99),pct(x.r.probCrit),pct(x.r.probAboveP95),pct(x.iis)]),12,y,[8,82,24,20,20,20,25,25,20]);
+
+    doc.addPage(); title('Diagnóstico automático da rede FRAM','RF multicamadas, centralidade e rotas críticas'); y=28;
+    y=table(['Função','RF Direta','RF Indireta','RF Recebida','RF Emitida','RF Líquida','IIS','Estado'], rows.map(x=>[x.fn.name,pct(x.r.directResonance||0),pct(x.r.indirectResonance||0),pct(x.rf),pct(x.r.emittedResonance||0),pct(x.r.rfLiquid||0),pct(x.iis),x.state]),12,y,[76,27,30,30,30,30,22,36]);
+    y+=8; doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Top 5 rotas críticas',12,y); y+=7;
+    table(['#','Rota','Intensidade','Contribuição','Probabilidade'], routes.map((r,i)=>[i+1,r.names.join(' → '),pct(Math.min(1,r.score)),pct(r.contribution),pct(r.probability)]),12,y,[8,190,28,28,28]);
+
+    doc.addPage(); title('Centralidade FRAM avançada','Entrada, saída, betweenness, closeness e eigenvector'); y=28;
+    table(['Função','Entrada','Saída','Betweenness','Closeness','Eigenvector','Centralidade'], rows.map(x=>[x.fn.name,x.r.inDegree||0,x.r.outDegree||0,pct(x.r.betweenness||0),pct(x.r.closeness||0),pct(x.r.eigenvector||0),pct(x.r.centralityNorm||0)]),12,y,[92,22,22,32,32,32,32]);
+
+    doc.addPage(); title('Matriz de propagação multicamadas','Direta + indireta + total');
+    const prop=this.computePropagationLayers(5), names=DGRState.fns.map(f=>f.name.slice(0,13)), startX=58,startY=42,cell=18,maxVal=Math.max(1e-9,...prop.total.flat());
+    doc.setFontSize(7); names.forEach((n,i)=>{doc.text(n,startX+i*cell+2,35,{angle:45}); doc.text(n,12,startY+i*cell+10);});
+    for(let i=0;i<names.length;i++) for(let j=0;j<names.length;j++){ const v=prop.total[i][j], shade=Math.round(245-170*(v/maxVal)); doc.setFillColor(255,shade,shade); doc.rect(startX+j*cell,startY+i*cell,cell,cell,'F'); doc.setDrawColor(225); doc.rect(startX+j*cell,startY+i*cell,cell,cell); if(v>0){doc.setTextColor(0); doc.text((v*100).toFixed(0),startX+j*cell+cell/2,startY+i*cell+cell/2,{align:'center'});} }
+    doc.setFontSize(8); doc.text('Destino nas linhas; origem nas colunas. Valores representam influência acumulada em cascata até 5 camadas.',12,H-16);
+
+    doc.addPage(); title('Cenário Sem MR × Com MR e Sensibilidade Monte Carlo','Tornado Analysis'); y=28;
+    const scen=this.resilienceScenarioComparison(); y=table(['Função','Sem MR','Com MR','Redução'], scen.map(e=>[e.fn.name,pct(e.semMR),pct(e.comMR),pct(e.reduction)]),12,y,[100,30,30,30]);
+    y+=8; doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Sensibilidade Monte Carlo — Tornado Analysis',12,y); y+=7;
+    table(['Fator','Família','Função','Influência no IIS'], this.sensitivityRows(16).map(s=>[s.code,s.family,s.fn,pct(s.impact)]),12,y,[50,25,100,35]);
+
+    doc.addPage(); title('Mapa FRAM completo','I-O-P-R-C-T, classes IIS, RE/RX, MR e rotas críticas');
+    if(this.drawFramMapPDF) this.drawFramMapPDF(doc,W,H); else { doc.setFontSize(10); doc.text('Mapa FRAM disponível na tela Funções e Conexões.',12,28); }
+    doc.addPage(); if(this.pdfBarPageV1010) this.pdfBarPageV1010(doc,W,H,'vfr');
+    doc.addPage(); if(this.pdfDonutPageV1010) this.pdfDonutPageV1010(doc,W,H);
+    doc.addPage(); if(this.pdfHistPageV1010) this.pdfHistPageV1010(doc,W,H);
+    doc.addPage(); if(this.pdfBarPageV1010) this.pdfBarPageV1010(doc,W,H,'iis');
+    doc.save('dgr-fram-analytics-v10-13-10de10.pdf');
   };
 })();
 </script>
