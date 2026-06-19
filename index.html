@@ -3546,112 +3546,140 @@ let openSubcatFn = {};
 
 
 
-/* Correção definitiva PDF: gráficos vetoriais no PDF, sem Tornado e sem página em branco. */
+/* =========================================================
+   PATCH FINAL PDF v10.15 — gráficos vetoriais no PDF
+   - Primeira página redesenhada com somente VE, VX, MR, VFR, Média, P90, P95, P99 e Prob. Criticidade
+   - Distribuição de Criticidade Estrutural ampliada e centralizada
+   - Matriz de propagação centralizada
+   - Remove Sensibilidade Monte Carlo/Tornado Analysis
+   - Remove página em branco final
+   - Não depende de canvas/html2canvas para os gráficos do PDF
+   ========================================================= */
 (function(){
-  const pct = (v,d=1)=> ((+v||0)*100).toFixed(d)+'%';
-  const escTxt = s => String(s||'').replace(/\s+/g,' ').trim();
-  const colorHex = v => v>=.70?'#c0392b':v>=.50?'#f59e0b':v>=.30?'#eab308':'#0f6e56';
-  function hexToRgb(hex){ const m=String(hex).replace('#','').match(/^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i); return m?[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)]:[80,80,80]; }
-  function setHex(doc, hex, stroke=false){ const [r,g,b]=hexToRgb(hex); stroke?doc.setDrawColor(r,g,b):doc.setFillColor(r,g,b); }
-  function getRows(){
-    if(DGRManager.resultRows) return DGRManager.resultRows().filter(x=>x&&x.fn&&x.r).sort((a,b)=>(b.r.p95||0)-(a.r.p95||0));
-    return (DGRState.fns||[]).map(fn=>({fn,r:DGRState.mcRes[fn.id]||{}})).filter(x=>x.r&&Object.keys(x.r).length).sort((a,b)=>(b.r.p95||0)-(a.r.p95||0));
+  function pct(v,d=1){ return ((+v||0)*100).toFixed(d)+'%'; }
+  function safe(s,n){ return String(s||'-').replace(/[\u{1F300}-\u{1FAFF}]/gu,'').slice(0,n||80); }
+  function rows(){
+    const r=(DGRManager.resultRows?DGRManager.resultRows():[]).filter(x=>x&&x.fn&&x.r);
+    return r.sort((a,b)=>(b.r.p95||0)-(a.r.p95||0));
   }
-  function header(doc, title, pageNo, total){
-    const w=doc.internal.pageSize.getWidth();
-    doc.setFillColor(31,37,50); doc.rect(0,0,w,15,'F');
-    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(11);
-    doc.text(title||'Relatório DGR-FRAM Analítico 10/10',12,9.5);
-    doc.setFontSize(7); doc.text('Gerado em '+new Date().toLocaleString('pt-BR'),w-12,9.5,{align:'right'});
+  function colorRGB(v){
+    v=+v||0;
+    if(v>=.70) return [198,57,47];
+    if(v>=.50) return [245,126,20];
+    if(v>=.30) return [234,179,8];
+    return [15,110,86];
+  }
+  function cls(v){
+    v=+v||0;
+    if(v>=.70) return 'Crítica';
+    if(v>=.50) return 'Alta';
+    if(v>=.30) return 'Média';
+    return 'Baixa';
+  }
+  function header(doc,title,right){
+    const W=doc.internal.pageSize.getWidth();
+    doc.setFillColor(31,37,50); doc.rect(0,0,W,16,'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.text(title||'Relatório DGR-FRAM Analítico 10/10',12,10);
+    if(right){ doc.setFontSize(7); doc.text(right,W-12,10,{align:'right'}); }
     doc.setTextColor(0,0,0);
-    if(pageNo){ doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.text(`Página ${pageNo} de ${total}`,w/2,202,{align:'center'}); }
   }
-  function metricCard(doc,x,y,w,h,label,val,hex){
-    setHex(doc,hex); doc.roundedRect(x,y,w,h,2,2,'F');
-    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text(String(val),x+w/2,y+9,{align:'center'});
-    doc.setFontSize(7.5); doc.text(label,x+w/2,y+15,{align:'center'}); doc.setTextColor(0,0,0);
+  function footer(doc,p,t){
+    const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight();
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(70,70,70);
+    doc.text('Página '+p+' de '+t,W/2,H-8,{align:'center'}); doc.setTextColor(0,0,0);
   }
-  function drawBarChart(doc, rows, x, y, w, h){
-    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text('VFRR por Função (P95 — Limite Crítico)',x,y);
-    y+=8; h-=10;
-    if(!rows.length){ doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text('Execute a simulação para gerar o gráfico.',x,y+10); return; }
-    const max=Math.max(1,...rows.map(r=>(r.r.p95||0)*100));
-    const left=x+48, right=x+w-16, barW=right-left, rowH=Math.min(13, Math.max(7, h/Math.max(rows.length,1)-1));
-    doc.setDrawColor(210,210,218); doc.setLineWidth(.2); doc.line(left,y+h-8,right,y+h-8);
-    [0,25,50,75,100].forEach(t=>{ const xx=left+barW*Math.min(t,max)/max; doc.setDrawColor(235,235,240); doc.line(xx,y,xx,y+h-8); doc.setFontSize(6.5); doc.setTextColor(80,80,90); doc.text(t+'%',xx,y+h-4,{align:'center'}); });
-    if(max>=100){ const xx=left+barW*100/max; doc.setDrawColor(220,0,0); doc.setLineDashPattern([2,1.5],0); doc.line(xx,y,xx,y+h-8); doc.setLineDashPattern([],0); doc.setTextColor(200,0,0); doc.setFontSize(7); doc.text('Limite Crítico',xx,y-1,{align:'center'}); }
-    rows.forEach((row,i)=>{
-      const v=(row.r.p95||0)*100, yy=y+3+i*rowH;
-      doc.setFont('helvetica','normal'); doc.setFontSize(6.6); doc.setTextColor(0,0,0);
-      doc.text(escTxt(row.fn.name).slice(0,28),left-2,yy+rowH*.55,{align:'right'});
-      setHex(doc,'#eef0f6'); doc.rect(left,yy,barW,rowH*.68,'F');
-      setHex(doc,colorHex(v/100)); doc.rect(left,yy,barW*(v/max),rowH*.68,'F');
-      doc.setFont('helvetica','bold'); doc.setFontSize(6.6); doc.text(pct(v/100),left+barW*(v/max)+2,yy+rowH*.55);
+  function drawCard(doc,x,y,w,h,label,value,rgb){
+    doc.setDrawColor(220,224,232); doc.setFillColor(255,255,255); doc.roundedRect(x,y,w,h,2,2,'FD');
+    doc.setTextColor(...rgb); doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text(value,x+w/2,y+10,{align:'center'});
+    doc.setTextColor(40,40,40); doc.setFontSize(7.5); doc.text(label,x+w/2,y+h-4,{align:'center'});
+  }
+  function averages(rs){
+    const n=Math.max(1,rs.length), avg=k=>rs.reduce((a,x)=>a+(+x.r[k]||0),0)/n;
+    return {vde:avg('vde'), vdx:avg('vdx'), mr:avg('mr'), vfr:avg('vfr'), mean:avg('mean'), p90:avg('p90'), p95:avg('p95'), p99:avg('p99'), probCrit:avg('probCrit')};
+  }
+  function table(doc,title,headers,data,x,y,widths,rowH,maxRows){
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text(title,x,y); y+=7;
+    doc.setFontSize(7); let xx=x; headers.forEach((h,i)=>{doc.text(h,xx,y); xx+=widths[i];});
+    y+=2; doc.setDrawColor(80,80,80); doc.line(x,y,x+widths.reduce((a,b)=>a+b,0),y); y+=5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    data.slice(0,maxRows||12).forEach(row=>{ xx=x; row.forEach((c,i)=>{doc.text(safe(c, i===0?36:14),xx,y); xx+=widths[i];}); y+=rowH||5; });
+    return y;
+  }
+  function drawDistribution(doc,rs){
+    header(doc,'Relatório DGR-FRAM Analítico 10/10','Distribuição de Criticidade Estrutural');
+    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text('Distribuição de Criticidade Estrutural',18,28);
+    const counts={Crítica:0,Alta:0,Média:0,Baixa:0}; rs.forEach(x=>counts[cls(x.r.p95||0)]++);
+    const total=Math.max(1,rs.length), cats=[
+      ['Crítica',counts['Crítica'],[210,35,30]],['Alta',counts['Alta'],[255,130,30]],['Média',counts['Média'],[245,195,35]],['Baixa',counts['Baixa'],[65,170,65]]
+    ];
+    const cx=148, cy=94, R=54, inner=25; let a=-Math.PI/2;
+    cats.forEach(c=>{ const n=c[1]; if(!n)return; const da=n/total*Math.PI*2, a2=a+da, large=da>Math.PI?1:0; const [r,g,b]=c[2];
+      const x1=cx+R*Math.cos(a), y1=cy+R*Math.sin(a), x2=cx+R*Math.cos(a2), y2=cy+R*Math.sin(a2);
+      const x3=cx+inner*Math.cos(a2), y3=cy+inner*Math.sin(a2), x4=cx+inner*Math.cos(a), y4=cy+inner*Math.sin(a);
+      doc.setFillColor(r,g,b);
+      doc.path([{op:'m',c:[x1,y1]},{op:'c',c:[cx+R*Math.cos(a+da/3),cy+R*Math.sin(a+da/3),cx+R*Math.cos(a+2*da/3),cy+R*Math.sin(a+2*da/3),x2,y2]},{op:'l',c:[x3,y3]},{op:'c',c:[cx+inner*Math.cos(a+2*da/3),cy+inner*Math.sin(a+2*da/3),cx+inner*Math.cos(a+da/3),cy+inner*Math.sin(a+da/3),x4,y4]},{op:'h'}],'F');
+      // jsPDF path cubic approximation is enough for visual PDF; labels are drawn separately.
+      a=a2;
     });
-    doc.setTextColor(0,0,0);
-  }
-  function drawDistribution(doc, rows, x, y, w, h){
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Distribuição de Criticidade Estrutural',x+w/2,y,{align:'center'});
-    if(!rows.length){ doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text('Sem dados simulados.',x+w/2,y+20,{align:'center'}); return; }
-    const buckets=[{n:'Baixa',c:'#0f6e56',v:0},{n:'Moderada',c:'#eab308',v:0},{n:'Alta',c:'#f59e0b',v:0},{n:'Crítica',c:'#c0392b',v:0}];
-    rows.forEach(r=>{ const v=r.r.p95||0; buckets[v>=.7?3:v>=.5?2:v>=.3?1:0].v++; });
-    const total=rows.length, cx=x+w/2, cy=y+h/2+8, R=Math.min(45,h*.34), inner=R*.54;
-    let a=-90;
-    buckets.forEach(b=>{ if(!b.v) return; const da=360*b.v/total; setHex(doc,b.c); doc.setDrawColor(255,255,255); doc.setLineWidth(.6); doc.setFillColor(...hexToRgb(b.c)); doc.circle(cx,cy,R,'F'); /* fallback filled circle before sector */ a+=da; });
-    // jsPDF has no native sector in every build; draw proportional legend and central marker plus full doughnut-like summary.
     doc.setFillColor(255,255,255); doc.circle(cx,cy,inner,'F');
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Criticidade',cx,cy-2,{align:'center'}); doc.setFontSize(8); doc.text(`${total} funções`,cx,cy+6,{align:'center'});
-    const lx=x+w/2-58, ly=y+h-32; let offset=0;
-    buckets.forEach(b=>{ if(!b.v) return; const pctv=b.v/total; const segW=(w-25)*pctv; setHex(doc,b.c); doc.rect(x+12+offset,y+20,segW,8,'F'); offset+=segW; });
-    buckets.forEach((b,i)=>{ const xx=lx+(i%2)*65, yy=ly+Math.floor(i/2)*10; setHex(doc,b.c); doc.rect(xx,yy-4,5,5,'F'); doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text(`${b.n}: ${pct(b.v/total)}`,xx+8,yy); });
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Distribuição',cx,cy-2,{align:'center'}); doc.text('de Criticidade',cx,cy+5,{align:'center'});
+    let lx=210, ly=62; cats.forEach(c=>{ const [name,n,rgb]=c, p=(n/total*100).toFixed(1)+'%'; doc.setFillColor(...rgb); doc.rect(lx,ly-4,5,5,'F'); doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(`${name}: ${p}`,lx+8,ly); ly+=12; });
   }
-  function drawTable(doc, rows, x, y){
-    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text('Indicadores Monte Carlo por Função',x,y); y+=7;
-    const cols=[x,x+56,x+72,x+88,x+104,x+122,x+142,x+160,x+178,x+198,x+224];
-    const hs=['Função','VE','VX','MR','VFR','Média','P90','P95','P99','Prob.','Classe'];
-    doc.setFontSize(7); hs.forEach((h,i)=>doc.text(h,cols[i],y)); y+=3; doc.setDrawColor(80,80,80); doc.line(x,y,282,y); y+=5;
-    doc.setFont('helvetica','normal'); doc.setFontSize(6.6);
-    rows.forEach((row,i)=>{ const r=row.r, p=r.p95||0; const cls=p>=.7?'Crítica':p>=.5?'Alta':p>=.3?'Moderada':'Baixa';
-      const vals=[escTxt(row.fn.name).slice(0,33),pct(r.vde||0,0),pct(r.vdx||0,0),pct(r.mr||0,0),pct(r.vfr||r.beforeMR||0,0),pct(r.mean||0,0),pct(r.p90||0,0),pct(r.p95||0,0),pct(r.p99||0,0),pct(r.probCrit||0,0),cls];
-      vals.forEach((v,j)=>doc.text(String(v),cols[j],y)); y+=5.5;
-      if(y>190){ doc.addPage('l'); header(doc,'Relatório DGR-FRAM Analítico 10/10'); y=24; }
+  function drawMatrix(doc,rs){
+    header(doc,'Relatório DGR-FRAM Analítico 10/10','Direta + indireta + total');
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Matriz de propagação multicamadas',18,28);
+    const nodes=rs.map(x=>x.fn).slice(0,8), n=Math.max(1,nodes.length);
+    const pm=(DGRManager.computePropagationMatrix?DGRManager.computePropagationMatrix(nodes,5):Array.from({length:n},()=>Array(n).fill(0)));
+    const max=Math.max(.0001,...pm.flat());
+    const size=Math.min(122, 17*n), cell=size/n, startX=(297-size)/2+8, startY=52;
+    doc.setFontSize(6.2); doc.setFont('helvetica','bold');
+    nodes.forEach((fn,j)=>{ doc.text(safe(fn.name,12),startX+j*cell+cell/2,startY-8,{align:'center',angle:45}); });
+    nodes.forEach((fn,i)=>{
+      doc.text(safe(fn.name,16),startX-12,startY+i*cell+cell*.6,{align:'right'});
+      nodes.forEach((_,j)=>{ const val=pm[i][j]||0, norm=val/max; const shade=val?Math.max(0,255-Math.round(175*norm)):248; doc.setFillColor(255,shade,shade); doc.setDrawColor(220,220,220); doc.rect(startX+j*cell,startY+i*cell,cell,cell,'FD'); if(val>0){ doc.setTextColor(norm>.55?255:0,norm>.55?255:0,norm>.55?255:0); doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.text(String(Math.round(val*100)),startX+j*cell+cell/2,startY+i*cell+cell*.6,{align:'center'}); doc.setTextColor(0,0,0); } });
     });
   }
-  function drawMatrix(doc, x, y, w, h){
-    if(!DGRManager.computePropagationMatrix || !(DGRState.fns||[]).length) return false;
-    const nodes=DGRState.fns.slice(0,12), m=DGRManager.computePropagationMatrix(nodes,5);
-    if(!m || !m.length) return false;
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Matriz de propagação multicamadas',x+w/2,y,{align:'center'});
-    const n=nodes.length, size=Math.min((w-60)/n,(h-40)/n,12), gx=x+(w-size*n)/2+12, gy=y+24;
-    const max=Math.max(...m.flat(),1e-6);
-    doc.setFont('helvetica','normal'); doc.setFontSize(5.5);
-    nodes.forEach((fn,i)=>{ doc.text(escTxt(fn.name).slice(0,12),gx-2,gy+i*size+size*.62,{align:'right'}); doc.text(escTxt(fn.name).slice(0,10),gx+i*size+size*.5,gy-3,{align:'right',angle:45}); });
-    for(let r=0;r<n;r++) for(let c=0;c<n;c++){ const v=m[r][c]||0, alpha=v/max; const red=255, gb=Math.round(245-125*alpha); doc.setFillColor(red,gb,gb); doc.setDrawColor(220,220,220); doc.rect(gx+c*size,gy+r*size,size,size,'FD'); if(v>0){ doc.setTextColor(0,0,0); doc.setFontSize(5.5); doc.text(String(Math.round(v*100)),gx+c*size+size/2,gy+r*size+size*.62,{align:'center'}); } }
-    doc.setTextColor(0,0,0); return true;
+  function drawVFRR(doc,rs){
+    header(doc,'Relatório DGR-FRAM Analítico 10/10','VFRR por Função');
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('VFRR por Função (P95 — Limite Crítico)',18,28);
+    const max=Math.max(1,...rs.map(x=>x.r.p95||0)); const left=88, top=42, barW=175, rowH=Math.min(17, 115/Math.max(1,rs.length));
+    doc.setFontSize(7); doc.setFont('helvetica','normal');
+    rs.forEach((x,i)=>{ const v=x.r.p95||0, y=top+i*rowH, w=barW*v/max; doc.text(safe(x.fn.name,30),left-5,y+4,{align:'right'}); doc.setFillColor(238,240,246); doc.rect(left,y,barW,6,'F'); doc.setFillColor(...colorRGB(v)); doc.rect(left,y,w,6,'F'); doc.text(pct(v),left+w+4,y+4); });
+    const critX=left+barW*(1/max); if(critX>=left && critX<=left+barW){ doc.setDrawColor(220,0,0); doc.setLineDashPattern([2,2],0); doc.line(critX,top-5,critX,top+rowH*rs.length); doc.setLineDashPattern([],0); doc.setTextColor(220,0,0); doc.text('Limite Crítico (100%)',critX,top-9,{align:'center'}); doc.setTextColor(0,0,0); }
   }
-  DGRManager.exportPDF = function(){
-    const {jsPDF}=window.jspdf||{}; if(!jsPDF){ alert('Biblioteca jsPDF não carregada.'); return; }
-    const rows=getRows(); if(!rows.length){ alert('Execute a simulação antes de exportar o PDF.'); return; }
-    const doc=new jsPDF('l','mm','a4'); const pageW=297, pageH=210;
-    const totalPages = (DGRState.coups||[]).length ? 4 : 3;
-    header(doc,'Relatório DGR-FRAM Analítico 10/10',1,totalPages);
-    const av = k => rows.reduce((s,x)=>s+(x.r[k]||0),0)/Math.max(rows.length,1);
-    const max = k => Math.max(...rows.map(x=>x.r[k]||0),0);
-    doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text('Síntese executiva Monte Carlo',14,26);
-    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-    const top=rows[0];
-    doc.text(`O relatório mantém apenas os indicadores: VE, VX, MR, VFR, Média, P90, P95, P99 e Probabilidade de Criticidade.`,14,33);
-    doc.text(`Função dominante por P95: ${escTxt(top.fn.name).slice(0,60)} (${pct(top.r.p95||0)}). Probabilidade média de criticidade: ${pct(av('probCrit'))}.`,14,39);
-    const cards=[['VE',av('vde'),'#c0392b'],['VX',av('vdx'),'#d97706'],['MR',av('mr'),'#0f6e56'],['VFR',av('vfr'),'#4778e8'],['Média',av('mean'),'#185fa5'],['P90',max('p90'),'#f59e0b'],['P95',max('p95'),'#c0392b'],['P99',max('p99'),'#7c0000'],['Prob. Criticidade',av('probCrit'),'#c0392b']];
-    cards.forEach((c,i)=>metricCard(doc,14+(i%5)*34,48+Math.floor(i/5)*23,28,18,c[0],pct(c[1]),c[2]));
-    drawBarChart(doc,rows,104,50,176,120);
-
-    doc.addPage('l'); header(doc,'Relatório DGR-FRAM Analítico 10/10',2,totalPages); drawTable(doc,rows,14,28);
-
-    doc.addPage('l'); header(doc,'Relatório DGR-FRAM Analítico 10/10',3,totalPages); drawDistribution(doc,rows,38,30,220,130);
-
-    if((DGRState.coups||[]).length){ doc.addPage('l'); header(doc,'Relatório DGR-FRAM Analítico 10/10',4,totalPages); drawMatrix(doc,28,30,240,135); }
-    doc.save('dgr-fram-relatorio-com-graficos.pdf');
+  DGRManager.exportPDF=function(){
+    const {jsPDF}=window.jspdf||{}; if(!jsPDF){alert('Biblioteca jsPDF não carregada.');return;}
+    if((DGRState.fns||[]).length && !(DGRState.fns||[]).some(f=>DGRState.mcRes&&DGRState.mcRes[f.id])){
+      alert('Execute a simulação antes de exportar o PDF.'); return;
+    }
+    if(this.calculateNetworkResonance) this.calculateNetworkResonance();
+    const rs=rows();
+    const doc=new jsPDF('l','mm','a4');
+    const totalPages=5;
+    // Página 1 — nova capa executiva com os indicadores pedidos
+    header(doc,'Relatório DGR-FRAM Analítico 10/10','Gerado em '+new Date().toLocaleString('pt-BR'));
+    const av=averages(rs); const main=av.probCrit||av.p95||0;
+    doc.setFillColor(...colorRGB(main)); doc.roundedRect(14,30,48,38,3,3,'F'); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.text(pct(main),38,49,{align:'center'}); doc.setFontSize(8); doc.text('Probabilidade de Criticidade',38,59,{align:'center'}); doc.setTextColor(0,0,0);
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text('Síntese executiva',72,32); doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    const top=rs[0]; const txt=`Relatório Monte Carlo consolidado com os indicadores mantidos: VE, VX, MR, VFR, Média, P90, P95, P99 e Probabilidade de Criticidade. A função de maior P95 é ${safe(top?.fn?.name,60)} (${pct(top?.r?.p95||0)}).`;
+    doc.text(doc.splitTextToSize(txt,205),72,40);
+    const cards=[['VE',av.vde],['VX',av.vdx],['MR',av.mr],['VFR',av.vfr],['Média',av.mean],['P90',av.p90],['P95',av.p95],['P99',av.p99],['Prob. Crit.',av.probCrit]];
+    cards.forEach((c,i)=>{ const x=14+(i%9)*30.5, y=82; drawCard(doc,x,y,27,22,c[0],pct(c[1]),colorRGB(c[1])); });
+    const data=rs.map((x,i)=>[i+1+'. '+safe(x.fn.name,28),pct(x.r.vde||0),pct(x.r.vdx||0),pct(x.r.mr||0),pct(x.r.vfr||0),pct(x.r.mean||0),pct(x.r.p90||0),pct(x.r.p95||0),pct(x.r.p99||0),pct(x.r.probCrit||0)]);
+    table(doc,'Ranking por P95 / Limite Crítico',['Função','VE','VX','MR','VFR','Média','P90','P95','P99','Prob.'],data,14,120,[54,22,22,22,22,24,20,20,20,24],5,10);
+    footer(doc,1,totalPages);
+    // Página 2 — tabela completa
+    doc.addPage(); header(doc,'Relatório DGR-FRAM Analítico 10/10','Indicadores Monte Carlo');
+    table(doc,'Resumo por função — somente indicadores mantidos',['Função','VE','VX','MR','VFR','Média','P90','P95','P99','Prob. Crit.'],data,14,32,[60,23,23,23,23,25,22,22,22,28],6,22);
+    footer(doc,2,totalPages);
+    // Página 3 — distribuição ampliada e centralizada
+    doc.addPage(); drawDistribution(doc,rs); footer(doc,3,totalPages);
+    // Página 4 — matriz centralizada
+    doc.addPage(); drawMatrix(doc,rs); footer(doc,4,totalPages);
+    // Página 5 — VFRR/P95
+    doc.addPage(); drawVFRR(doc,rs); footer(doc,5,totalPages);
+    doc.save('dgr-fram-relatorio-graficos-corrigidos.pdf');
   };
 })();
 </script>
