@@ -3608,23 +3608,65 @@ let openSubcatFn = {};
   }
   function drawDistribution(doc,rs){
     header(doc,'Relatório DGR-FRAM Analítico 10/10','Distribuição de Criticidade Estrutural');
-    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text('Distribuição de Criticidade Estrutural',18,28);
-    const counts={Crítica:0,Alta:0,Média:0,Baixa:0}; rs.forEach(x=>counts[cls(x.r.p95||0)]++);
-    const total=Math.max(1,rs.length), cats=[
-      ['Crítica',counts['Crítica'],[210,35,30]],['Alta',counts['Alta'],[255,130,30]],['Média',counts['Média'],[245,195,35]],['Baixa',counts['Baixa'],[65,170,65]]
-    ];
-    const cx=148, cy=94, R=54, inner=25; let a=-Math.PI/2;
-    cats.forEach(c=>{ const n=c[1]; if(!n)return; const da=n/total*Math.PI*2, a2=a+da, large=da>Math.PI?1:0; const [r,g,b]=c[2];
-      const x1=cx+R*Math.cos(a), y1=cy+R*Math.sin(a), x2=cx+R*Math.cos(a2), y2=cy+R*Math.sin(a2);
-      const x3=cx+inner*Math.cos(a2), y3=cy+inner*Math.sin(a2), x4=cx+inner*Math.cos(a), y4=cy+inner*Math.sin(a);
-      doc.setFillColor(r,g,b);
-      doc.path([{op:'m',c:[x1,y1]},{op:'c',c:[cx+R*Math.cos(a+da/3),cy+R*Math.sin(a+da/3),cx+R*Math.cos(a+2*da/3),cy+R*Math.sin(a+2*da/3),x2,y2]},{op:'l',c:[x3,y3]},{op:'c',c:[cx+inner*Math.cos(a+2*da/3),cy+inner*Math.sin(a+2*da/3),cx+inner*Math.cos(a+da/3),cy+inner*Math.sin(a+da/3),x4,y4]},{op:'h'}],'F');
-      // jsPDF path cubic approximation is enough for visual PDF; labels are drawn separately.
-      a=a2;
+    doc.setFont('helvetica','bold'); doc.setFontSize(14);
+    doc.text('Distribuição de Criticidade Estrutural',148,30,{align:'center'});
+
+    // Classificação por P95. Desenho 100% vetorial, sem canvas/html2canvas.
+    const counts={Crítica:0,Alta:0,Média:0,Baixa:0};
+    rs.forEach(x=>counts[cls(x.r.p95||0)]++);
+    const total=Math.max(1,rs.length);
+    const cats=[
+      ['Crítica',counts['Crítica'],[210,35,30]],
+      ['Alta',counts['Alta'],[255,130,30]],
+      ['Média',counts['Média'],[245,195,35]],
+      ['Baixa',counts['Baixa'],[65,170,65]]
+    ].filter(c=>c[1]>0);
+
+    const cx=148, cy=94, R=62, inner=28;
+    let a=-Math.PI/2;
+
+    // Setores construídos por pequenos polígonos triangulares: compatível com jsPDF em todos os navegadores.
+    cats.forEach(c=>{
+      const [name,n,rgb]=c;
+      const da=(n/total)*Math.PI*2;
+      const steps=Math.max(16,Math.ceil(da/(Math.PI/60)));
+      doc.setDrawColor(...rgb);
+      doc.setFillColor(...rgb);
+      for(let k=0;k<steps;k++){
+        const a1=a+da*k/steps;
+        const a2=a+da*(k+1)/steps;
+        const x1=cx+R*Math.cos(a1), y1=cy+R*Math.sin(a1);
+        const x2=cx+R*Math.cos(a2), y2=cy+R*Math.sin(a2);
+        doc.triangle(cx,cy,x1,y1,x2,y2,'FD');
+      }
+      // Rótulo dentro do setor, quando há espaço visual.
+      const mid=a+da/2;
+      if(da>0.32){
+        const tx=cx+(R*0.68)*Math.cos(mid), ty=cy+(R*0.68)*Math.sin(mid);
+        doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+        doc.text(name,tx,ty-3,{align:'center'});
+        doc.setFontSize(10); doc.text(((n/total)*100).toFixed(1)+'%',tx,ty+5,{align:'center'});
+        doc.setTextColor(0,0,0);
+      }
+      a+=da;
     });
-    doc.setFillColor(255,255,255); doc.circle(cx,cy,inner,'F');
-    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Distribuição',cx,cy-2,{align:'center'}); doc.text('de Criticidade',cx,cy+5,{align:'center'});
-    let lx=210, ly=62; cats.forEach(c=>{ const [name,n,rgb]=c, p=(n/total*100).toFixed(1)+'%'; doc.setFillColor(...rgb); doc.rect(lx,ly-4,5,5,'F'); doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(`${name}: ${p}`,lx+8,ly); ly+=12; });
+
+    // Furo central e título interno.
+    doc.setDrawColor(255,255,255); doc.setFillColor(255,255,255); doc.circle(cx,cy,inner,'FD');
+    doc.setTextColor(20,20,25); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('Distribuição',cx,cy-3,{align:'center'});
+    doc.text('de Criticidade',cx,cy+5,{align:'center'});
+
+    // Legenda centralizada na base.
+    const legendY=164; let legendX=64;
+    cats.forEach((c,idx)=>{
+      const [name,n,rgb]=c; const p=((n/total)*100).toFixed(1)+'%';
+      const x=legendX+(idx%4)*46;
+      const y=legendY+Math.floor(idx/4)*10;
+      doc.setFillColor(...rgb); doc.setDrawColor(...rgb); doc.rect(x,y-4,5,5,'FD');
+      doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.setFontSize(8);
+      doc.text(`${name} (${p})`,x+8,y);
+    });
   }
   function drawMatrix(doc,rs){
     header(doc,'Relatório DGR-FRAM Analítico 10/10','Direta + indireta + total');
