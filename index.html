@@ -233,25 +233,11 @@ textarea.fi{resize:vertical;min-height:55px}
           
           <div class="dash-grid" id="dash-stats"></div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-            <div class="dash-section">
-              <h3>VFRR por Função (P95 — Limite Crítico)</h3>
-              <canvas id="ch-vfr" height="200"></canvas>
-              <div id="ch-vfr-empty" class="empty">Execute a simulação para calcular</div>
-            </div>
-            <div class="dash-section">
-              <h3>Distribuição de Criticidade Estrutural</h3>
-              <canvas id="ch-donut" height="200"></canvas>
-              <div id="ch-donut-empty" class="empty">Execute a simulação para calcular</div>
-            </div>
-          </div>
-
           <div class="dash-section" style="margin-bottom:14px">
-            <h3>Histograma de Risco Acumulado — Distribuição Agregada</h3>
-            <canvas id="ch-hist" height="130"></canvas>
-            <div id="ch-hist-empty" class="empty">Execute a simulação para calcular</div>
+            <h3>VFRR por Função (P95 — Limite Crítico)</h3>
+            <canvas id="ch-vfr" height="260" style="width:100%;min-height:260px;display:block"></canvas>
+            <div id="ch-vfr-empty" class="empty">Execute a simulação para calcular</div>
           </div>
-
 
           <div class="dash-section" style="margin-bottom:14px">
             <h3>Diagnóstico Automático da Rede FRAM</h3>
@@ -3412,6 +3398,152 @@ let openSubcatFn = {};
   DGRManager.refreshUI=function(){ oldRefresh(); cleanMonteCarloUI(); if(DGRState.curPage==='mc'){ const hasRes=(DGRState.fns||[]).some(f=>DGRState.mcRes[f.id]); this.renderKPIs(hasRes); this.renderCharts(hasRes); this.renderMCPanel(hasRes); this.renderAdvancedAnalytics(hasRes); } };
   document.addEventListener('DOMContentLoaded', cleanMonteCarloUI); setTimeout(cleanMonteCarloUI,0);
 })();
+</script>
+
+
+
+<script>
+// PATCH FINAL — manter somente VE, VX, MR, VFR, Média, P90, P95, P99 e Probabilidade de Criticidade
+(function(){
+  const $ = (id) => document.getElementById(id);
+  const pct = (v,d=1) => (Number(v||0)*100).toFixed(d)+'%';
+  const esc = (s) => (DGRManager.esc ? DGRManager.esc(s) : String(s||'').replace(/[&<>\"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])));
+  const avg = (a) => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
+  const rows = () => (DGRManager.resultRows ? DGRManager.resultRows() : []).filter(x=>x&&x.r&&x.fn);
+
+  function limparBlocosExtras(){
+    const removerTitulos = [
+      'Diagnóstico Automático', 'Rotas Críticas', 'Efeito dos Mecanismos', 'IGR', 'IIS',
+      'Propagação da Variabilidade', 'Matriz', 'RF recebida', 'Ressonância', 'Distribuição de Criticidade Estrutural', 'Histograma de Risco Acumulado', 'Distribuição Agregada'
+    ];
+    document.querySelectorAll('#s-mc .dash-section').forEach(sec => {
+      const t = (sec.querySelector('h3')?.textContent || '');
+      if (removerTitulos.some(k => t.includes(k))) sec.remove();
+    });
+    ['auto-diagnosis','critical-routes','resilience-effect','ch-heat','ch-iis','ch-heat-empty','ch-iis-empty','ch-donut','ch-donut-empty','ch-hist','ch-hist-empty'].forEach(id=>{
+      const el=$(id); const sec=el?.closest('.dash-section'); if(sec) sec.remove();
+    });
+    const sub = document.querySelector('#s-mc .page-sub');
+    if(sub) sub.innerHTML = 'Cálculos Monte Carlo mantendo somente os indicadores: <b>VE</b>, <b>VX</b>, <b>MR</b>, <b>VFR</b>, <b>Média</b>, <b>P90</b>, <b>P95</b>, <b>P99</b> e <b>Probabilidade de Criticidade</b>.';
+    const donut = $('ch-donut');
+    if(donut){ donut.setAttribute('height','320'); donut.style.minHeight='320px'; }
+    const hist = $('ch-hist');
+    if(hist){ hist.setAttribute('height','160'); }
+  }
+
+  DGRManager.renderKPIs = function(hasRes){
+    const fs=(DGRState.fns||[]).filter(f=>DGRState.mcRes[f.id]);
+    const m = fs.map(f=>DGRState.mcRes[f.id]||{});
+    const stats = [
+      {val:hasRes?pct(avg(m.map(r=>r.vde||0))):'-', lbl:'VE', color:'#c0392b'},
+      {val:hasRes?pct(avg(m.map(r=>r.vdx||0))):'-', lbl:'VX', color:'#d97706'},
+      {val:hasRes?pct(avg(m.map(r=>r.mr||0))):'-', lbl:'MR', color:'#0f6e56'},
+      {val:hasRes?pct(avg(m.map(r=>r.vfr||r.beforeMR||0))):'-', lbl:'VFR', color:'#4778e8'},
+      {val:hasRes?pct(avg(m.map(r=>r.mean||0))):'-', lbl:'Média', color:'#4778e8'},
+      {val:hasRes?pct(avg(m.map(r=>r.p90||0))):'-', lbl:'P90', color:'#854f0b'},
+      {val:hasRes?pct(avg(m.map(r=>r.p95||0))):'-', lbl:'P95', color:'#c0392b'},
+      {val:hasRes?pct(avg(m.map(r=>r.p99||0))):'-', lbl:'P99', color:'#7c0000'},
+      {val:hasRes?pct(avg(m.map(r=>r.probCrit||0))):'-', lbl:'Probabilidade de Criticidade', color:'#c0392b'}
+    ];
+    const el=$('dash-stats'); if(el) el.innerHTML=stats.map(s=>`<div class="dash-card"><div class="dash-card-val" style="color:${s.color}">${s.val}</div><div class="dash-card-lbl">${s.lbl}</div></div>`).join('');
+    limparBlocosExtras();
+  };
+
+  DGRManager.renderAdvancedAnalytics = function(){ limparBlocosExtras(); };
+
+  DGRManager.renderMCPanel = function(hasRes){
+    const target=$('mc-inner'); if(!target) return; if(!hasRes){ target.innerHTML=''; limparBlocosExtras(); return; }
+    const rs=rows().sort((a,b)=>(b.r.p95||0)-(a.r.p95||0));
+    const max=Math.max(...rs.map(x=>x.r.p95||0),.001);
+    let html='<div style="margin-top:20px"><div style="font-size:14px;font-weight:600;margin-bottom:10px">Ranking por P95</div>';
+    rs.forEach((x,i)=>{ const v=x.r.p95||0, ci=this.critInfo(v); html+=`<div class="rcard"><span class="rnum">#${i+1}</span><span class="rname">${esc(x.fn.name)}</span><span class="cbadge ${ci.cls}">${ci.lbl}</span><div class="rbar"><div class="rbarfill" style="width:${Math.round(v/max*100)}%;background:${this.vColor(v)}"></div></div><span class="rval">${pct(v)}</span></div>`; });
+    html+='</div><div class="dgrid">';
+    rs.forEach(x=>{ const r=x.r, ci=this.critInfo(r.p95||0); html+=`<div class="dc"><div class="dc-head"><span style="font-weight:700;">${esc(x.fn.name)}</span><span class="cbadge ${ci.cls}">${ci.lbl}</span></div><div class="sgrid"><div class="sbox"><span class="sval">${pct(r.vde||0)}</span><span class="slbl">VE</span></div><div class="sbox"><span class="sval">${pct(r.vdx||0)}</span><span class="slbl">VX</span></div><div class="sbox"><span class="sval">${pct(r.mr||0)}</span><span class="slbl">MR</span></div><div class="sbox"><span class="sval">${pct(r.vfr||r.beforeMR||0)}</span><span class="slbl">VFR</span></div><div class="sbox"><span class="sval">${pct(r.mean||0)}</span><span class="slbl">Média</span></div><div class="sbox"><span class="sval">${pct(r.p90||0)}</span><span class="slbl">P90</span></div><div class="sbox"><span class="sval">${pct(r.p95||0)}</span><span class="slbl">P95</span></div><div class="sbox"><span class="sval">${pct(r.p99||0)}</span><span class="slbl">P99</span></div><div class="sbox"><span class="sval">${pct(r.probCrit||0)}</span><span class="slbl">Prob. Criticidade</span></div></div></div>`; });
+    target.innerHTML=html+'</div>'; limparBlocosExtras();
+  };
+
+  DGRManager.renderCharts = function(hasRes){
+    limparBlocosExtras();
+    const rs=rows().sort((a,b)=>(b.r.p95||0)-(a.r.p95||0));
+    const bar=$('ch-vfr'), be=$('ch-vfr-empty');
+    if(bar){ const ctx=bar.getContext('2d'), w=bar.width=bar.clientWidth||720, h=bar.height=+bar.getAttribute('height')||200; ctx.clearRect(0,0,w,h); if(!hasRes||!rs.length){ if(be)be.style.display='block'; } else { if(be)be.style.display='none'; const max=Math.max(...rs.map(x=>x.r.p95||0),.001), bh=Math.max(10,(h-36)/rs.length-5); ctx.font='11px Segoe UI'; rs.forEach((x,i)=>{ const v=x.r.p95||0, y=20+i*(bh+5), bw=(w-210)*v/max; ctx.fillStyle='#eef0f6'; ctx.fillRect(145,y,w-220,bh); ctx.fillStyle=this.vColor(v); ctx.fillRect(145,y,bw,bh); ctx.fillStyle='#4c5570'; ctx.textAlign='right'; ctx.fillText((x.fn.name||'').slice(0,22),138,y+bh*.72); ctx.textAlign='left'; ctx.fillStyle='#1a1a2e'; ctx.font='bold 11px Segoe UI'; ctx.fillText(pct(v),150+bw,y+bh*.72); ctx.font='11px Segoe UI'; }); }}
+    const hist=$('ch-hist'), he=$('ch-hist-empty');
+    if(hist){ const ctx=hist.getContext('2d'), w=hist.width=hist.clientWidth||900, h=hist.height=+hist.getAttribute('height')||160; ctx.clearRect(0,0,w,h); if(!hasRes||!rs.length){ if(he)he.style.display='block'; } else { if(he)he.style.display='none'; const bins=Array(20).fill(0); rs.forEach(x=>(x.r.hist||[]).forEach((v,i)=>{ if(i<20) bins[i]+=v; })); const mx=Math.max(...bins,1), bw=(w-30)/20; bins.forEach((v,i)=>{ const bh=(h-35)*v/mx; ctx.fillStyle=this.vColor(i/20); ctx.fillRect(15+i*bw,h-18-bh,bw-2,bh); }); ctx.fillStyle='#4c5570'; ctx.font='11px Segoe UI'; ctx.fillText('Baixa',15,h-4); ctx.textAlign='right'; ctx.fillText('Crítica',w-15,h-4); ctx.textAlign='left'; }}
+    const donut=$('ch-donut'), de=$('ch-donut-empty');
+    if(donut){ const ctx=donut.getContext('2d'), w=donut.width=donut.clientWidth||520, h=donut.height=+donut.getAttribute('height')||320; ctx.clearRect(0,0,w,h); if(!hasRes||!rs.length){ if(de)de.style.display='block'; } else { if(de)de.style.display='none'; const counts=[0,0,0,0]; rs.forEach(x=>{ const v=x.r.p95||0; counts[v>=.7?3:v>=.5?2:v>=.3?1:0]++; }); const labels=['Baixa','Moderada','Alta','Crítica'], colors=['#0f6e56','#eab308','#f59e0b','#c0392b']; const total=rs.length, cx=Math.min(w*.38,210), cy=h/2+5, R=Math.min(118,h*.38), inner=R*.55; let a=-Math.PI/2; counts.forEach((cnt,i)=>{ if(!cnt) return; const da=cnt/total*Math.PI*2; ctx.beginPath(); ctx.arc(cx,cy,R,a,a+da); ctx.arc(cx,cy,inner,a+da,a,true); ctx.closePath(); ctx.fillStyle=colors[i]; ctx.fill(); a+=da; }); ctx.fillStyle='#1a1a2e'; ctx.font='bold 28px Segoe UI'; ctx.textAlign='center'; ctx.fillText(String(total),cx,cy+4); ctx.font='12px Segoe UI'; ctx.fillText('funções',cx,cy+25); ctx.textAlign='left'; counts.forEach((cnt,i)=>{ const yy=70+i*44, p=Math.round(cnt/total*100); ctx.fillStyle=colors[i]; ctx.fillRect(w*.62,yy-16,22,22); ctx.fillStyle='#1a1a2e'; ctx.font='14px Segoe UI'; ctx.fillText(`${labels[i]}: ${cnt} (${p}%)`,w*.62+32,yy); }); }}
+  };
+
+  DGRManager.exportPDF = function(){
+    const {jsPDF}=window.jspdf||{}; if(!jsPDF){alert('Biblioteca jsPDF não carregada.');return;}
+    const doc=new jsPDF('p','mm','a4'); const rs=rows().sort((a,b)=>(b.r.p95||0)-(a.r.p95||0));
+    let y=16; const line=6; const addPageIf=()=>{ if(y>276){ doc.addPage(); y=16; } };
+    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('DGR-FRAM Analyze — Relatório Monte Carlo',15,y); y+=9;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text('Indicadores mantidos: VE, VX, MR, VFR, Média, P90, P95, P99 e Probabilidade de Criticidade.',15,y); y+=8;
+    doc.text(`Funções: ${(DGRState.fns||[]).length} | Simulações: ${DGRState.mcN||0}`,15,y); y+=10;
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    const xs=[15,58,73,88,103,120,138,154,170,186]; const hs=['Função','VE','VX','MR','VFR','Média','P90','P95','P99','Prob.'];
+    hs.forEach((h,i)=>doc.text(h,xs[i],y)); y+=5; doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    if(!rs.length){ doc.text('Execute a simulação antes de exportar para incluir os resultados.',15,y); }
+    rs.forEach(x=>{ addPageIf(); const r=x.r; const vals=[String(x.fn.name||'').slice(0,24),pct(r.vde||0,0),pct(r.vdx||0,0),pct(r.mr||0,0),pct(r.vfr||r.beforeMR||0,0),pct(r.mean||0,0),pct(r.p90||0,0),pct(r.p95||0,0),pct(r.p99||0,0),pct(r.probCrit||0,0)]; vals.forEach((v,i)=>doc.text(v,xs[i],y)); y+=line; });
+    y+=6; addPageIf(); doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text('Ranking por P95',15,y); y+=6; doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    rs.forEach((x,i)=>{ addPageIf(); doc.text(`${i+1}. ${String(x.fn.name||'').slice(0,42)} — P95 ${pct(x.r.p95||0)} — Prob. ${pct(x.r.probCrit||0)}`,15,y); y+=line; });
+    doc.save('dgr-fram-relatorio-montecarlo-indicadores-limpos.pdf');
+  };
+
+  const oldRefreshFinalIndicadores = DGRManager.refreshUI.bind(DGRManager);
+  DGRManager.refreshUI = function(){ oldRefreshFinalIndicadores(); limparBlocosExtras(); if(DGRState.curPage==='mc'){ const has=(DGRState.fns||[]).some(f=>DGRState.mcRes[f.id]); this.renderKPIs(has); this.renderCharts(has); this.renderMCPanel(has); } };
+  document.addEventListener('DOMContentLoaded', limparBlocosExtras);
+  setTimeout(limparBlocosExtras,0);
+})();
+
+
+/* Ajuste final: manter somente o gráfico VFRR/P95 e remover distribuição/histograma da tela. */
+(function(){
+  const $ = id => document.getElementById(id);
+  const pct = (v,d=1)=> ((+v||0)*100).toFixed(d)+'%';
+  function finalCleanMonteCarlo(){
+    const titles=['Distribuição de Criticidade Estrutural','Histograma de Risco Acumulado','Distribuição Agregada','Diagnóstico Automático','Rotas Críticas','Efeito dos Mecanismos','IGR','IIS','Propagação da Variabilidade','Matriz','RF recebida','Ressonância'];
+    document.querySelectorAll('#s-mc .dash-section').forEach(sec=>{
+      const t=sec.querySelector('h3')?.textContent||'';
+      if(titles.some(k=>t.includes(k))) sec.remove();
+    });
+    ['ch-donut','ch-donut-empty','ch-hist','ch-hist-empty','auto-diagnosis','critical-routes','resilience-effect','ch-heat','ch-iis','ch-heat-empty','ch-iis-empty'].forEach(id=>{
+      const el=$(id), sec=el?.closest('.dash-section');
+      if(sec) sec.remove(); else if(el) el.remove();
+    });
+    const bar=$('ch-vfr');
+    if(bar){ bar.style.width='100%'; bar.style.display='block'; bar.style.minHeight='260px'; }
+  }
+  DGRManager.renderCharts=function(hasRes){
+    finalCleanMonteCarlo();
+    const rs=(this.resultRows?this.resultRows():[]).filter(x=>x&&x.r&&x.fn).sort((a,b)=>(b.r.p95||0)-(a.r.p95||0));
+    const bar=$('ch-vfr'), empty=$('ch-vfr-empty');
+    if(!bar) return;
+    const parent=bar.closest('.dash-section') || bar.parentElement;
+    const w=Math.max(720, parent?.clientWidth ? parent.clientWidth-40 : bar.clientWidth || 720);
+    const rowH=30;
+    const h=Math.max(260, 48 + rs.length*rowH);
+    bar.width=w; bar.height=h; bar.style.height=h+'px';
+    const ctx=bar.getContext('2d'); ctx.clearRect(0,0,w,h);
+    if(!hasRes || !rs.length){ if(empty) empty.style.display='block'; return; }
+    if(empty) empty.style.display='none';
+    const left=170, right=75, max=Math.max(...rs.map(x=>x.r.p95||0), .001);
+    ctx.font='11px Segoe UI'; ctx.fillStyle='#4c5570'; ctx.fillText('P95 / Limite Crítico', 8, 16);
+    rs.forEach((x,i)=>{
+      const v=x.r.p95||0, y=34+i*rowH, bh=18, bw=(w-left-right)*v/max;
+      ctx.fillStyle='#eef0f6'; ctx.fillRect(left,y,w-left-right,bh);
+      ctx.fillStyle=this.vColor ? this.vColor(v) : '#4778e8'; ctx.fillRect(left,y,bw,bh);
+      ctx.fillStyle='#4c5570'; ctx.textAlign='right'; ctx.font='11px Segoe UI'; ctx.fillText(String(x.fn.name||'').slice(0,24), left-8, y+13);
+      ctx.textAlign='left'; ctx.fillStyle='#1a1a2e'; ctx.font='bold 11px Segoe UI'; ctx.fillText(pct(v), Math.min(left+bw+6,w-55), y+13);
+    });
+    ctx.textAlign='left';
+  };
+  const oldRefresh=DGRManager.refreshUI.bind(DGRManager);
+  DGRManager.refreshUI=function(){ oldRefresh(); finalCleanMonteCarlo(); if(DGRState.curPage==='mc'){ const has=(DGRState.fns||[]).some(f=>DGRState.mcRes[f.id]); this.renderCharts(has); } };
+  document.addEventListener('DOMContentLoaded', finalCleanMonteCarlo);
+  setTimeout(finalCleanMonteCarlo,0);
+})();
+
 </script>
 
 </body>
