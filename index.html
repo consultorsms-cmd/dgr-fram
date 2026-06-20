@@ -4469,5 +4469,40 @@ let openSubcatFn = {};
 })();
 </script>
 
+
+
+<script>
+// Patch corretivo: exportar PDF sem bloquear com "Execute a simulação antes de exportar o PDF".
+// Quando houver funções cadastradas e ainda não existir resultado Monte Carlo, roda a simulação automaticamente antes da exportação.
+(function(){
+  function hasResults(){
+    try{
+      return !!(window.DGRState && DGRState.fns && DGRState.fns.some(function(f){ return DGRState.mcRes && DGRState.mcRes[f.id]; }));
+    }catch(e){ return false; }
+  }
+  function hasFunctions(){
+    try{ return !!(window.DGRState && DGRState.fns && DGRState.fns.length); }catch(e){ return false; }
+  }
+  function autoRunIfNeeded(){
+    if(hasFunctions() && !hasResults() && window.DGRManager && typeof DGRManager.runSimulation === 'function'){
+      try{ DGRManager.runSimulation(); }catch(e){ console.warn('Simulação automática antes do PDF falhou:', e); }
+    }
+  }
+  function install(){
+    if(!window.DGRManager || typeof DGRManager.exportPDF !== 'function' || DGRManager.__pdfAutoRunPatched) return;
+    const previousExportPDF = DGRManager.exportPDF.bind(DGRManager);
+    DGRManager.exportPDF = function(){
+      autoRunIfNeeded();
+      // pequena espera para permitir que a interface e mcRes sejam atualizados quando o navegador processar a simulação
+      setTimeout(function(){ previousExportPDF(); }, 80);
+    };
+    DGRManager.__pdfAutoRunPatched = true;
+  }
+  install();
+  setTimeout(install, 200);
+  setTimeout(install, 800);
+})();
+</script>
+
 </body>
 </html>
