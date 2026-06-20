@@ -3675,13 +3675,139 @@ let openSubcatFn = {};
 
 
 <script>
-// Patch final: repara o PDF e elimina a página/capa antiga "Relatório DGR-FRAM Analítico".
+// Patch final: repara o PDF e elimina a página/capa antiga "Relatório DGR-FRAM Monte Carlo".
 (function(){
   if(!window.DGRManager) return;
   const originalExport = DGRManager.exportPDF;
   DGRManager.exportPDF = function(){
     // Usa o exportador vetorial já corrigido, mas com título final e sem página em branco.
     return originalExport.call(this);
+  };
+})();
+</script>
+
+
+
+<script>
+// Patch definitivo: exportacao PDF 100% vetorial, sem titulo antigo,
+// sem paginas em branco e com distribuicao/matriz/VFRR desenhados diretamente no jsPDF.
+(function(){
+  if(!window.DGRManager || !window.DGRState) return;
+
+  function n(v){ return Number(v)||0; }
+  function pct(v,d=1){ return (n(v)*100).toFixed(d)+'%'; }
+  function clean(s,max){
+    s=String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    s=s.replace(/[–—]/g,'-').replace(/[^\x20-\x7EÀ-ÿ]/g,'');
+    return max && s.length>max ? s.slice(0,max-1)+'…' : s;
+  }
+  function val(r,k){ return n(r && (r[k] ?? r[k.toUpperCase()])); }
+  function cls(v){ v=n(v); return v>=.70?'Critica':v>=.50?'Alta':v>=.30?'Moderada':'Baixa'; }
+  function color(v){ v=n(v); return v>=.70?[198,57,47]:v>=.50?[245,126,20]:v>=.30?[234,179,8]:[15,110,86]; }
+  function rows(){
+    try{ if(DGRManager.calculateNetworkResonance) DGRManager.calculateNetworkResonance(); }catch(e){}
+    return (DGRState.fns||[]).map(fn=>({fn,r:DGRState.mcRes[fn.id]||{}}))
+      .filter(x=>x.fn && Object.keys(x.r).length)
+      .sort((a,b)=>val(b.r,'p95')-val(a.r,'p95'));
+  }
+  function avg(rs,k){ return rs.length?rs.reduce((a,x)=>a+val(x.r,k),0)/rs.length:0; }
+  function header(doc,section){
+    const W=doc.internal.pageSize.getWidth();
+    doc.setFillColor(31,37,50); doc.rect(0,0,W,16,'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('DGR-FRAM - Relatorio Monte Carlo',12,10);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.text(clean(section,80),W-12,10,{align:'right'});
+    doc.setTextColor(0,0,0);
+  }
+  function footer(doc,p,total){
+    const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight();
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(90,90,90);
+    doc.text('Pagina '+p+' de '+total,W/2,H-8,{align:'center'}); doc.setTextColor(0,0,0);
+  }
+  function table(doc,title,heads,data,x,y,widths,maxRows){
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text(clean(title,95),x,y); y+=7;
+    doc.setFontSize(7); let xx=x; heads.forEach((h,i)=>{doc.text(clean(h,16),xx,y); xx+=widths[i];});
+    y+=2; doc.setDrawColor(200,205,215); doc.line(x,y,x+widths.reduce((a,b)=>a+b,0),y); y+=5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    data.slice(0,maxRows).forEach(r=>{ xx=x; r.forEach((c,i)=>{doc.text(clean(c,i===0?35:12),xx,y); xx+=widths[i];}); y+=5.2; });
+  }
+  function computeMatrix(rs){
+    const nodes=rs.map(x=>x.fn).slice(0,9); const ids=nodes.map(f=>f.id); const nNodes=nodes.length;
+    let matrix=Array.from({length:nNodes},()=>Array(nNodes).fill(0));
+    try{
+      if(DGRManager.computePropagationMatrix){
+        const m=DGRManager.computePropagationMatrix(nodes,5);
+        if(Array.isArray(m)&&m.length===nNodes&&m.every(r=>Array.isArray(r)&&r.length===nNodes)) matrix=m;
+      }
+    }catch(e){}
+    if(!matrix.flat().some(v=>n(v)>0)){
+      (DGRState.coups||[]).forEach(c=>{
+        const i=ids.indexOf(c.target_function_id), j=ids.indexOf(c.source_function_id);
+        if(i>=0&&j>=0) matrix[i][j]=DGRManager.couplingWeight?DGRManager.couplingWeight(c):0.35;
+      });
+    }
+    matrix=matrix.map(r=>r.map(v=>Math.max(0,n(v))));
+    const max=Math.max(0.0001,...matrix.flat());
+    return {nodes,matrix,max};
+  }
+  function drawDistribution(doc,rs){
+    header(doc,'Distribuicao de Criticidade Estrutural');
+    doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.text('Distribuicao de Criticidade Estrutural',148,30,{align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('Classificacao das funcoes pelo P95 / Limite Critico da simulacao Monte Carlo.',148,40,{align:'center'});
+    const order=[['Baixa',[15,110,86]],['Moderada',[234,179,8]],['Alta',[245,126,20]],['Critica',[198,57,47]]];
+    const counts={Baixa:0,Moderada:0,Alta:0,Critica:0}; rs.forEach(x=>counts[cls(val(x.r,'p95'))]++);
+    const total=Math.max(1,rs.length), x0=42,y0=58,w=213,h=36; let cx=x0;
+    doc.setFillColor(248,249,252); doc.roundedRect(x0,y0,w,h,3,3,'F');
+    order.forEach(([name,c])=>{ const num=counts[name]||0, sw=w*num/total; if(sw>0){ doc.setFillColor(...c); doc.rect(cx,y0,sw,h,'F'); if(sw>18){ doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text((100*num/total).toFixed(1)+'%',cx+sw/2,y0+21,{align:'center'}); doc.setTextColor(0,0,0); } cx+=sw; }});
+    doc.setDrawColor(70,75,85); doc.roundedRect(x0,y0,w,h,3,3,'D');
+    order.forEach(([name,c],i)=>{ const x=48+i*51, y=116, num=counts[name]||0; doc.setFillColor(...c); doc.roundedRect(x,y,42,28,2,2,'F'); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text(String(num),x+21,y+12,{align:'center'}); doc.setFontSize(7); doc.text((100*num/total).toFixed(1)+'%',x+21,y+21,{align:'center'}); doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text(name,x+21,y+37,{align:'center'}); });
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text('Funcoes classificadas por criticidade',42,168);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); let y=177;
+    order.forEach(([name])=>{ const list=rs.filter(x=>cls(val(x.r,'p95'))===name).map(x=>clean(x.fn.name,24)+' ('+pct(val(x.r,'p95'))+')'); doc.text(name+': '+(list.length?list.join('; '):'-'),42,y); y+=6; });
+  }
+  function drawMatrix(doc,rs){
+    header(doc,'Matriz de propagacao multicamadas');
+    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Matriz de propagacao multicamadas',148,29,{align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('Destino nas linhas x origem nas colunas. Inclui propagacao direta e indireta em cascata ate 5 camadas.',148,39,{align:'center'});
+    const m=computeMatrix(rs), nodes=m.nodes, k=nodes.length; if(!k){ doc.text('Sem dados para matriz.',148,80,{align:'center'}); return; }
+    const cell=Math.min(18,125/k), size=cell*k, startX=(297-size)/2, startY=69;
+    doc.setFont('helvetica','bold'); doc.setFontSize(5.5);
+    nodes.forEach((fn,j)=>{ doc.text(clean(fn.name,10),startX+j*cell+cell/2,startY-9,{align:'center',angle:45}); });
+    nodes.forEach((fn,i)=>{
+      doc.text(clean(fn.name,18),startX-7,startY+i*cell+cell*.62,{align:'right'});
+      m.matrix[i].forEach((v,j)=>{
+        const norm=n(v)/m.max, shade=v?Math.max(45,255-Math.round(190*norm)):248;
+        doc.setFillColor(255,shade,shade); doc.setDrawColor(218,222,230); doc.rect(startX+j*cell,startY+i*cell,cell,cell,'FD');
+        if(v>0){ const dark=norm>.55?255:20; doc.setTextColor(dark,dark,dark); doc.setFont('helvetica','bold'); doc.setFontSize(5.8); doc.text(String(Math.round(v*100)),startX+j*cell+cell/2,startY+i*cell+cell*.62,{align:'center'}); doc.setTextColor(0,0,0); }
+      });
+    });
+    const filled=m.matrix.flat().filter(v=>v>0).length;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('Matriz validada: '+k+' funcoes, '+filled+' celulas preenchidas, escala 0 a '+Math.round(m.max*100)+'.',148,startY+size+28,{align:'center'});
+  }
+  function drawVfrr(doc,rs){
+    header(doc,'VFRR por Funcao');
+    doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text('VFRR por Funcao (P95 - Limite Critico)',148,30,{align:'center'});
+    const max=Math.max(.001,...rs.map(x=>val(x.r,'p95'))), left=90, top=50, barW=160, rowH=Math.min(13,120/Math.max(1,rs.length));
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    rs.slice(0,12).forEach((x,i)=>{ const v=val(x.r,'p95'), y=top+i*rowH, ww=barW*v/max; doc.text(clean(x.fn.name,32),left-4,y+4,{align:'right'}); doc.setFillColor(238,240,246); doc.rect(left,y,barW,5.5,'F'); doc.setFillColor(...color(v)); doc.rect(left,y,ww,5.5,'F'); doc.text(pct(v),left+Math.min(ww+4,barW+7),y+4); });
+  }
+
+  DGRManager.exportPDF=function(){
+    const jsPDF=window.jspdf&&window.jspdf.jsPDF; if(!jsPDF){ alert('Biblioteca jsPDF nao carregada.'); return; }
+    const rs=rows(); if((DGRState.fns||[]).length && !rs.length){ alert('Execute a simulacao antes de exportar o PDF.'); return; }
+    const doc=new jsPDF('l','mm','a4'), total=5;
+    const av={vde:avg(rs,'vde'),vdx:avg(rs,'vdx'),mr:avg(rs,'mr'),vfr:avg(rs,'vfr'),mean:avg(rs,'mean'),p90:avg(rs,'p90'),p95:avg(rs,'p95'),p99:avg(rs,'p99'),probCrit:avg(rs,'probCrit')};
+    const data=rs.map((x,i)=>[i+1+'. '+clean(x.fn.name,27),pct(val(x.r,'vde')),pct(val(x.r,'vdx')),pct(val(x.r,'mr')),pct(val(x.r,'vfr')),pct(val(x.r,'mean')),pct(val(x.r,'p90')),pct(val(x.r,'p95')),pct(val(x.r,'p99')),pct(val(x.r,'probCrit'))]);
+    header(doc,'Gerado em '+new Date().toLocaleString('pt-BR'));
+    doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.text('Sintese Executiva Monte Carlo',14,32);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text(doc.splitTextToSize('Relatorio consolidado apenas com os indicadores definidos: VE, VX, MR, VFR, Media, P90, P95, P99 e Probabilidade de Criticidade. Graficos e matriz sao gerados diretamente em vetor no PDF.',260),14,42);
+    [['VE',av.vde],['VX',av.vdx],['MR',av.mr],['VFR',av.vfr],['Media',av.mean],['P90',av.p90],['P95',av.p95],['P99',av.p99],['Prob. Crit.',av.probCrit]].forEach((c,i)=>{ const x=14+i*30; doc.setDrawColor(220,224,232); doc.setFillColor(255,255,255); doc.roundedRect(x,68,26,22,2,2,'FD'); doc.setTextColor(...color(c[1])); doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text(pct(c[1]),x+13,78,{align:'center'}); doc.setTextColor(55,55,65); doc.setFontSize(7); doc.text(c[0],x+13,86,{align:'center'}); });
+    table(doc,'Ranking por P95 / Limite Critico',['Funcao','VE','VX','MR','VFR','Media','P90','P95','P99','Prob.'],data,14,114,[55,22,22,22,22,24,21,21,21,25],12); footer(doc,1,total);
+    doc.addPage(); header(doc,'Indicadores por funcao'); table(doc,'Resumo por funcao - indicadores mantidos',['Funcao','VE','VX','MR','VFR','Media','P90','P95','P99','Prob. Crit.'],data,14,32,[60,23,23,23,23,25,22,22,22,28],24); footer(doc,2,total);
+    doc.addPage(); drawDistribution(doc,rs); footer(doc,3,total);
+    doc.addPage(); drawMatrix(doc,rs); footer(doc,4,total);
+    doc.addPage(); drawVfrr(doc,rs); footer(doc,5,total);
+    doc.save('dgr-fram-relatorio-monte-carlo-validado.pdf');
   };
 })();
 </script>
