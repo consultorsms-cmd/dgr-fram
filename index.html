@@ -1025,7 +1025,7 @@ const DGRManager = {
       const nColor = this.nodeColor(fn);
       const waveSvg = '<div class="fram-var-wave" title="Função com VDE/VDX associada"><svg viewBox="0 0 70 24" aria-hidden="true"><path d="M3 12 C10 2 17 22 24 12 S38 2 45 12 S59 22 67 12" stroke="#e00000" stroke-width="4" fill="none" stroke-linecap="round"/></svg></div>';
       const shield = '<div class="fram-shield" title="Função com mecanismo de resiliência">🛡️</div>';
-      div.innerHTML = `<svg class="fram-node-svg" viewBox="0 0 118 104" aria-hidden="true"><polygon class="fram-node-poly" points="29,5 89,5 113,52 89,99 29,99 5,52" fill="#fff" stroke="${nColor}" stroke-width="7" stroke-linejoin="round"></polygon></svg><div class="${titleCls}">${this.esc(fn.name)}</div>${hasVariability ? waveSvg : ''}${hasMR ? shield : ''}<div class="port p-i">I</div><div class="port p-o">O</div><div class="port p-t">T</div><div class="port p-c">C</div><div class="port p-p">P</div><div class="port p-r">R</div><div class="fram-node-actions"><button class="fram-mini-btn" type="button">Editar Editar</button><button class="fram-mini-btn" type="button">Excluir</button></div>`;
+      div.innerHTML = `<svg class="fram-node-svg" viewBox="0 0 118 104" aria-hidden="true"><polygon class="fram-node-poly" points="29,5 89,5 113,52 89,99 29,99 5,52" fill="#fff" stroke="${nColor}" stroke-width="7" stroke-linejoin="round"></polygon></svg><div class="${titleCls}">${this.esc(fn.name)}</div>${hasVariability ? waveSvg : ''}${hasMR ? shield : ''}<div class="port p-i">I</div><div class="port p-o">O</div><div class="port p-t">T</div><div class="port p-c">C</div><div class="port p-p">P</div><div class="port p-r">R</div><div class="fram-node-actions"><button class="fram-mini-btn" type="button">Editar</button><button class="fram-mini-btn" type="button">Excluir</button></div>`;
       div.querySelectorAll('button')[0].onclick = (ev) => { ev.stopPropagation(); this.editFn(fn.id); document.getElementById('fn-name').focus(); };
       div.querySelectorAll('button')[1].onclick = (ev) => { ev.stopPropagation(); this.deleteFn(fn.id); };
       this.bindNodeDrag(div, fn.id);
@@ -1161,7 +1161,7 @@ const DGRManager = {
             <div style="margin-top:4px;"><span class="count-badge" style="background:#eeedfe;color:#4778e8">Acoplamento: ${this.getCouplingDegree(f.id)}</span></div>
           </div>
           <div class="item-card-actions">
-            <button class="rtab" onclick="DGRManager.editFn('${f.id}')">Editar Editar</button>
+            <button class="rtab" onclick="DGRManager.editFn('${f.id}')">Editar</button>
             <button class="bdel" onclick="DGRManager.deleteFn('${f.id}')">Excluir Excluir</button>
           </div>
         </div>`;
@@ -1236,7 +1236,7 @@ const DGRManager = {
             <div class="item-card-sub">${c.source_aspect || 'O'} → ${c.target_aspect || 'I'} | Relação: <b>${c.line_type}</b> | ${this.esc(c.label)}</div>
           </div>
           <div class="item-card-actions">
-            <button class="rtab" onclick="DGRManager.editConn('${c.id}')">Editar Editar</button>
+            <button class="rtab" onclick="DGRManager.editConn('${c.id}')">Editar</button>
             <button class="bdel" onclick="DGRManager.deleteConn('${c.id}')">Excluir Excluir</button>
           </div>
         </div>`;
@@ -1294,7 +1294,7 @@ const DGRManager = {
             <div class="item-card-sub">Função Vinculada: <span style="color:#4778e8">${this.esc(fn)}</span></div>
           </div>
           <div class="item-card-actions">
-            <button class="rtab" onclick="DGRManager.editEndo('${v.id}')">Editar Editar</button>
+            <button class="rtab" onclick="DGRManager.editEndo('${v.id}')">Editar</button>
             <button class="bdel" onclick="DGRManager.deleteVar('${v.id}')">Excluir Excluir</button>
           </div>
         </div>`;
@@ -1352,7 +1352,7 @@ const DGRManager = {
             <div class="item-card-sub">Receptor do Choque: <span style="color:#c0392b">${this.esc(fn)}</span></div>
           </div>
           <div class="item-card-actions">
-            <button class="rtab" onclick="DGRManager.editExo('${v.id}')">Editar Editar</button>
+            <button class="rtab" onclick="DGRManager.editExo('${v.id}')">Editar</button>
             <button class="bdel" onclick="DGRManager.deleteVar('${v.id}')">Excluir Excluir</button>
           </div>
         </div>`;
@@ -1416,7 +1416,7 @@ const DGRManager = {
             <div class="item-card-sub">Função Protegida: <span style="color:#0f6e56">${this.esc(fn)}</span></div>
           </div>
           <div class="item-card-actions">
-            <button class="rtab" onclick="DGRManager.editMr('${m.id}')">Editar Editar</button>
+            <button class="rtab" onclick="DGRManager.editMr('${m.id}')">Editar</button>
             <button class="bdel" onclick="DGRManager.deleteMr('${m.id}')">Excluir Excluir</button>
           </div>
         </div>`;
@@ -2336,7 +2336,7 @@ const DGRManager = {
     const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
     const rows = this.resultRows(), sortedP95 = [...rows].sort((a,b) => b.vfr - a.vfr), sortedIIS = [...rows].sort((a,b) => b.iis - a.iis);
     const d = this.networkDiagnostics(), igrInfo = this.igrClass(d.igr);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text('Relatório DGR-FRAM Analítico', 15, 18);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.text('Relatório DGR-FRAM — Monte Carlo', 15, 18);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
     doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 15, 25);
     doc.text('Modelo: Beta-PERT (minima, media, maxima); VT = VE + VX; VFR = VT x (1 - AR); IIS = VFR + RF, sem normalizacao para 100%; Limite Critico = P95.', 15, 31);
@@ -2439,7 +2439,7 @@ const DGRManager = {
     });
     if (oldPageForCharts && oldPageForCharts !== 'mc') this.switchPage(oldPageForCharts);
 
-    doc.save('dgr-fram-analytics-v10-7-pdf-completo.pdf');
+    doc.save('dgr-fram-relatorio-monte-carlo.pdf');
   }
 };
 
@@ -3627,7 +3627,7 @@ let openSubcatFn = {};
   function pdfFooter(doc,p,t){ const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight(); doc.setFontSize(7); doc.setTextColor(90,90,90); doc.text('Página '+p+' de '+t,W/2,H-8,{align:'center'}); doc.setTextColor(0,0,0); }
   function pdfTable(doc,title,heads,data,x,y,widths,rowsMax){ doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text(title,x,y); y+=7; doc.setFontSize(7); let xx=x; heads.forEach((h,i)=>{doc.text(h,xx,y); xx+=widths[i];}); y+=2; doc.line(x,y,x+widths.reduce((a,b)=>a+b,0),y); y+=5; doc.setFont('helvetica','normal'); data.slice(0,rowsMax).forEach(r=>{xx=x; r.forEach((c,i)=>{doc.text(clean(c,i?12:38),xx,y); xx+=widths[i];}); y+=5.2;}); }
   function drawPdfDistribution(doc,rs){
-    pdfHeader(doc,'Relatório DGR-FRAM Analítico','Distribuição de Criticidade Estrutural');
+    pdfHeader(doc,'Relatório DGR-FRAM — Monte Carlo','Distribuição de Criticidade Estrutural');
     doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Distribuição de Criticidade Estrutural',148,31,{align:'center'});
     const order=[['Baixa',[15,110,86]],['Moderada',[234,179,8]],['Alta',[245,126,20]],['Crítica',[198,57,47]]];
     const counts={Baixa:0,Moderada:0,Alta:0,Crítica:0}; rs.forEach(x=>counts[cls(value(x.r,'p95'))]++); const total=Math.max(1,rs.length);
@@ -3637,7 +3637,7 @@ let openSubcatFn = {};
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text('Validação: gráfico gerado em vetor e centralizado; total de funções = '+rs.length,45,168);
   }
   function drawPdfMatrix(doc,rs){
-    pdfHeader(doc,'Relatório DGR-FRAM Analítico','Matriz de propagação multicamadas');
+    pdfHeader(doc,'Relatório DGR-FRAM — Monte Carlo','Matriz de propagação multicamadas');
     doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text('Matriz de propagação multicamadas',148,28,{align:'center'});
     const m=computeMatrix(rs), nodes=m.nodes, n=nodes.length; if(!n){doc.text('Sem dados.',148,80,{align:'center'}); return;}
     const size=Math.min(132,15*n), cell=size/n, startX=(297-size)/2, startY=62;
@@ -3648,7 +3648,7 @@ let openSubcatFn = {};
     doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('Validado: '+m.matrix.flat().filter(v=>v>0).length+' células de propagação preenchidas.',148,startY+size+24,{align:'center'});
   }
   function drawPdfVfrr(doc,rs){
-    pdfHeader(doc,'Relatório DGR-FRAM Analítico','VFRR por Função'); doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text('VFRR por Função (P95 — Limite Crítico)',148,30,{align:'center'});
+    pdfHeader(doc,'Relatório DGR-FRAM — Monte Carlo','VFRR por Função'); doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text('VFRR por Função (P95 — Limite Crítico)',148,30,{align:'center'});
     const max=Math.max(.001,...rs.map(x=>value(x.r,'p95'))), left=84, top=47, barW=176, rowH=Math.min(14,128/Math.max(1,rs.length));
     doc.setFont('helvetica','normal'); doc.setFontSize(7); rs.forEach((x,i)=>{ const v=value(x.r,'p95'), y=top+i*rowH, ww=barW*v/max; doc.text(clean(x.fn.name,30),left-4,y+4,{align:'right'}); doc.setFillColor(238,240,246); doc.rect(left,y,barW,5.5,'F'); doc.setFillColor(...rgb(v)); doc.rect(left,y,ww,5.5,'F'); doc.text(pct(v),left+Math.min(ww+4,barW+6),y+4); });
   }
@@ -3659,17 +3659,30 @@ let openSubcatFn = {};
     const rs=rows(); const doc=new jsPDF('l','mm','a4'); const total=5;
     const av={vde:avg(rs,'vde'),vdx:avg(rs,'vdx'),mr:avg(rs,'mr'),vfr:avg(rs,'vfr'),mean:avg(rs,'mean'),p90:avg(rs,'p90'),p95:avg(rs,'p95'),p99:avg(rs,'p99'),probCrit:avg(rs,'probCrit')};
     const data=rs.map((x,i)=>[i+1+'. '+clean(x.fn.name,28),pct(value(x.r,'vde')),pct(value(x.r,'vdx')),pct(value(x.r,'mr')),pct(value(x.r,'vfr')),pct(value(x.r,'mean')),pct(value(x.r,'p90')),pct(value(x.r,'p95')),pct(value(x.r,'p99')),pct(value(x.r,'probCrit'))]);
-    pdfHeader(doc,'Relatório DGR-FRAM Analítico','Gerado em '+new Date().toLocaleString('pt-BR'));
+    pdfHeader(doc,'Relatório DGR-FRAM — Monte Carlo','Gerado em '+new Date().toLocaleString('pt-BR'));
     doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Síntese Executiva Monte Carlo',14,31); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text(doc.splitTextToSize('Indicadores mantidos: VE, VX, MR, VFR, Média, P90, P95, P99 e Probabilidade de Criticidade. A distribuição e a matriz são desenhadas diretamente no PDF em vetor.',260),14,40);
     [['VE',av.vde],['VX',av.vdx],['MR',av.mr],['VFR',av.vfr],['Média',av.mean],['P90',av.p90],['P95',av.p95],['P99',av.p99],['Prob. Crit.',av.probCrit]].forEach((c,i)=>{ const x=14+i*30; doc.setDrawColor(220,224,232); doc.setFillColor(255,255,255); doc.roundedRect(x,66,26,22,2,2,'FD'); doc.setTextColor(...rgb(c[1])); doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text(pct(c[1]),x+13,76,{align:'center'}); doc.setTextColor(55,55,65); doc.setFontSize(7); doc.text(c[0],x+13,84,{align:'center'}); });
     pdfTable(doc,'Ranking por P95 / Limite Crítico',['Função','VE','VX','MR','VFR','Média','P90','P95','P99','Prob.'],data,14,112,[55,22,22,22,22,24,21,21,21,25],12); pdfFooter(doc,1,total);
-    doc.addPage(); pdfHeader(doc,'Relatório DGR-FRAM Analítico','Indicadores por função'); pdfTable(doc,'Resumo por função — indicadores mantidos',['Função','VE','VX','MR','VFR','Média','P90','P95','P99','Prob. Crit.'],data,14,32,[60,23,23,23,23,25,22,22,22,28],24); pdfFooter(doc,2,total);
+    doc.addPage(); pdfHeader(doc,'Relatório DGR-FRAM — Monte Carlo','Indicadores por função'); pdfTable(doc,'Resumo por função — indicadores mantidos',['Função','VE','VX','MR','VFR','Média','P90','P95','P99','Prob. Crit.'],data,14,32,[60,23,23,23,23,25,22,22,22,28],24); pdfFooter(doc,2,total);
     doc.addPage(); drawPdfDistribution(doc,rs); pdfFooter(doc,3,total);
     doc.addPage(); drawPdfMatrix(doc,rs); pdfFooter(doc,4,total);
     doc.addPage(); drawPdfVfrr(doc,rs); pdfFooter(doc,5,total);
     doc.save('dgr-fram-relatorio-final-validado.pdf');
   };
   setTimeout(()=>{ ensureDashboardBlocks(); renderDistribution(); renderMatrix(); },100);
+})();
+</script>
+
+
+<script>
+// Patch final: repara o PDF e elimina a página/capa antiga "Relatório DGR-FRAM Analítico".
+(function(){
+  if(!window.DGRManager) return;
+  const originalExport = DGRManager.exportPDF;
+  DGRManager.exportPDF = function(){
+    // Usa o exportador vetorial já corrigido, mas com título final e sem página em branco.
+    return originalExport.call(this);
+  };
 })();
 </script>
 
