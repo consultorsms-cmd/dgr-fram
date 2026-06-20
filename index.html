@@ -3548,130 +3548,9 @@ let openSubcatFn = {};
 
 
 
-<!-- PATCH DEFINITIVO: Distribuição + Matriz aparecem na tela e no PDF, em SVG/vetor -->
-<script>
-(function(){
-  'use strict';
-  function pct(v,d){ return ((Number(v)||0)*100).toFixed(d==null?1:d)+'%'; }
-  function clean(s,n){ return String(s||'-').replace(/[\u{1F300}-\u{1FAFF}]/gu,'').replace(/\s+/g,' ').trim().slice(0,n||80); }
-  function rows(){
-    const fns=(window.DGRState&&DGRState.fns)||[];
-    return fns.map(fn=>({fn:fn,r:(DGRState.mcRes&&DGRState.mcRes[fn.id])||{}}))
-      .filter(x=>x.fn && Object.keys(x.r).length)
-      .sort((a,b)=>(Number(b.r.p95)||0)-(Number(a.r.p95)||0));
-  }
-  function value(r,k){ return Number(r[k] ?? r[k.toUpperCase()] ?? 0) || 0; }
-  function cls(v){ v=Number(v)||0; return v>=.70?'Crítica':v>=.50?'Alta':v>=.30?'Moderada':'Baixa'; }
-  function rgb(v){ v=Number(v)||0; return v>=.70?[198,57,47]:v>=.50?[245,126,20]:v>=.30?[234,179,8]:[15,110,86]; }
-  function rgbCss(a){ return 'rgb('+a.join(',')+')'; }
-  function avg(rs,k){ return rs.length?rs.reduce((s,x)=>s+value(x.r,k),0)/rs.length:0; }
-  function ensureDashboardBlocks(){
-    const form=document.querySelector('#s-mc .form-wrap'); if(!form) return;
-    let anchor=document.getElementById('mc-inner') || form.lastElementChild;
-    if(!document.getElementById('dgr-def-dist')){
-      const d=document.createElement('div'); d.className='dash-section'; d.id='dgr-def-dist'; d.innerHTML='<h3>Distribuição de Criticidade Estrutural</h3><div id="dgr-def-dist-body"></div>';
-      form.insertBefore(d, anchor);
-    }
-    if(!document.getElementById('dgr-def-matrix')){
-      const m=document.createElement('div'); m.className='dash-section'; m.id='dgr-def-matrix'; m.innerHTML='<h3></h3><div id="dgr-def-matrix-body"></div>';
-      form.insertBefore(m, anchor);
-    }
-  }
-  function computeMatrix(rs){
-    const nodes=rs.map(x=>x.fn).slice(0,10), n=nodes.length;
-    let matrix=Array.from({length:n},()=>Array(n).fill(0));
-    try{
-      if(DGRManager.computePropagationMatrix){
-        const pm=DGRManager.computePropagationMatrix(nodes,5);
-        if(Array.isArray(pm)&&pm.length===n&&pm.every(r=>Array.isArray(r)&&r.length===n)) matrix=pm;
-      }
-    }catch(e){}
-    if(!matrix.flat().some(v=>Number(v)>0)){
-      ((DGRState&&DGRState.coups)||[]).forEach(c=>{
-        const i=nodes.findIndex(f=>f.id===c.target_function_id), j=nodes.findIndex(f=>f.id===c.source_function_id);
-        if(i>=0&&j>=0) matrix[i][j]=(DGRManager.couplingWeight?DGRManager.couplingWeight(c):0.35);
-      });
-    }
-    matrix=matrix.map(r=>r.map(v=>Math.max(0,Number(v)||0)));
-    return {nodes,matrix,max:Math.max(0.0001,...matrix.flat())};
-  }
-  function renderDistribution(){
-    const el=document.getElementById('dgr-def-dist-body'); if(!el) return;
-    const rs=rows(); if(!rs.length){ el.innerHTML='<div class="empty">Execute a simulação para calcular.</div>'; return; }
-    const order=[['Baixa','#0f6e56'],['Moderada','#eab308'],['Alta','#f57e14'],['Crítica','#c6392f']];
-    const counts={Baixa:0,Moderada:0,Alta:0,Crítica:0}; rs.forEach(x=>counts[cls(value(x.r,'p95'))]++);
-    const total=Math.max(1,rs.length); let x=0, seg='';
-    order.forEach(([name,color])=>{ const n=counts[name]||0, w=100*n/total; if(w>0){ seg+=`<div title="${name}" style="width:${w}%;background:${color};height:38px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px">${w>=10?w.toFixed(1)+'%':''}</div>`; }});
-    const cards=order.map(([name,color])=>`<div style="border:1px solid #e0e0ea;border-radius:8px;padding:10px;text-align:center;background:#fff"><div style="font-size:22px;font-weight:800;color:${color}">${counts[name]||0}</div><div style="font-size:11px;color:#555">${name}</div><div style="font-size:11px;color:#888">${(100*(counts[name]||0)/total).toFixed(1)}%</div></div>`).join('');
-    el.innerHTML=`<div style="max-width:760px;margin:0 auto"><div style="display:flex;width:100%;border-radius:8px;overflow:hidden;border:1px solid #d0d0da;background:#f8f8fc">${seg}</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px">${cards}</div></div>`;
-  }
-  function renderMatrix(){
-    const el=document.getElementById('dgr-def-matrix-body'); if(!el) return;
-    const rs=rows(); if(!rs.length){ el.innerHTML='<div class="empty">Execute a simulação para calcular.</div>'; return; }
-    const {nodes,matrix,max}=computeMatrix(rs); const n=nodes.length;
-    const cell=34, left=150, top=80, W=left+n*cell+25, H=top+n*cell+58;
-    let svg=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;display:block;margin:0 auto;background:#fff">`;
-    svg+=`<text x="${W/2}" y="22" text-anchor="middle" font-size="14" font-weight="700"></text>`;
-    svg+=`<text x="${W/2}" y="40" text-anchor="middle" font-size="11" fill="#666">Destino nas linhas × origem nas colunas; propagação direta e indireta</text>`;
-    nodes.forEach((fn,j)=>{ svg+=`<text transform="translate(${left+j*cell+cell/2},${top-10}) rotate(-45)" text-anchor="start" font-size="9" font-weight="600">${clean(fn.name,18)}</text>`; });
-    nodes.forEach((fn,i)=>{ svg+=`<text x="${left-8}" y="${top+i*cell+cell*.62}" text-anchor="end" font-size="9" font-weight="600">${clean(fn.name,24)}</text>`; matrix[i].forEach((v,j)=>{ const norm=v/max, shade=v?Math.max(45,255-Math.round(190*norm)):248; const fill=`rgb(255,${shade},${shade})`; svg+=`<rect x="${left+j*cell}" y="${top+i*cell}" width="${cell}" height="${cell}" fill="${fill}" stroke="#dfe3ee"/>`; if(v>0) svg+=`<text x="${left+j*cell+cell/2}" y="${top+i*cell+cell*.62}" text-anchor="middle" font-size="9" font-weight="700" fill="${norm>.55?'#fff':'#111'}">${Math.round(v*100)}</text>`; }); });
-    svg+=`<text x="${W/2}" y="${H-18}" text-anchor="middle" font-size="10" fill="#555">Validado: matriz gerada com ${n} função(ões) e ${matrix.flat().filter(v=>v>0).length} célula(s) de propagação.</text></svg>`;
-    el.innerHTML=svg;
-  }
-  const oldRefresh=DGRManager.refreshUI.bind(DGRManager);
-  DGRManager.refreshUI=function(){ oldRefresh(); if(DGRState.curPage==='mc'){ ensureDashboardBlocks(); renderDistribution(); renderMatrix(); } };
-  const oldRun=DGRManager.runSimulation?DGRManager.runSimulation.bind(DGRManager):null;
-  if(oldRun){ DGRManager.runSimulation=function(){ const r=oldRun(); setTimeout(()=>{ensureDashboardBlocks();renderDistribution();renderMatrix();},50); return r; }; }
 
-  function pdfHeader(doc,title,sub){ const W=doc.internal.pageSize.getWidth(); doc.setFillColor(31,37,50); doc.rect(0,0,W,16,'F'); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text(title,12,10); doc.setFontSize(7); doc.text(sub||'',W-12,10,{align:'right'}); doc.setTextColor(0,0,0); }
-  function pdfFooter(doc,p,t){ const W=doc.internal.pageSize.getWidth(), H=doc.internal.pageSize.getHeight(); doc.setFontSize(7); doc.setTextColor(90,90,90); doc.text('Página '+p+' de '+t,W/2,H-8,{align:'center'}); doc.setTextColor(0,0,0); }
-  function pdfTable(doc,title,heads,data,x,y,widths,rowsMax){ doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text(title,x,y); y+=7; doc.setFontSize(7); let xx=x; heads.forEach((h,i)=>{doc.text(h,xx,y); xx+=widths[i];}); y+=2; doc.line(x,y,x+widths.reduce((a,b)=>a+b,0),y); y+=5; doc.setFont('helvetica','normal'); data.slice(0,rowsMax).forEach(r=>{xx=x; r.forEach((c,i)=>{doc.text(clean(c,i?12:38),xx,y); xx+=widths[i];}); y+=5.2;}); }
-  function drawPdfDistribution(doc,rs){
-    pdfHeader(doc,'Relatório DGR-FRAM — Monte Carlo','Distribuição de Criticidade Estrutural');
-    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Distribuição de Criticidade Estrutural',148,31,{align:'center'});
-    const order=[['Baixa',[15,110,86]],['Moderada',[234,179,8]],['Alta',[245,126,20]],['Crítica',[198,57,47]]];
-    const counts={Baixa:0,Moderada:0,Alta:0,Crítica:0}; rs.forEach(x=>counts[cls(value(x.r,'p95'))]++); const total=Math.max(1,rs.length);
-    const x0=45,y0=64,w=207,h=30; let cx=x0; doc.setFillColor(248,249,252); doc.roundedRect(x0,y0,w,h,3,3,'F');
-    order.forEach(([name,color])=>{ const n=counts[name]||0, sw=w*n/total; if(sw>0){ doc.setFillColor(...color); doc.rect(cx,y0,sw,h,'F'); if(sw>22){ doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text((100*n/total).toFixed(1)+'%',cx+sw/2,y0+18,{align:'center'}); doc.setTextColor(0,0,0);} cx+=sw; }}); doc.setDrawColor(80,80,90); doc.roundedRect(x0,y0,w,h,3,3,'D');
-    order.forEach(([name,color],i)=>{ const x=52+i*49, y=116, n=counts[name]||0; doc.setFillColor(...color); doc.roundedRect(x,y,37,26,2,2,'F'); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text(String(n),x+18.5,y+12,{align:'center'}); doc.setFontSize(7); doc.text((100*n/total).toFixed(1)+'%',x+18.5,y+20,{align:'center'}); doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text(name,x+18.5,y+35,{align:'center'}); });
-    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text('Validação: gráfico gerado em vetor e centralizado; total de funções = '+rs.length,45,168);
-  }
-  function drawPdfMatrix(doc,rs){
-    pdfHeader(doc,'Relatório DGR-FRAM — Monte Carlo','');
-    doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text('',148,28,{align:'center'});
-    const m=computeMatrix(rs), nodes=m.nodes, n=nodes.length; if(!n){doc.text('Sem dados.',148,80,{align:'center'}); return;}
-    const size=Math.min(132,15*n), cell=size/n, startX=(297-size)/2, startY=62;
-    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('Destino nas linhas × origem nas colunas. Propagação direta e indireta em cascata.',148,38,{align:'center'});
-    doc.setFont('helvetica','bold'); doc.setFontSize(6);
-    nodes.forEach((fn,j)=>{ doc.text(clean(fn.name,11),startX+j*cell+cell/2,startY-8,{align:'center',angle:45}); });
-    nodes.forEach((fn,i)=>{ doc.text(clean(fn.name,16),startX-8,startY+i*cell+cell*.62,{align:'right'}); m.matrix[i].forEach((v,j)=>{ const norm=v/m.max, shade=v?Math.max(45,255-Math.round(190*norm)):248; doc.setFillColor(255,shade,shade); doc.setDrawColor(218,222,230); doc.rect(startX+j*cell,startY+i*cell,cell,cell,'FD'); if(v>0){ doc.setTextColor(norm>.55?255:20,norm>.55?255:20,norm>.55?255:20); doc.setFont('helvetica','bold'); doc.setFontSize(6.2); doc.text(String(Math.round(v*100)),startX+j*cell+cell/2,startY+i*cell+cell*.62,{align:'center'}); doc.setTextColor(0,0,0); } }); });
-    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('Validado: '+m.matrix.flat().filter(v=>v>0).length+' células de propagação preenchidas.',148,startY+size+24,{align:'center'});
-  }
-  function drawPdfVfrr(doc,rs){
-    pdfHeader(doc,'Relatório DGR-FRAM — Monte Carlo','VFRR por Função'); doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text('VFRR por Função (P95 — Limite Crítico)',148,30,{align:'center'});
-    const max=Math.max(.001,...rs.map(x=>value(x.r,'p95'))), left=84, top=47, barW=176, rowH=Math.min(14,128/Math.max(1,rs.length));
-    doc.setFont('helvetica','normal'); doc.setFontSize(7); rs.forEach((x,i)=>{ const v=value(x.r,'p95'), y=top+i*rowH, ww=barW*v/max; doc.text(clean(x.fn.name,30),left-4,y+4,{align:'right'}); doc.setFillColor(238,240,246); doc.rect(left,y,barW,5.5,'F'); doc.setFillColor(...rgb(v)); doc.rect(left,y,ww,5.5,'F'); doc.text(pct(v),left+Math.min(ww+4,barW+6),y+4); });
-  }
-  DGRManager.exportPDF=function(){
-    const jsPDF=window.jspdf&&window.jspdf.jsPDF; if(!jsPDF){ alert('Biblioteca jsPDF não carregada.'); return; }
-    if(DGRState.fns.length && !rows().length){ alert('Execute a simulação antes de exportar o PDF.'); return; }
-    try{ if(DGRManager.calculateNetworkResonance) DGRManager.calculateNetworkResonance(); }catch(e){}
-    const rs=rows(); const doc=new jsPDF('l','mm','a4'); const total=5;
-    const av={vde:avg(rs,'vde'),vdx:avg(rs,'vdx'),mr:avg(rs,'mr'),vfr:avg(rs,'vfr'),mean:avg(rs,'mean'),p90:avg(rs,'p90'),p95:avg(rs,'p95'),p99:avg(rs,'p99'),probCrit:avg(rs,'probCrit')};
-    const data=rs.map((x,i)=>[i+1+'. '+clean(x.fn.name,28),pct(value(x.r,'vde')),pct(value(x.r,'vdx')),pct(value(x.r,'mr')),pct(value(x.r,'vfr')),pct(value(x.r,'mean')),pct(value(x.r,'p90')),pct(value(x.r,'p95')),pct(value(x.r,'p99')),pct(value(x.r,'probCrit'))]);
-    pdfHeader(doc,'Relatório DGR-FRAM — Monte Carlo','Gerado em '+new Date().toLocaleString('pt-BR'));
-    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('Síntese Executiva Monte Carlo',14,31); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text(doc.splitTextToSize('Indicadores mantidos: VE, VX, MR, VFR, Média, P90, P95, P99 e Probabilidade de Criticidade. A distribuição e a matriz são desenhadas diretamente no PDF em vetor.',260),14,40);
-    [['VE',av.vde],['VX',av.vdx],['MR',av.mr],['VFR',av.vfr],['Média',av.mean],['P90',av.p90],['P95',av.p95],['P99',av.p99],['Prob. Crit.',av.probCrit]].forEach((c,i)=>{ const x=14+i*30; doc.setDrawColor(220,224,232); doc.setFillColor(255,255,255); doc.roundedRect(x,66,26,22,2,2,'FD'); doc.setTextColor(...rgb(c[1])); doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text(pct(c[1]),x+13,76,{align:'center'}); doc.setTextColor(55,55,65); doc.setFontSize(7); doc.text(c[0],x+13,84,{align:'center'}); });
-    pdfTable(doc,'Ranking por P95 / Limite Crítico',['Função','VE','VX','MR','VFR','Média','P90','P95','P99','Prob.'],data,14,112,[55,22,22,22,22,24,21,21,21,25],12); pdfFooter(doc,1,total);
-    doc.addPage(); pdfHeader(doc,'Relatório DGR-FRAM — Monte Carlo','Indicadores por função'); pdfTable(doc,'Resumo por função — indicadores mantidos',['Função','VE','VX','MR','VFR','Média','P90','P95','P99','Prob. Crit.'],data,14,32,[60,23,23,23,23,25,22,22,22,28],24); pdfFooter(doc,2,total);
-    doc.addPage(); drawPdfDistribution(doc,rs); pdfFooter(doc,3,total);
-    doc.addPage(); drawPdfMatrix(doc,rs); pdfFooter(doc,4,total);
-    doc.addPage(); drawPdfVfrr(doc,rs); pdfFooter(doc,5,total);
-    doc.save('dgr-fram-relatorio-final-validado.pdf');
-  };
-  setTimeout(()=>{ ensureDashboardBlocks(); renderDistribution(); renderMatrix(); },100);
-})();
-</script>
+<!-- Blocos Distribuição de Criticidade Estrutural e Matriz de propagação multicamadas removidos definitivamente. -->
+
 
 
 <script>
@@ -4027,6 +3906,107 @@ let openSubcatFn = {};
       return oldBuild.apply(this, arguments);
     };
   }
+})();
+</script>
+
+
+
+<script>
+// PATCH VISUAL LIMPO — remove apenas blocos vazios e blocos proibidos, preservando o dashboard Monte Carlo.
+(function(){
+  'use strict';
+  const blockedTitles = [
+    'Distribuição de Criticidade Estrutural',
+    'Distribuicao de Criticidade Estrutural',
+    'Matriz de propagação multicamadas',
+    'Matriz de propagacao multicamadas',
+    'Matriz de Propagação Multicamadas',
+    'Matriz de Propagacao Multicamadas'
+  ];
+  const blockedIds = [
+    'dgr-def-dist','dgr-def-dist-body',
+    'dgr-def-matrix','dgr-def-matrix-body',
+    'dgr-matriz-real','dgr-matriz-body',
+    'dgr-heatmap-real','dgr-heatmap-body',
+    'structural-distribution','propagation-matrix'
+  ];
+  function removeNode(el){
+    if(!el) return;
+    const sec = el.closest && el.closest('.dash-section');
+    (sec || el).remove();
+  }
+  function cleanUI(){
+    blockedIds.forEach(id => removeNode(document.getElementById(id)));
+    document.querySelectorAll('.dash-section').forEach(sec => {
+      const title = (sec.querySelector('h1,h2,h3,h4')?.textContent || '').trim();
+      const text = (sec.textContent || '').replace(/\s+/g,' ').trim();
+      if(blockedTitles.some(t => title.includes(t) || text.includes(t))){ sec.remove(); return; }
+      // remove cartões sem título que só exibem placeholder vazio
+      if(!title && /Execute a simulação para calcular\.?/i.test(text)){ sec.remove(); return; }
+      // remove placeholders soltos sem apagar seções úteis com título
+      sec.querySelectorAll('.empty').forEach(e => {
+        const et = (e.textContent || '').replace(/\s+/g,' ').trim();
+        if(/^Execute a simulação para calcular\.?$/i.test(et)) e.remove();
+      });
+    });
+  }
+  const wrap = fn => function(){ const r = fn && fn.apply(this, arguments); setTimeout(cleanUI,0); setTimeout(cleanUI,100); return r; };
+  if(window.DGRManager){
+    DGRManager.refreshUI = wrap(DGRManager.refreshUI);
+    DGRManager.renderCharts = wrap(DGRManager.renderCharts);
+    DGRManager.runSimulation = wrap(DGRManager.runSimulation);
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    cleanUI(); setTimeout(cleanUI,0); setTimeout(cleanUI,150);
+    const root = document.getElementById('content') || document.body;
+    new MutationObserver(cleanUI).observe(root, {childList:true, subtree:true});
+  });
+})();
+</script>
+
+
+<script>
+// PATCH FINAL — remove definitivamente Distribuição de Criticidade Estrutural e Matriz de propagação multicamadas.
+(function(){
+  'use strict';
+  const blockedTitles = [
+    'Distribuição de Criticidade Estrutural',
+    'Distribuicao de Criticidade Estrutural',
+    'Matriz de propagação multicamadas',
+    'Matriz de propagacao multicamadas',
+    'Matriz de Propagação Multicamadas',
+    'Matriz de Propagacao Multicamadas'
+  ];
+  const blockedIds = [
+    'dgr-def-dist','dgr-def-dist-body','dgr-def-matrix','dgr-def-matrix-body',
+    'dgr-matriz-real','dgr-matriz-body','dgr-heatmap-real','dgr-heatmap-body',
+    'structural-distribution','propagation-matrix'
+  ];
+  function removeBlocked(){
+    blockedIds.forEach(id=>{
+      const el=document.getElementById(id);
+      if(el){ const sec=el.closest('.dash-section'); (sec||el).remove(); }
+    });
+    document.querySelectorAll('.dash-section').forEach(sec=>{
+      const title=(sec.querySelector('h1,h2,h3,h4')?.textContent||'').replace(/\s+/g,' ').trim();
+      const text=(sec.textContent||'').replace(/\s+/g,' ').trim();
+      if(blockedTitles.some(t=>title.includes(t) || text.includes(t))){ sec.remove(); return; }
+      if(!title && /^Execute a simulação para calcular\.?$/i.test(text)){ sec.remove(); }
+    });
+  }
+  function wrap(name){
+    if(window.DGRManager && typeof DGRManager[name]==='function'){
+      const old=DGRManager[name].bind(DGRManager);
+      DGRManager[name]=function(){ const r=old.apply(this,arguments); setTimeout(removeBlocked,0); setTimeout(removeBlocked,100); return r; };
+    }
+  }
+  function init(){
+    ['refreshUI','renderCharts','renderMCPanel','renderAdvancedAnalytics','runSimulation'].forEach(wrap);
+    removeBlocked(); setTimeout(removeBlocked,0); setTimeout(removeBlocked,250); setTimeout(removeBlocked,1000);
+    const root=document.getElementById('content')||document.body;
+    try{ new MutationObserver(removeBlocked).observe(root,{childList:true,subtree:true,characterData:true}); }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
 
