@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>DGR-FRAM Modeler & Simulator - v10.14 VDE/VDX/VAE/VAX</title>
@@ -221,6 +222,10 @@ textarea.fi{resize:vertical;min-height:55px}
         <div class="nav-item" id="ni-mr" onclick="DGRManager.switchPage('mr')">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           Mecanismos MR
+        </div>
+        <div class="nav-item" id="ni-dgr" onclick="DGRManager.switchPage('dgr')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          Capacidades DGR-OPS
         </div>
       </div>
     </div>
@@ -456,6 +461,29 @@ textarea.fi{resize:vertical;min-height:55px}
             </div>
           </div>
           <div class="item-list" id="mr-list-target"></div>
+        </div>
+      </div>
+
+      <div class="screen scroll-screen" id="s-dgr">
+        <div class="form-wrap">
+          <div class="page-title">Capacidades Resilientes Desenvolvidas (DGR-OPS)</div>
+          <div class="page-sub">Monitorar · Responder · Aprender · Antecipar</div>
+
+          <div id="dgr-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0 10px"></div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:10px 0 18px;align-items:start">
+            <div>
+              <div class="section-title" style="margin-bottom:8px">Radar de Capacidades</div>
+              <canvas id="dgr-radar" width="320" height="320" style="max-width:100%"></canvas>
+            </div>
+            <div>
+              <div class="section-title" style="margin-bottom:8px">Matriz Mecanismos × Capacidades</div>
+              <div id="dgr-matrix"></div>
+            </div>
+          </div>
+
+          <div class="section-title" style="margin-bottom:8px">Interpretação Automática DGR-OPS</div>
+          <div id="dgr-interp" style="background:#f8f9fc;border-left:4px solid #185fa5;padding:14px 16px;border-radius:4px;font-size:13px;line-height:1.7;color:#2a2e45"></div>
         </div>
       </div>
 
@@ -2569,131 +2597,364 @@ let openSubcatFn = {};
   const setMulti = (sel, vals) => { const set=new Set(vals||[]); Array.from(sel?.options||[]).forEach(o=>o.selected=set.has(o.value)); };
 
   const EXAMPLES = {
-    'VDE-A.1':['Informação transmitida de forma incompleta','Comunicação informal sem registro','Interpretação divergente entre executores','Ausência de feedback operacional'],
-    'VDE-A.2':['Procedimento desatualizado','Instrução ambígua','Lacuna entre trabalho prescrito e real','Etapa crítica não descrita'],
-    'VDE-A.3':['Jornada prolongada','Acúmulo de atividades','Trabalho noturno','Redução da atenção sustentada'],
-    'VDE-A.4':['Excesso de informações simultâneas','Múltiplas decisões em curto prazo','Pressão por resposta imediata','Monitoramento de muitos sinais ao mesmo tempo'],
-    'VDE-A.5':['Capacitação insuficiente para a tarefa','Baixa familiaridade com sistema crítico','Treinamento não atualizado','Ausência de reciclagem operacional'],
-    'VDE-A.6':['Execução incorreta de etapa','Omissão de verificação','Registro equivocado','Ação fora da sequência prevista'],
-    'VDX-A.1':['Dados recebidos parcialmente','Documentação ausente enviada por outra função','Requisitos não informados','Informações inconsistentes recebidas da rede'],
-    'VDX-A.2':['Produto de outra função entregue com erro','Saída incompatível com a entrada esperada','Resultado anterior incompleto','Informação de saída divergente'],
-    'VDX-A.3':['Recurso necessário não disponibilizado','Equipe de apoio indisponível','Sistema ou ferramenta fora do ar','Material ou informação de suporte insuficiente'],
-    'VDX-A.4':['Orientação externa contraditória','Controle recebido sem clareza','Regra aplicada de forma divergente','Autorização inadequada vinda de outra função'],
-    'VDX-A.5':['Prazo imposto por função anterior','Atraso propagado na cadeia','Janela operacional reduzida','Compressão temporal recebida da rede'],
-    'VDX-A.6':['Pré-requisito não cumprido a montante','Autorização anterior ausente','Condição técnica não preparada','Dependência não resolvida por outra função'],
-    'VAE-A.1':['Vivência prévia em situação semelhante','Conhecimento prático acumulado','Reconhecimento rápido de anomalias','Uso de repertório operacional seguro'],
-    'VAE-A.2':['Saber prático não formalizado','Memória operacional da equipe','Conhecimento de exceções recorrentes','Leitura contextual da situação'],
-    'VAE-A.3':['Identificação precoce de sinais fracos','Ação preventiva antes da falha','Preparação para cenário crítico','Verificação antecipatória'],
-    'VAE-A.4':['Reorganização segura da sequência de trabalho','Ajuste local dentro de limites aceitáveis','Priorização adaptativa','Mudança controlada de estratégia operacional'],
-    'VAE-A.5':['Ajuda entre membros da mesma equipe','Conferência coletiva','Troca rápida de informação local','Distribuição colaborativa de tarefas'],
-    'VAE-A.6':['Lição aprendida incorporada','Correção de prática após ocorrência','Melhoria incremental do procedimento','Registro de aprendizado operacional'],
-    'VAX-A.1':['Apoio técnico de outra equipe','Auxílio emergencial de área acoplada','Disponibilização de especialista externo à função','Suporte operacional interáreas'],
-    'VAX-A.2':['Revisão colaborativa por outra área','Supervisão técnica compartilhada','Validação externa construtiva','Acompanhamento conjunto da execução'],
-    'VAX-A.3':['Informação útil enviada por outra função','Compartilhamento de alerta operacional','Transferência de conhecimento entre áreas','Orientação técnica interfuncional'],
-    'VAX-A.4':['Recurso adicional fornecido por outra função','Realocação de equipe de apoio','Disponibilização de ferramenta ou dado complementar','Capacidade extra recebida da rede'],
-    'VAX-A.5':['Outra função consegue assumir parte da demanda','Existência de caminho alternativo','Redundância de pessoas, dados ou sistemas','Backup organizacional disponível'],
-    'VAX-A.6':['Alinhamento rápido entre funções','Reunião operacional emergencial','Coordenação entre áreas dependentes','Ajuste conjunto de prioridade'],
-    'MR-A.1':['Revisão por segundo operador','Conferência cruzada','Aprovação em dois níveis','Validação independente antes da continuidade'],
-    'MR-A.2':['Auditoria periódica','Verificação amostral','Rastreabilidade de execução','Revisão formal de conformidade'],
-    'MR-A.3':['Painel de acompanhamento','Alerta em tempo real','Indicador de degradação','Monitoramento contínuo de condição crítica'],
-    'MR-A.4':['Procedimento de contingência documentado','Plano alternativo de execução','Acionamento previamente definido','Roteiro de resposta a falha crítica'],
+    'VDE-A.1':['Informação transmitida de forma incompleta','Interpretação divergente entre executores','Ausência de feedback operacional'],
+    'VDE-A.2':['Procedimento desatualizado','Instrução ambígua','Lacuna entre trabalho prescrito e real'],
+    'VDE-A.3':['Jornada prolongada','Acúmulo de atividades','Redução da atenção sustentada'],
+    'VDE-A.4':['Excesso de informações simultâneas','Múltiplas decisões em curto prazo','Pressão por resposta imediata'],
+    'VDE-A.5':['Capacitação insuficiente para a tarefa','Treinamento não atualizado','Ausência de reciclagem operacional'],
+    'VDE-A.6':['Execução incorreta de etapa crítica','Omissão de verificação','Ação fora da sequência prevista'],
+    'VDE-A.7':['Prazo de auditoria vencido sem reprogramação','Achados de auditoria anterior não tratados','Auditoria superficial sem verificação de campo'],
+    'VDE-A.8':['Indicador crítico sem monitoramento ativo','Alerta configurado desativado','Rotina de acompanhamento descontinuada sem substituto'],
 
-    'VDE-B.1':['Registro com campos incompletos ou inconsistentes','Dado desatualizado em sistema crítico','Informação duplicada sem controle de versão','Base de dados com lacunas não identificadas'],
-    'VDE-B.2':['Ausência de responsável pela integridade do dado','Política de uso de dados inexistente','Critérios de qualidade não definidos','Falta de procedimento para atualização de registros'],
-    'VDE-B.3':['Gestor sem clareza sobre quem responde pelo ativo informacional','Acesso sem controle de responsabilidade','Conflito de custódia entre áreas','Atribuição informal e não documentada'],
-    'VDE-B.4':['Processo autuado por órgão regulador','Uso de dado sem consentimento adequado','Violação de norma de proteção de dados','Descumprimento de requisito legal interno'],
-    'VDE-B.5':['Decisão tomada sem base em dado verificado','Indicador gerado sem fonte confiável','Análise feita com dado desatualizado','Relatório sem rastreabilidade de origem'],
-    'VDE-B.6':['Acesso indevido a dado sensível','Dado exposto sem criptografia','Ausência de controle de acesso por perfil','Violação de confidencialidade interna'],
+    'VDE-B.1':['Registro com campos incompletos ou inconsistentes','Dado desatualizado em sistema crítico','Base de dados com lacunas não identificadas'],
+    'VDE-B.2':['Política de uso de dados inexistente','Critérios de qualidade não definidos','Falta de procedimento para atualização de registros'],
+    'VDE-B.3':['Conflito de custódia entre áreas','Acesso sem controle de responsabilidade','Atribuição informal e não documentada'],
+    'VDE-B.4':['Uso de dado sem consentimento adequado','Violação de norma de proteção de dados','Descumprimento de requisito legal interno'],
+    'VDE-B.5':['Decisão tomada sem base em dado verificado','Indicador gerado sem fonte confiável','Relatório sem rastreabilidade de origem'],
+    'VDE-B.6':['Acesso indevido a dado sensível','Ausência de controle de acesso por perfil','Dado exposto sem criptografia'],
+    'VDE-B.7':['Catálogo de dados inexistente ou desatualizado','Ativos informacionais sem descrição formal','Impossibilidade de localizar dado crítico'],
+    'VDE-B.8':['Metadados ausentes em conjuntos de dados críticos','Origem do dado não documentada','Data de atualização desconhecida'],
+    'VDE-B.9':['Trilha de auditoria inexistente','Modificações em dados sem registro','Impossibilidade de rastrear acesso a informação sensível'],
+    'VDE-B.10':['Dados críticos sem responsável definido','Ausência de classificação de criticidade','Dado estratégico tratado como dado comum'],
 
-    'VDE-C.1':['Banco de dados indisponível em momento crítico','Corrupção de registros por falha de sistema','Perda de dados por falta de backup','Inconsistência entre bases replicadas'],
-    'VDE-C.2':['ERP inoperante durante operação','Módulo crítico do sistema com erro de processamento','Falha de autenticação no sistema interno','Sistema legado sem suporte causando instabilidade'],
-    'VDE-C.3':['Ferramenta de BI offline durante tomada de decisão','Dashboard sem atualização em tempo real','Ambiente de análise com dados defasados','Relatório automatizado com erro de geração'],
-    'VDE-C.4':['API interna retornando erro','Falha no processo de ETL','Integração entre módulos corrompida','Sincronização de dados interrompida'],
-    'VDE-C.5':['Portal interno fora do ar','Aplicação mobile instável para operadores','Interface de trabalho com falhas de usabilidade crítica','Plataforma de gestão com lentidão severa'],
-    'VDE-C.6':['Fila de processamento represada por capacidade insuficiente','Tempo de resposta do sistema acima do tolerável','Processamento em lote não concluído no prazo','Infraestrutura subdimensionada para demanda real'],
+    'VDE-C.1':['Banco de dados indisponível em momento crítico','Corrupção de registros por falha de sistema','Perda de dados por falta de backup'],
+    'VDE-C.2':['ERP inoperante durante operação','Módulo crítico com erro de processamento','Sistema legado causando instabilidade'],
+    'VDE-C.3':['Ferramenta de BI offline durante decisão','Dashboard sem atualização em tempo real','Relatório automatizado com erro de geração'],
+    'VDE-C.4':['API interna retornando erro','Falha no processo de ETL','Sincronização de dados interrompida'],
+    'VDE-C.5':['Portal interno fora do ar','Plataforma de gestão com lentidão severa','Interface com falhas críticas de usabilidade'],
+    'VDE-C.6':['Fila de processamento represada','Tempo de resposta acima do tolerável','Infraestrutura subdimensionada para demanda real'],
+    'VDE-C.7':['Dashboard operacional indisponível em crise','Dados do painel desatualizados há mais de 24h','Indicadores visuais de risco fora do ar'],
+    'VDE-C.8':['Alertas automatizados desativados','Nenhum aviso emitido diante de desvio crítico','Sistema de notificação sem manutenção'],
+    'VDE-C.9':['Sistema de apoio à decisão inoperante','Ferramenta de análise indisponível em momento crítico','Recomendações automatizadas interrompidas'],
 
-    'VDE-D.1':['Ausência de painel de monitoramento de indicadores','Sinais de degradação ignorados por falta de processo','Sensor ou alerta desativado','Falta de rotina de acompanhamento de variáveis críticas'],
-    'VDE-D.2':['Plano de resposta inexistente ou desatualizado','Equipe sem treinamento para situação crítica','Resposta lenta a evento já identificado','Ausência de protocolo de escalada'],
-    'VDE-D.3':['Ocorrência repetida sem análise de causa raiz','Lição aprendida não documentada','Melhoria não implementada após falha anterior','Cultura organizacional avessa a feedback'],
-    'VDE-D.4':['Cenários de risco não mapeados','Planejamento sem análise de vulnerabilidades futuras','Ausência de exercícios simulados','Falta de inteligência preditiva operacional'],
-    'VDE-D.5':['Rigidez de processo impedindo ajuste em tempo real','Falta de autonomia para adaptar resposta local','Procedimento engessado diante de situação nova','Incapacidade de reconfigurar recursos rapidamente'],
+    'VDE-D.1':['Ausência de backup em ambiente crítico','Única cópia de dado sem replicação','Backup existente mas nunca testado'],
+    'VDE-D.2':['UPS com capacidade insuficiente para demanda','Nobreak sem manutenção preventiva','Autonomia de energia inferior ao tempo mínimo de contingência'],
+    'VDE-D.3':['Infraestrutura sem redundância de componentes','Ponto único de falha em servidor crítico','Ausência de failover automático'],
 
-    'VDX-B.1':['Dado recebido de outra função com erros não sinalizados','Informação enviada sem validação de origem','Qualidade do dado não verificada antes da transmissão','Arquivo com inconsistências estruturais recebido'],
-    'VDX-B.2':['Outra função retém informação crítica por processo isolado','Dado relevante não compartilhado entre áreas acopladas','Ausência de canal formal de troca de informação','Função a montante não notifica atualização relevante'],
-    'VDX-B.3':['Dado recebido sem conformidade regulatória','Informação transmitida sem atender requisito legal','Ausência de evidência de conformidade na entrega','Recebimento de dado sem assinatura digital ou rastreabilidade'],
-    'VDX-B.4':['Decisão tomada sem evidência transferida pela função anterior','Informação de contexto não encaminhada junto ao produto','Dado entregue sem metadados de suporte','Relatório recebido sem referência de base de cálculo'],
-    'VDX-B.5':['Dado recebido sem histórico de modificações','Ausência de trilha de auditoria na transferência','Responsabilidade pela custódia não transferida formalmente','Dado alterado em trânsito sem registro'],
+    'VDE-E.1':['Processo rígido impedindo ajuste em situação nova','Falta de autonomia para adaptar resposta local','Procedimento engessado diante de contexto emergente'],
+    'VDE-E.2':['Decisões centralizadas bloqueando resposta rápida','Ausência de delegação em situação crítica','Necessidade de aprovação hierárquica impedindo ação imediata'],
+    'VDE-E.3':['Falta de cooperação entre equipes internas em crise','Silos organizacionais impedindo resposta integrada','Ausência de coordenação entre turnos ou unidades'],
+    'VDE-E.4':['Conhecimento operacional retido por indivíduo','Saber crítico não documentado nem compartilhado','Perda de capacidade por saída de colaborador-chave'],
+    'VDE-E.5':['Impossibilidade de realocar tarefa entre membros','Carga concentrada sem alternativa de distribuição','Ausência de polivalência operacional'],
+    'VDE-E.6':['Unidades sem mecanismo de suporte mútuo','Ausência de protocolo de auxílio entre áreas','Solidariedade organizacional inexistente em crise'],
+    'VDE-E.7':['Improvisação sem critério gerando novo erro','Ação emergencial descontrolada ampliando o problema','Ausência de limite para decisão local em crise'],
 
-    'VDX-C.1':['Falha no webservice entre sistemas de funções diferentes','API de integração retornando timeout','Quebra de contrato de integração entre plataformas','Conector de dados entre áreas inoperante'],
-    'VDX-C.2':['Sistema de origem offline impedindo recebimento de dado','Plataforma da função a montante fora do ar','Portal de envio de informação indisponível','Falha no sistema de outra área bloqueando fluxo'],
-    'VDX-C.3':['Rede compartilhada congestionada','Falha de comunicação entre data centers de diferentes funções','Interrupção de canal dedicado entre áreas','Latência severa na transferência de dados entre sistemas'],
-    'VDX-C.4':['Base de dados de origem corrompida propagando erro','Dado inválido na fonte impactando função receptora','Banco de outra área com dado deletado indevidamente','Registro de origem modificado sem controle'],
-    'VDX-C.5':['Serviço de processamento externo à função com falha','Nuvem compartilhada com instabilidade afetando múltiplas funções','Serviço de terceiro que suporta integração interrompido','Microserviço da função a montante degradado'],
+    'VDX-A.1':['Dados recebidos parcialmente de função a montante','Documentação ausente na transferência','Requisitos não informados pela função anterior'],
+    'VDX-A.2':['Produto entregue por função anterior com erro','Saída incompatível com a entrada esperada','Resultado anterior divergente do especificado'],
+    'VDX-A.3':['Recurso necessário não disponibilizado por função acoplada','Equipe de apoio de outra área indisponível','Sistema de suporte de outra função fora do ar'],
+    'VDX-A.4':['Orientação externa contraditória','Autorização inadequada vinda de outra função','Regra aplicada de forma divergente por função de controle'],
+    'VDX-A.5':['Prazo imposto por função anterior inviável','Atraso propagado da função a montante','Janela operacional reduzida por restrição externa'],
+    'VDX-A.6':['Pré-requisito não cumprido a montante','Autorização anterior ausente','Dependência não resolvida por função precedente'],
+    'VDX-A.7':['Barreira de segurança de outra função não acionada','Checklist de função acoplada não executado','Permissão de trabalho de função anterior inválida'],
+    'VDX-A.8':['Checklist de função acoplada incompleto','Permissão emitida por função anterior com falha','Verificação de segurança de outra função omitida'],
 
-    'VDX-D.1':['Serviço essencial paralisado por dependência não cumprida','Função crítica bloqueada por falha a montante','Entrega de produto final comprometida por ruptura em elo anterior','Beneficiário afetado por interrupção em cadeia'],
-    'VDX-D.2':['Falha em uma função propagando-se por toda a rede','Erro em sistema de infraestrutura afetando múltiplas funções','Cascata de indisponibilidade por dependência acoplada','Colapso de serviço por reação em cadeia'],
-    'VDX-D.3':['Função crítica parada por dependência não mapeada no planejamento','Interrupção inesperada por acoplamento oculto','Dependência informal não gerenciada causando ruptura','Serviço não documentado utilizado por múltiplas funções'],
-    'VDX-D.4':['Equipes de funções diferentes sem comunicação em crise','Ruptura de protocolo social entre áreas acopladas','Desalinhamento de prioridades entre funções interdependentes','Conflito de agenda entre atores de funções distintas'],
+    'VDX-B.1':['Dado recebido de outra função com erros não sinalizados','Qualidade do dado não verificada antes da transmissão','Arquivo com inconsistências estruturais recebido'],
+    'VDX-B.2':['Dado relevante retido por função isolada','Ausência de canal formal de troca de informação','Função a montante não notifica atualização relevante'],
+    'VDX-B.3':['Dado recebido sem conformidade regulatória','Ausência de evidência de conformidade na entrega','Informação transmitida sem atender requisito legal'],
+    'VDX-B.4':['Informação de contexto não encaminhada junto ao produto','Dado entregue sem metadados de suporte','Relatório recebido sem referência de base de cálculo'],
+    'VDX-B.5':['Dado recebido sem histórico de modificações','Responsabilidade de custódia não transferida formalmente','Trilha de auditoria interrompida na transição entre funções'],
+    'VDX-B.6':['Catálogo de dados de função de origem desatualizado','Impossibilidade de localizar dado recebido por ausência de catálogo','Ativos informacionais de outra função sem descrição formal'],
+    'VDX-B.7':['Metadados ausentes na transferência interfuncional','Origem do dado recebido não documentada','Data de produção do dado transferido desconhecida'],
+    'VDX-B.8':['Trilha de auditoria interrompida na transição entre funções','Modificações feitas em dado antes da transferência sem registro','Impossibilidade de rastrear dado recebido até sua origem'],
 
-    'VAE-B.1':['Painel de indicadores atualizado em tempo real','Rotina estruturada de análise de sinais críticos','Alerta configurado para desvio de parâmetro','Monitoramento ativo de variáveis de risco'],
-    'VAE-B.2':['Protocolo de resposta a incidentes ativado com agilidade','Equipe treinada para resposta em cenário crítico','Plano de contingência executado efetivamente','Capacidade de mobilização rápida de recursos'],
-    'VAE-B.3':['Registro sistemático de lições aprendidas','Análise de causa raiz implementada após evento','Incorporação de melhorias ao processo','Cultura de aprendizado contínuo consolidada'],
-    'VAE-B.4':['Mapeamento de cenários de risco prospectivos','Exercício simulado de situação crítica realizado','Identificação precoce de tendências de degradação','Planejamento de contingência atualizado'],
-    'VAE-B.5':['Ajuste local de prioridades sem perda de controle','Reconfiguração da ordem de execução em tempo real','Adaptação de recurso disponível à demanda atual','Decisão operacional segura tomada em contexto imprevisto'],
+    'VDX-C.1':['API de integração entre funções retornando erro','Quebra de contrato de integração entre plataformas','Conector de dados entre áreas inoperante'],
+    'VDX-C.2':['Sistema de função a montante offline bloqueando recebimento','Portal de envio de informação de outra área indisponível','Plataforma de função acoplada fora do ar'],
+    'VDX-C.3':['Rede compartilhada congestionada','Interrupção de canal dedicado entre funções','Latência severa na transferência de dados entre sistemas'],
+    'VDX-C.4':['Base de dados de origem corrompida propagando erro','Dado inválido na fonte impactando função receptora','Registro de origem modificado sem controle'],
+    'VDX-C.5':['Serviço de nuvem compartilhada instável','Serviço de terceiro que suporta integração interrompido','Microserviço da função a montante degradado'],
+    'VDX-C.6':['Dashboard de função acoplada com dados defasados','Painel de outra área indisponível impactando decisão local','Indicadores de função a montante sem atualização'],
+    'VDX-C.7':['Alerta de risco de função acoplada não chegou à receptora','Sistema de notificação interfuncional inoperante','Evento crítico de outra função não comunicado'],
+    'VDX-C.8':['Sistema de apoio à decisão de função a montante inoperante','Recomendação automatizada de função acoplada interrompida','Ferramenta de análise de outra área indisponível'],
 
-    'VAE-C.1':['Dado com procedência verificada e rastreável','Sistema com registro confiável e atualizado','Informação validada antes da utilização','Base de dados com alta taxa de completude e precisão'],
-    'VAE-C.2':['Política de dados formalmente definida e comunicada','Responsabilidades sobre ativos informacionais documentadas','Processo de governança de dados em operação','Papéis de gestão da informação claramente atribuídos'],
-    'VAE-C.3':['Conformidade com LGPD e normas setoriais verificada','Controle de acesso por perfil implementado','Auditoria de segurança da informação realizada','Dado sensível protegido com criptografia adequada'],
-    'VAE-C.4':['Relatório gerado com fonte verificada','Indicador baseado em dado rastreável','Decisão documentada com referência à evidência utilizada','Análise produzida com metodologia validada'],
-    'VAE-C.5':['Dado disponível no momento da necessidade','Sistema acessível durante janela operacional crítica','Informação consistente entre diferentes pontos de consulta','Base de dados sem lacunas para os campos essenciais'],
+    'VDX-D.1':['Queda de energia externa interrompendo operação','Fornecimento elétrico instável causando falhas em cascata','Interrupção de energia sem prévio aviso'],
+    'VDX-D.2':['Interrupção de link de telecomunicações','Falha de operadora afetando conectividade crítica','Queda de internet sem redundância disponível'],
+    'VDX-D.3':['Fornecedor crítico indisponível sem substituto','Interrupção de serviço essencial terceirizado','Dependência de único fornecedor sem contingência'],
 
-    'VAE-D.1':['Sistema com redundância ativa operando','Backup executado e testado regularmente','Falha de hardware absorvida sem interrupção de serviço','Infraestrutura com alta disponibilidade comprovada'],
-    'VAE-D.2':['Ferramenta analítica acessível para suporte à decisão em tempo real','Dashboard com dados atualizados disponível para gestores','Ambiente de análise responsivo durante operação crítica','BI corporativo integrado ao processo decisório'],
-    'VAE-D.3':['Rede com redundância de link garantindo conectividade','Canal de comunicação alternativo disponível','Infraestrutura de TI com failover automático','Comunicação mantida mesmo com falha parcial de infraestrutura'],
-    'VAE-D.4':['Capacidade de processamento adequada ao pico de demanda','Infraestrutura escalável ativada antes da saturação','Desempenho do sistema mantido sob carga máxima','Recurso computacional suficiente para demanda operacional real'],
+    'VDX-E.1':['Ausência de cooperação interfuncional em crise','Silos entre funções impedindo resposta integrada','Coordenação interfuncional inexistente durante perturbação'],
+    'VDX-E.2':['Conhecimento operacional retido em função isolada','Saber crítico de outra área não compartilhado','Expertise necessária à função receptora não transferida'],
+    'VDX-E.3':['Rigidez de função acoplada impedindo ajuste da receptora','Processo de outra função engessado em contexto emergente','Impossibilidade de adaptar entrega de função a montante'],
+    'VDX-E.4':['Impossibilidade de realocar recursos entre funções','Capacidade ociosa em uma função não aproveitada por outra','Ausência de mecanismo de transferência de recursos interfuncional'],
+    'VDX-E.5':['Coordenação adaptativa inexistente entre equipes de funções distintas','Ausência de protocolo de colaboração em crise interfuncional','Falta de canal de comunicação direta entre funções acopladas'],
+    'VDX-E.6':['Suporte mútuo interfuncional não acionado em perturbação','Unidades de funções distintas sem mecanismo de apoio','Ausência de solidariedade operacional entre funções em crise'],
 
-    'VAX-B.1':['Dado de alta qualidade compartilhado tempestivamente entre funções','Informação crítica enviada com metadados completos','Compartilhamento proativo de indicador relevante para função acoplada','Transferência de dado verificado e rastreável'],
-    'VAX-B.2':['Evidência encaminhada junto com o produto da função','Relatório de suporte enviado para função receptora','Base de cálculo disponibilizada para decisão compartilhada','Dado de contexto incluído na transferência interfuncional'],
-    'VAX-B.3':['Conformidade verificada antes da entrega interfuncional','Requisito legal atendido na transmissão de dado','Dado enviado com certificação de conformidade','Processo de transferência auditado e validado'],
-    'VAX-B.4':['Integração de bases de dados entre funções funcionando','Repositório compartilhado alimentado por múltiplas áreas','Ativo informacional acessível para continuidade da cadeia','Dado centralizado utilizado por funções dependentes'],
-    'VAX-B.5':['Histórico de modificações mantido na transferência','Trilha de auditoria preservada entre funções','Responsabilidade de custódia transferida formalmente','Rastreabilidade garantida ao longo de toda a cadeia'],
+    'VAE-A.1':['Dupla checagem aplicada em etapa de alto risco','Aprovação em dois níveis antes da continuidade','Validação independente antes da liberação do processo'],
+    'VAE-A.2':['Procedimento operacional seguido integralmente','POP atualizado e acessível ao operador','Instrução de trabalho aplicada na sequência correta'],
+    'VAE-A.3':['Checklist crítico executado antes de atividade de risco','Todos os itens verificados antes da liberação','Checklist aplicado por operador e conferido por par'],
+    'VAE-A.4':['Permissão formal emitida antes do início da atividade','PTW aplicada corretamente em ambiente de risco','Autorização documentada e rastreável'],
+    'VAE-A.5':['Revisão por par realizada em decisão de alto impacto','Segunda opinião técnica incorporada ao processo','Validação cruzada antes de ação irreversível'],
+    'VAE-A.6':['Plano de contingência ativado dentro do tempo previsto','Alternativa documentada executada com sucesso','Plano testado em exercício e aplicado em evento real'],
+    'VAE-A.7':['Auditoria realizada no prazo com achados tratados','Não conformidade identificada e corrigida antes da reincidência','Verificação formal gerando melhoria de processo'],
+    'VAE-A.8':['Indicador crítico monitorado em tempo real','Alerta ativado e respondido dentro do tempo tolerável','Rotina de acompanhamento mantida mesmo sob pressão operacional'],
 
-    'VAX-C.1':['Recurso realocado de outra função para cobrir lacuna crítica','Pessoal de área acoplada mobilizado em situação de crise','Redistribuição interfuncional de capacidade operacional','Apoio emergencial negociado rapidamente entre funções'],
-    'VAX-C.2':['Função acoplada adapta sua entrega ao contexto da receptora','Processo ajustado entre funções para absorver perturbação','Flexibilidade do parceiro funcional absorvendo variabilidade extra','Ajuste mútuo de ritmo e prioridade entre áreas'],
-    'VAX-C.3':['Decisão conjunta tomada entre atores de funções diferentes','Coordenação interfuncional resolvendo conflito de recurso','Cooperação entre equipes para superar ruptura na cadeia','Trabalho colaborativo interfuncional em cenário crítico'],
-    'VAX-C.4':['Ajuste de desempenho compartilhado entre funções da rede','Compensação distribuída de variabilidade ao longo da cadeia','Função a jusante absorve variação gerada a montante','Redistribuição de carga operacional entre elos da rede'],
-    'VAX-C.5':['Comunicação clara entre funções durante perturbação','Alinhamento rápido de expectativas entre áreas acopladas','Canal direto de comunicação entre funções ativo em crise','Notificação imediata entre funções interdependentes'],
+    'VAE-B.1':['Painel de indicadores atualizado em tempo real','Alerta configurado para desvio de parâmetro crítico','Rotina estruturada de análise de sinais de risco'],
+    'VAE-B.2':['Protocolo de resposta ativado com agilidade','Equipe treinada mobilizada diante de evento crítico','Plano de contingência executado efetivamente'],
+    'VAE-B.3':['Análise de causa raiz implementada após ocorrência','Lição aprendida incorporada ao processo','Melhoria registrada e aplicada após falha anterior'],
+    'VAE-B.4':['Mapeamento de cenários de risco prospectivos realizado','Exercício simulado executado e avaliado','Planejamento de contingência atualizado com base em tendências'],
+    'VAE-B.5':['Desvio detectado antes de impactar o resultado','Sinal fraco identificado e tratado precocemente','Indicador de degradação reconhecido em fase inicial'],
+    'VAE-B.6':['Exercício de crise realizado com avaliação formal','Simulação gerando revisão de procedimento','Drill executado com participação da equipe crítica'],
+    'VAE-B.7':['Lição aprendida documentada e disseminada','Revisão de procedimento após falha evitando recorrência','Relatório de ocorrência incorporado à base de conhecimento'],
+    'VAE-B.8':['Ajuste local realizado sem comprometer o resultado global','Reconfiguração da prioridade em tempo real','Decisão operacional segura tomada em contexto imprevisto'],
 
-    'VAX-D.1':['Plataforma de dados acessível para múltiplas funções simultaneamente','Sistema integrado utilizado por toda a cadeia operacional','Dado centralizado disponível para consulta interfuncional','Infraestrutura compartilhada com alta disponibilidade garantida'],
-    'VAX-D.2':['Integração entre sistemas de funções distintas funcionando','API compartilhada entre áreas respondendo corretamente','Conector de dados entre plataformas operacional','Fluxo automatizado entre sistemas de funções diferentes'],
-    'VAX-D.3':['Base de dados compartilhada com uptime elevado','Repositório central acessível para todas as funções dependentes','Banco de dados replicado garantindo disponibilidade distribuída','Dado disponível mesmo com falha parcial de infraestrutura'],
-    'VAX-D.4':['Ambiente de análise acessível para gestores de múltiplas funções','BI interfuncional disponível para suporte à decisão distribuída','Ferramenta analítica compartilhada operando durante crise','Dashboard integrado consultado por diferentes áreas da rede'],
+    'VAE-C.1':['Dado com procedência verificada e rastreável','Informação validada antes da utilização decisória','Base de dados com alta taxa de completude e precisão'],
+    'VAE-C.2':['Política de dados formalmente definida e aplicada','Responsabilidades sobre ativos informacionais documentadas','Papéis de gestão da informação claramente atribuídos'],
+    'VAE-C.3':['Conformidade com LGPD e normas setoriais verificada','Controle de acesso por perfil implementado','Dado sensível protegido com criptografia adequada'],
+    'VAE-C.4':['Decisão documentada com referência à evidência utilizada','Indicador baseado em dado rastreável','Análise produzida com metodologia validada'],
+    'VAE-C.5':['Dado disponível no momento da necessidade','Informação consistente entre diferentes pontos de consulta','Sistema acessível durante janela operacional crítica'],
+    'VAE-C.6':['Catálogo corporativo de dados atualizado e acessível','Ativo informacional localizado rapidamente via catálogo','Descrição formal de todos os dados críticos disponível'],
+    'VAE-C.7':['Metadados completos associados a cada conjunto de dados','Origem, data e responsável pelo dado documentados','Metadados permitindo rastreabilidade e uso correto'],
+    'VAE-C.8':['Qualidade dos dados monitorada continuamente','Indicador de qualidade de dado acompanhado por gestor','Anomalia de dado detectada e corrigida automaticamente'],
+    'VAE-C.9':['Trilha de auditoria completa e íntegra','Todo acesso e modificação de dado registrado','Rastreabilidade garantida do dado crítico até sua origem'],
+    'VAE-C.10':['Dados críticos com responsável e política definidos','Classificação de criticidade aplicada ao portfólio de dados','Governança de dado estratégico formalmente estruturada'],
 
-    'MR-B.1':['Critério de qualidade do dado verificado antes do uso','Política de dados aplicada como barreira ao erro informacional','Dado rejeitado por não atender padrão mínimo de qualidade','Regra de validação impedindo uso de informação corrompida'],
-    'MR-B.2':['Responsável pelo dado identificado e acionado diante de falha','Gestor de ativo informacional corrigindo anomalia antes da propagação','Estrutura de governança respondendo a incidente de dado','Papel de steward de dados ativo em situação crítica'],
-    'MR-B.3':['Controle de acesso impedindo uso indevido de dado sensível','Criptografia protegendo dado em trânsito e em repouso','Auditoria de segurança identificando vulnerabilidade antes da exploração','Conformidade verificada como barreira a risco regulatório'],
-    'MR-B.4':['Decisão baseada em evidência verificada revertendo erro potencial','Análise com fonte rastreável impedindo decisão equivocada','Processo decisório documentado como barreira a viés','Evidência auditável protegendo a organização em contestação'],
-    'MR-B.5':['Compartilhamento controlado impedindo vazamento entre funções','Protocolo de transferência garantindo integridade do dado','Rastreabilidade preservada ao longo da cadeia como barreira','Log de acesso e modificação impedindo adulteração'],
+    'VAE-D.1':['Redundância ativa absorvendo falha sem interrupção','Sistema redundante testado e operacional','Componente duplicado assumindo operação automaticamente'],
+    'VAE-D.2':['Backup executado, testado e restaurável','Cópia de segurança disponível em ambiente alternativo','Restore realizado com sucesso dentro do RTO definido'],
+    'VAE-D.3':['Plano de disaster recovery ativado restabelecendo serviço','Procedimento de DR executado dentro do tempo tolerável','Serviço essencial retomado com base em plano validado'],
+    'VAE-D.4':['Recuperação automatizada concluída sem intervenção manual','Sistema retornando ao estado operacional por rotina automatizada','Failover automático acionado e serviço restabelecido'],
 
-    'MR-C.1':['Indicador de criticidade acompanhado em tempo real','Alerta configurado identificando degradação precoce','Painel de monitoramento ativo durante toda a operação','Métrica de risco monitorada com frequência definida'],
-    'MR-C.2':['Protocolo de resposta acionado dentro do tempo tolerável','Equipe de resposta a incidentes mobilizada com agilidade','Plano de contingência executado reduzindo impacto','Resposta estruturada absorvendo perturbação antes da escalada'],
-    'MR-C.3':['Análise pós-evento gerando melhoria formal de processo','Relatório de ocorrência incorporado à base de conhecimento','Lição aprendida documentada e disseminada','Revisão de procedimento após falha anterior evitando recorrência'],
-    'MR-C.4':['Modelo preditivo identificando risco antes da manifestação','Simulação de cenário crítico orientando decisão preventiva','Dado histórico utilizado para antecipar degradação','Inteligência operacional reduzindo surpresa diante de evento'],
-    'MR-C.5':['Processo ajustado proativamente diante de mudança de contexto','Recurso realocado antes da saturação detectada','Estratégia operacional revisada em resposta a sinal fraco','Adaptação planejada reduzindo exposição a risco emergente'],
+    'VAX-A.1':['Apoio técnico de outra equipe reforçando barreira crítica','Especialista de área acoplada disponibilizado em crise','Suporte operacional interáreas acionado e efetivo'],
+    'VAX-A.2':['Revisão colaborativa realizada por função acoplada','Validação externa construtiva incorporada ao processo','Acompanhamento conjunto da execução entre funções'],
+    'VAX-A.3':['Permissões e checklists coordenados entre funções acopladas','Autorização compartilhada entre áreas antes de atividade crítica','Verificação cruzada realizada entre funções interdependentes'],
+    'VAX-A.4':['Recurso adicional fornecido por função acoplada para reforço de barreira','Capacidade extra recebida da rede operacional','Realocação de equipe de apoio de outra função'],
+    'VAX-A.5':['Outra função assume parte da demanda em situação crítica','Redundância organizacional entre funções ativada','Backup de capacidade operacional disponível na rede'],
+    'VAX-A.6':['Alinhamento rápido entre funções acionando contingência conjunta','Coordenação entre áreas dependentes para resposta integrada','Plano de contingência ativado conjuntamente entre funções'],
+    'VAX-A.7':['Auditoria cruzada entre funções identificando não conformidade','Verificação formal realizada por função acoplada','Achado de auditoria interfuncional gerando correção'],
+    'VAX-A.8':['Monitoramento compartilhado de processo crítico entre funções','Painel de acompanhamento acessível a funções acopladas','Alerta de uma função notificando automaticamente outra'],
 
-    'MR-D.1':['Servidor de backup assumindo operação sem interrupção','Dado replicado em ambiente alternativo garantindo continuidade','Sistema redundante ativado diante de falha do principal','Infraestrutura de contingência testada e operacional'],
-    'MR-D.2':['Plano de recuperação acionado restabelecendo serviço no prazo','RTO e RPO atingidos após incidente de infraestrutura','Processo de restauração executado dentro do tempo tolerável','Serviço essencial retomado com base em plano validado'],
-    'MR-D.3':['Falha contida sem propagação para sistema adjacente','Componente afetado isolado preservando funcionamento da rede','Segmentação de rede impedindo cascata de indisponibilidade','Barreira técnica impedindo contaminação entre ambientes'],
-    'MR-D.4':['Protocolo de continuidade de serviço digital ativado','Processo crítico mantido em modo degradado dentro do tolerável','SLA de disponibilidade respeitado mesmo sob incidente','Acordo de continuidade com parceiro tecnológico acionado'],
-    'MR-D.5':['Equipe reorganizada para manter entrega mínima do serviço','Função realocada para canal alternativo durante interrupção','Processo manual ativado como substituto temporário do sistema','Coordenação sociotécnica mantendo operação durante crise de infraestrutura']
+    'VAX-B.1':['Dado de alta qualidade compartilhado tempestivamente','Informação crítica enviada com metadados completos','Transferência de dado verificado e rastreável entre funções'],
+    'VAX-B.2':['Evidência encaminhada junto com o produto da função','Base de cálculo disponibilizada para decisão compartilhada','Dado de contexto incluído na transferência interfuncional'],
+    'VAX-B.3':['Conformidade verificada antes da entrega interfuncional','Processo de transferência auditado e validado','Dado enviado com certificação de conformidade'],
+    'VAX-B.4':['Repositório compartilhado alimentado por múltiplas funções','Ativo informacional acessível para continuidade da cadeia','Dado centralizado utilizado por funções dependentes'],
+    'VAX-B.5':['Rastreabilidade garantida ao longo de toda a cadeia','Responsabilidade de custódia transferida formalmente','Trilha de auditoria preservada entre funções'],
+    'VAX-B.6':['Catálogo de dados compartilhado e acessível a funções acopladas','Ativo informacional de outra função localizado via catálogo comum','Descrição de dados disponível para todas as funções da rede'],
+    'VAX-B.7':['Metadados transferidos com o dado interfuncional','Origem e data do dado preservados na transferência','Contexto do dado documentado e enviado junto ao produto'],
+    'VAX-B.8':['Trilha de auditoria da transferência preservada e íntegra','Todo movimento de dado entre funções registrado','Rastreabilidade completa da cadeia de custódia interfuncional'],
+
+    'VAX-C.1':['Recurso realocado de função acoplada para cobrir lacuna','Redistribuição interfuncional de capacidade operacional em crise','Apoio emergencial negociado rapidamente entre funções'],
+    'VAX-C.2':['Função acoplada adapta entrega ao contexto da receptora','Ajuste mútuo de ritmo e prioridade entre áreas','Flexibilidade do parceiro funcional absorvendo variabilidade'],
+    'VAX-C.3':['Decisão conjunta tomada por atores de funções distintas','Cooperação entre equipes superando ruptura na cadeia','Coordenação interfuncional resolvendo conflito de recurso'],
+    'VAX-C.4':['Ajuste de desempenho compartilhado entre funções da rede','Função a jusante absorve variação gerada a montante','Compensação distribuída de variabilidade ao longo da cadeia'],
+    'VAX-C.5':['Comunicação direta entre funções ativa durante perturbação','Alinhamento rápido de expectativas entre áreas acopladas','Notificação imediata entre funções interdependentes em crise'],
+    'VAX-C.6':['Suporte mútuo entre unidades de funções distintas em crise','Solidariedade operacional entre funções ativada','Unidade de outra função cobrindo lacuna da receptora'],
+    'VAX-C.7':['Conhecimento operacional compartilhado entre funções em crise','Saber crítico de outra área transferido quando necessário','Expertise interfuncional disponibilizada para função receptora'],
+    'VAX-C.8':['Improvisação coordenada entre funções em situação crítica','Ação emergencial conjunta com limites definidos','Solução criativa interfuncional dentro de parâmetros seguros'],
+    'VAX-C.9':['Carga redistribuída entre funções para absorver sobrecarga','Capacidade ociosa de função acoplada aproveitada','Redistribuição de demanda evitando colapso de função crítica'],
+
+    'VAX-D.1':['Site alternativo compartilhado entre funções críticas ativado','Operação migrada para site de contingência sem interrupção','Ambiente alternativo testado e disponível entre funções'],
+    'VAX-D.2':['Operação distribuída entre unidades mantendo continuidade','Carga redistributída geograficamente entre funções','Serviço mantido por operação em múltiplos nós'],
+    'VAX-D.3':['Contingência entre unidades ativada formalmente','Função alternativa assumindo operação de função afetada','Protocolo de apoio mútuo entre unidades acionado'],
+
+    'VAX-E.1':['Plano de continuidade compartilhado ativado entre funções','Protocolo conjunto de continuidade executado com sucesso','Funções críticas mantidas por plano interfuncional validado'],
+    'VAX-E.2':['Infraestrutura redundante compartilhada absorvendo falha','Recurso crítico replicado entre funções garantindo continuidade','Redundância compartilhada evitando interrupção na cadeia'],
+    'VAX-E.3':['Falha isolada coordenadamente entre funções acopladas','Contenção conjunta impedindo propagação na rede','Segmentação interfuncional evitando cascata de indisponibilidade'],
+    'VAX-E.4':['Disaster recovery compartilhado entre funções ativado','Recuperação conjunta restabelecendo cadeia de serviço','Plano de DR interfuncional executado dentro do RTO'],
+    'VAX-E.5':['Exercício periódico de continuidade interfuncional realizado','Simulação conjunta gerando revisão de procedimento compartilhado','Drill interfuncional com participação de todas as funções críticas'],
+    'VAX-E.6':['Recuperação automatizada interfuncional concluída sem intervenção','Failover compartilhado acionado automaticamente entre funções','Serviço restabelecido em cadeia por rotina automatizada'],
+
+    'MR-A.1':['Revisão por segundo operador antes da continuidade','Aprovação em dois níveis em decisão crítica','Validação independente antes da liberação do processo'],
+    'MR-A.2':['Auditoria periódica com achados formalmente tratados','Verificação formal de conformidade gerando melhoria','Rastreabilidade de execução garantida por auditoria'],
+    'MR-A.3':['Painel de acompanhamento ativo em tempo real','Alerta de degradação configurado e respondido','Monitoramento contínuo de condição crítica operacional'],
+    'MR-A.4':['Plano de contingência ativado dentro do tempo previsto','Alternativa documentada executada com sucesso','Roteiro de resposta a falha crítica aplicado efetivamente'],
+    'MR-A.5':['POP seguido integralmente em atividade de risco','Instrução de trabalho aplicada na sequência correta','Procedimento atualizado e acessível ao operador'],
+    'MR-A.6':['PTW emitida corretamente antes do início da atividade','Permissão formal rastreável e documentada','Autorização registrada antes de atividade de alto risco'],
+    'MR-A.7':['Checklist crítico executado integralmente','Todos os itens verificados antes da liberação','Checklist conferido por par antes da continuidade'],
+    'MR-A.8':['Revisão por par realizada em decisão de alto impacto','Segunda opinião técnica incorporada ao processo','Validação cruzada antes de ação irreversível'],
+
+    'MR-B.1':['Critério de qualidade verificado antes do uso do dado','Dado rejeitado por não atender padrão mínimo','Regra de validação impedindo uso de informação corrompida'],
+    'MR-B.2':['Responsável pelo dado acionado diante de falha','Estrutura de governança respondendo a incidente de dado','Steward de dados corrigindo anomalia antes da propagação'],
+    'MR-B.3':['Controle de acesso impedindo uso indevido de dado sensível','Criptografia protegendo dado em trânsito e em repouso','Conformidade verificada como barreira a risco regulatório'],
+    'MR-B.4':['Decisão baseada em evidência verificada revertendo erro potencial','Processo decisório documentado como barreira a viés','Evidência auditável protegendo a organização em contestação'],
+    'MR-B.5':['Compartilhamento controlado impedindo vazamento entre funções','Protocolo de transferência garantindo integridade do dado','Log de acesso impedindo adulteração não registrada'],
+    'MR-B.6':['Catálogo corporativo de dados localiza ativo crítico rapidamente','Dado encontrado via catálogo em situação de urgência','Catálogo impedindo uso de dado errado por desconhecimento'],
+    'MR-B.7':['Metadados orientando uso correto de dado em situação crítica','Contexto do dado disponível impedindo interpretação equivocada','Metadados garantindo rastreabilidade como barreira ao erro'],
+    'MR-B.8':['Anomalia de qualidade detectada antes de impactar decisão','Indicador de qualidade de dado disparando alerta de correção','Monitoramento contínuo evitando propagação de dado incorreto'],
+    'MR-B.9':['Trilha de auditoria detectando modificação não autorizada','Rastreabilidade de dado permitindo identificar origem do erro','Log completo viabilizando investigação de incidente de dado'],
+    'MR-B.10':['Dado crítico com responsável e política de uso definidos','Classificação de criticidade orientando proteção diferenciada','Governança de dado estratégico impedindo uso inadequado'],
+
+    'MR-C.1':['Indicador de criticidade acompanhado em tempo real','Alerta identificando degradação precocemente','Métrica de risco monitorada com frequência definida'],
+    'MR-C.2':['Protocolo de resposta acionado dentro do tempo tolerável','Plano de contingência executado reduzindo impacto','Equipe mobilizada com agilidade diante de perturbação'],
+    'MR-C.3':['Análise pós-evento gerando melhoria formal de processo','Lição aprendida documentada e aplicada','Revisão de procedimento evitando recorrência de falha'],
+    'MR-C.4':['Modelo preditivo identificando risco antes da manifestação','Dado histórico utilizado para antecipar degradação','Simulação de cenário orientando decisão preventiva'],
+    'MR-C.5':['Processo ajustado proativamente diante de mudança de contexto','Recurso realocado antes da saturação detectada','Adaptação planejada reduzindo exposição a risco emergente'],
+    'MR-C.6':['Exercício de crise realizado com avaliação formal','Simulação gerando revisão de procedimento crítico','Drill executado com participação da equipe de resposta'],
+    'MR-C.7':['Lição aprendida incorporada ao procedimento operacional','Melhoria oriunda de evento anterior implementada','Relatório de ocorrência gerando atualização de processo'],
+    'MR-C.8':['Desvio detectado em fase inicial antes de impacto significativo','Sinal fraco identificado e tratado proativamente','Indicador de degradação reconhecido com antecedência suficiente'],
+
+    'MR-D.1':['Sistema redundante assumindo operação sem interrupção','Infraestrutura de contingência testada e ativada com sucesso','Dado replicado em ambiente alternativo garantindo continuidade'],
+    'MR-D.2':['Plano de recuperação acionado restabelecendo serviço no prazo','RTO e RPO atingidos após incidente de infraestrutura','Processo de restauração executado dentro do tempo tolerável'],
+    'MR-D.3':['Falha contida sem propagação para sistema adjacente','Segmentação de rede impedindo cascata de indisponibilidade','Componente afetado isolado preservando o restante da operação'],
+    'MR-D.4':['Processo crítico mantido em modo degradado dentro do tolerável','SLA de disponibilidade respeitado mesmo sob incidente','Protocolo de continuidade digital ativado com sucesso'],
+    'MR-D.5':['Equipe reorganizada para manter entrega mínima do serviço','Processo manual ativado como substituto temporário do sistema','Coordenação sociotécnica mantendo operação durante crise'],
+    'MR-D.6':['Site alternativo ativado garantindo continuidade operacional','Migração para ambiente de contingência concluída no prazo','Site DR operacional absorvendo carga do ambiente principal'],
+    'MR-D.7':['Procedimento de disaster recovery executado com sucesso','DR testado e validado antes do evento crítico','Recuperação de ambiente concluída dentro do RTO definido'],
+    'MR-D.8':['Exercício periódico de continuidade realizado e avaliado','Simulação de desastre gerando revisão de procedimento','Participação de todas as equipes críticas no exercício de continuidade'],
+    'MR-D.9':['Recuperação automatizada concluída sem intervenção manual','Failover automático acionado e serviço restabelecido','Rotina de recuperação automática executada dentro do tempo tolerável'],
+
+    'MR-E.1':['Cooperação interfuncional resolvendo crise na cadeia','Coordenação entre funções superando ruptura operacional','Resposta integrada viabilizada por colaboração interfuncional'],
+    'MR-E.2':['Conhecimento operacional compartilhado reduzindo impacto','Saber crítico transferido para função em dificuldade','Expertise disponibilizada entre áreas em situação de crise'],
+    'MR-E.3':['Recursos realocados dinamicamente diante de perturbação','Capacidade redistribuída sem interrupção do serviço','Reorganização de recursos concluída dentro do tempo crítico'],
+    'MR-E.4':['Atividade crítica concluída com ajuste seguro de execução','Sequência adaptada ao contexto sem comprometer o resultado','Flexibilidade operacional evitando interrupção do serviço'],
+    'MR-E.5':['Decisão local tomada com agilidade sem perda de controle','Delegação efetiva reduzindo tempo de resposta a evento','Autonomia operacional exercida dentro de limites definidos'],
+    'MR-E.6':['Coordenação adaptativa entre equipes resolvendo conflito de recurso','Ajuste mútuo entre grupos viabilizando continuidade','Alinhamento entre equipes concluído antes do impacto'],
+    'MR-E.7':['Improvisação controlada resolvendo situação não prevista','Solução criativa aplicada dentro de parâmetros de segurança','Ação emergencial eficaz com risco controlado'],
+    'MR-E.8':['Redistribuição de cargas evitando sobrecarga de equipe crítica','Demanda redistribuída mantendo qualidade da entrega','Carga transferida de equipe saturada para equipe disponível'],
+    'MR-E.9':['Suporte de unidade parceira evitando interrupção de serviço','Apoio mútuo absorvendo lacuna de capacidade em crise','Solidariedade organizacional mantendo operação sob pressão'],
+
+    'MR-F.1':['Dashboard operacional identificando desvio em tempo real','Painel integrado permitindo decisão rápida em crise','Visualização de indicadores críticos orientando resposta'],
+    'MR-F.2':['Indicador preditivo sinalizando risco antes da manifestação','Métrica prospectiva orientando decisão preventiva','Tendência identificada por indicador antes de impacto operacional'],
+    'MR-F.3':['Alerta automatizado acionando resposta dentro do tempo tolerável','Notificação automática evitando escalada do problema','Alarme configurado disparado no momento crítico'],
+    'MR-F.4':['Analytics orientando decisão com base em dado verificado','Análise automatizada reduzindo tempo de diagnóstico','Suporte analítico viabilizando escolha mais segura em crise'],
+    'MR-F.5':['Correlação de eventos identificando causa raiz rapidamente','Padrão reconhecido automaticamente evitando diagnóstico tardio','Eventos correlacionados sinalizando origem da perturbação'],
+    'MR-F.6':['Monitoramento preditivo identificando degradação de infraestrutura','Previsão de falha permitindo manutenção antes da interrupção','Sinal de degradação detectado antes de impacto operacional'],
+    'MR-F.7':['IA detectando anomalia antes de impacto significativo','Modelo de ML identificando padrão de risco em tempo real','Detecção automática de anomalia acionando resposta preventiva'],
+    'MR-F.8':['Cenário prospectivo orientando planejamento de contingência','Análise de futuro reduzindo surpresa diante de evento crítico','Prospecção de cenário viabilizando preparação antecipada'],
+    'MR-F.9':['Sistema de apoio à decisão orientando resposta em crise','Ferramenta de decisão reduzindo incerteza em situação crítica','SAD disponível e eficaz durante perturbação operacional']
   };
 
   function item(code,name){return {code,name,examples:EXAMPLES[code]||[]};}
-  TAXO.VDE={label:'VDE — Variabilidade Degradadora Endógena',color:'#c0392b',bg:'#fdecea',groups:[{key:'A',label:'VDE-A — Falhas Humanas e Operacionais',items:[item('VDE-A.1','Falha de comunicação'),item('VDE-A.2','Procedimento inadequado'),item('VDE-A.3','Fadiga'),item('VDE-A.4','Sobrecarga cognitiva'),item('VDE-A.5','Treinamento insuficiente'),item('VDE-A.6','Erro operacional')]},{key:'B',label:'VDE-B — Falhas de Governança de Dados',items:[item('VDE-B.1','Baixa qualidade dos dados internos'),item('VDE-B.2','Ausência de políticas de integridade'),item('VDE-B.3','Responsabilidades mal definidas sobre ativos informacionais'),item('VDE-B.4','Não conformidade regulatória interna'),item('VDE-B.5','Tomada de decisão sem evidências adequadas'),item('VDE-B.6','Falha na segurança dos dados')]},{key:'C',label:'VDE-C — Falhas de Infraestrutura Informacional',items:[item('VDE-C.1','Banco de dados indisponível ou corrompido'),item('VDE-C.2','Sistema corporativo com falha interna'),item('VDE-C.3','Ambiente analítico degradado'),item('VDE-C.4','Falha em mecanismo de integração interno'),item('VDE-C.5','Plataforma digital instável'),item('VDE-C.6','Capacidade de processamento insuficiente')]},{key:'D',label:'VDE-D — Degradação das Capacidades Resilientes',items:[item('VDE-D.1','Incapacidade de monitorar sinais de mudança'),item('VDE-D.2','Falha na resposta a eventos críticos'),item('VDE-D.3','Ausência de aprendizagem organizacional'),item('VDE-D.4','Falta de antecipação a perturbações'),item('VDE-D.5','Perda de adaptabilidade operacional')]}],get items(){return this.groups.flatMap(g=>g.items);}};
-  TAXO.VDX={label:'VDX — Variabilidade Degradadora Exógena',color:'#d97706',bg:'#fff7ed',groups:[{key:'A',label:'VDX-A — Falhas de Acoplamento FRAM',items:[item('VDX-A.1','Input incompleto'),item('VDX-A.2','Output incorreto'),item('VDX-A.3','Recurso indisponível'),item('VDX-A.4','Controle inadequado'),item('VDX-A.5','Restrição temporal'),item('VDX-A.6','Pré-condição não atendida')]},{key:'B',label:'VDX-B — Degradação por Governança de Dados Exógena',items:[item('VDX-B.1','Dados recebidos de baixa qualidade'),item('VDX-B.2','Ausência de compartilhamento de informações entre funções'),item('VDX-B.3','Falha de conformidade em dados recebidos'),item('VDX-B.4','Ausência de evidências para decisão compartilhada'),item('VDX-B.5','Ruptura na cadeia de custódia dos dados')]},{key:'C',label:'VDX-C — Falhas de Infraestrutura Exógena',items:[item('VDX-C.1','Falha em mecanismo de integração entre sistemas'),item('VDX-C.2','Plataforma digital de origem indisponível'),item('VDX-C.3','Comunicação de infraestrutura interrompida'),item('VDX-C.4','Banco de dados de origem corrompido'),item('VDX-C.5','Serviço externo de processamento degradado')]},{key:'D',label:'VDX-D — Impactos sobre Continuidade Operacional',items:[item('VDX-D.1','Interrupção de serviço essencial por falha em função acoplada'),item('VDX-D.2','Cascata de falhas em infraestrutura crítica digital'),item('VDX-D.3','Perda de continuidade por dependência não gerenciada'),item('VDX-D.4','Ruptura sociotécnica por desconexão entre funções')]}],get items(){return this.groups.flatMap(g=>g.items);}};
-  TAXO.VAE={label:'VAE — Variabilidade Adaptativa Endógena',color:'#0f6e56',bg:'#e8f8f0',groups:[{key:'A',label:'VAE-A — Capacidades Humanas e de Adaptação Sociotécnica',items:[item('VAE-A.1','Experiência da equipe'),item('VAE-A.2','Conhecimento tácito'),item('VAE-A.3','Antecipação'),item('VAE-A.4','Flexibilidade operacional'),item('VAE-A.5','Cooperação local'),item('VAE-A.6','Aprendizagem')]},{key:'B',label:'VAE-B — Capacidades Resilientes (Hollnagel)',items:[item('VAE-B.1','Capacidade de monitorar sinais e indicadores internos'),item('VAE-B.2','Capacidade de responder a eventos adversos'),item('VAE-B.3','Capacidade de aprender com ocorrências anteriores'),item('VAE-B.4','Capacidade de antecipar mudanças e perturbações'),item('VAE-B.5','Ajuste de desempenho local em tempo real')]},{key:'C',label:'VAE-C — Maturidade em Governança de Dados',items:[item('VAE-C.1','Alta qualidade e confiabilidade dos dados internos'),item('VAE-C.2','Políticas e responsabilidades de dados bem definidas'),item('VAE-C.3','Segurança e conformidade dos ativos informacionais'),item('VAE-C.4','Tomada de decisão baseada em evidências sólidas'),item('VAE-C.5','Consistência e disponibilidade da informação')]},{key:'D',label:'VAE-D — Infraestrutura Informacional Robusta',items:[item('VAE-D.1','Sistemas corporativos estáveis e redundantes'),item('VAE-D.2','Ambiente analítico disponível para suporte à decisão'),item('VAE-D.3','Infraestrutura de comunicação resiliente'),item('VAE-D.4','Capacidade de processamento adequada à demanda operacional')]}],get items(){return this.groups.flatMap(g=>g.items);}};
-  TAXO.VAX={label:'VAX — Variabilidade Adaptativa Exógena',color:'#138a2e',bg:'#ecfdf5',groups:[{key:'A',label:'VAX-A — Suporte Adaptativo entre Funções FRAM',items:[item('VAX-A.1','Apoio de outra equipe'),item('VAX-A.2','Supervisão colaborativa'),item('VAX-A.3','Compartilhamento de conhecimento'),item('VAX-A.4','Recurso adicional fornecido por outra função'),item('VAX-A.5','Redundância organizacional'),item('VAX-A.6','Coordenação interfuncional')]},{key:'B',label:'VAX-B — Governança de Dados como Mecanismo Sociotécnico',items:[item('VAX-B.1','Compartilhamento de informações de alta qualidade entre funções'),item('VAX-B.2','Evidências transferidas adequadamente para suporte à decisão'),item('VAX-B.3','Conformidade compartilhada entre funções acopladas'),item('VAX-B.4','Integração de ativos informacionais para continuidade'),item('VAX-B.5','Rastreabilidade e custódia dos dados entre funções')]},{key:'C',label:'VAX-C — Adaptação Sociotécnica Interfuncional',items:[item('VAX-C.1','Reorganização de recursos entre funções em crise'),item('VAX-C.2','Flexibilidade operacional compartilhada'),item('VAX-C.3','Cooperação entre atores de funções distintas'),item('VAX-C.4','Ajuste de desempenho distribuído pela rede FRAM'),item('VAX-C.5','Comunicação eficaz entre funções acopladas')]},{key:'D',label:'VAX-D — Infraestrutura Informacional Compartilhada',items:[item('VAX-D.1','Plataformas digitais integradas para múltiplas funções'),item('VAX-D.2','Mecanismos de integração entre sistemas funcionando'),item('VAX-D.3','Bancos de dados compartilhados com alta disponibilidade'),item('VAX-D.4','Ambientes analíticos acessíveis para decisão distribuída')]}],get items(){return this.groups.flatMap(g=>g.items);}};
-  TAXO.MR={label:'MR — Mecanismos de Resiliência',color:'#185fa5',bg:'#eef2ff',groups:[{key:'A',label:'MR-A — Barreiras Estruturadas',items:[item('MR-A.1','Dupla checagem'),item('MR-A.2','Auditoria'),item('MR-A.3','Monitoramento'),item('MR-A.4','Plano de contingência')]},{key:'B',label:'MR-B — Governança de Dados como Barreira de Resiliência',items:[item('MR-B.1','Políticas de qualidade de dados como barreira de resiliência'),item('MR-B.2','Estruturas de responsabilidade sobre ativos informacionais'),item('MR-B.3','Mecanismos de segurança e conformidade de dados'),item('MR-B.4','Processo de tomada de decisão baseada em evidências'),item('MR-B.5','Compartilhamento controlado e rastreável de informações')]},{key:'C',label:'MR-C — Capacidades Resilientes como Mecanismos',items:[item('MR-C.1','Monitoramento contínuo de variáveis críticas operacionais'),item('MR-C.2','Resposta estruturada a perturbações e interrupções'),item('MR-C.3','Aprendizagem sistemática pós-evento'),item('MR-C.4','Antecipação baseada em dados e modelos'),item('MR-C.5','Adaptação proativa ao ambiente em transformação')]},{key:'D',label:'MR-D — Continuidade Operacional em Infraestrutura Crítica',items:[item('MR-D.1','Redundância de infraestrutura informacional crítica'),item('MR-D.2','Plano de recuperação de serviços essenciais'),item('MR-D.3','Isolamento de falhas para evitar cascata sistêmica'),item('MR-D.4','Protocolos de continuidade de serviço público digital'),item('MR-D.5','Reorganização sociotécnica em cenários de interrupção')]}],get items(){return this.groups.flatMap(g=>g.items);}};
+  TAXO.VDE={label:'VDE — Variabilidade Degradadora Endógena',color:'#c0392b',bg:'#fdecea',groups:[
+    {key:'A',label:'VDE-A — Falhas nas Barreiras Operacionais Internas',items:[
+      item('VDE-A.1','Ausência ou falha de dupla checagem em atividade crítica'),
+      item('VDE-A.2','Procedimento operacional padrão não seguido'),
+      item('VDE-A.3','Plano de contingência inexistente ou desatualizado')
+    ]},
+    {key:'B',label:'VDE-B — Falhas de Governança de Dados Interna',items:[
+      item('VDE-B.1','Baixa qualidade dos dados internos'),
+      item('VDE-B.2','Responsabilidades mal definidas sobre ativos informacionais'),
+      item('VDE-B.3','Tomada de decisão sem evidências adequadas')
+    ]},
+    {key:'C',label:'VDE-C — Falhas de Infraestrutura Informacional Interna',items:[
+      item('VDE-C.1','Banco de dados indisponível ou corrompido'),
+      item('VDE-C.2','Sistema corporativo com falha interna'),
+      item('VDE-C.3','Falha em mecanismo de integração interno')
+    ]},
+    {key:'D',label:'VDE-D — Fragilidade de Recursos Internos',items:[
+      item('VDE-D.1','Ausência de backup'),
+      item('VDE-D.2','UPS insuficiente'),
+      item('VDE-D.3','Redundância inexistente')
+    ]},
+    {key:'E',label:'VDE-E — Falhas de Adaptação Sociotécnica Interna',items:[
+      item('VDE-E.1','Rigidez na execução diante de contexto emergente'),
+      item('VDE-E.2','Conhecimento operacional crítico não compartilhado'),
+      item('VDE-E.3','Impossibilidade de redistribuir cargas de trabalho')
+    ]}
+  ],get items(){return this.groups.flatMap(g=>g.items);}};
+
+  TAXO.VDX={label:'VDX — Variabilidade Degradadora Exógena',color:'#d97706',bg:'#fff7ed',groups:[
+    {key:'A',label:'VDX-A — Falhas de Acoplamento e Barreiras Exógenas',items:[
+      item('VDX-A.1','Input incompleto recebido de função acoplada'),
+      item('VDX-A.2','Output incorreto entregue por função a montante'),
+      item('VDX-A.3','Pré-condição não atendida por função precedente')
+    ]},
+    {key:'B',label:'VDX-B — Degradação por Governança de Dados Exógena',items:[
+      item('VDX-B.1','Dados recebidos de baixa qualidade ou inconsistentes'),
+      item('VDX-B.2','Ausência de compartilhamento de informações entre funções'),
+      item('VDX-B.3','Ruptura na cadeia de custódia dos dados entre funções')
+    ]},
+    {key:'C',label:'VDX-C — Falhas de Infraestrutura Informacional Exógena',items:[
+      item('VDX-C.1','Falha em mecanismo de integração entre sistemas de funções distintas'),
+      item('VDX-C.2','Plataforma digital de função a montante indisponível'),
+      item('VDX-C.3','Banco de dados de origem corrompido')
+    ]},
+    {key:'D',label:'VDX-D — Perda de Recursos Externos',items:[
+      item('VDX-D.1','Queda de energia'),
+      item('VDX-D.2','Interrupção de telecomunicações'),
+      item('VDX-D.3','Indisponibilidade de fornecedor crítico')
+    ]},
+    {key:'E',label:'VDX-E — Falhas de Adaptação Sociotécnica Exógena',items:[
+      item('VDX-E.1','Ausência de cooperação interfuncional em crise'),
+      item('VDX-E.2','Rigidez de função acoplada impedindo ajuste da receptora'),
+      item('VDX-E.3','Impossibilidade de redistribuição de recursos entre funções')
+    ]}
+  ],get items(){return this.groups.flatMap(g=>g.items);}};
+
+  TAXO.VAE={label:'VAE — Variabilidade Adaptativa Endógena',color:'#0f6e56',bg:'#e8f8f0',groups:[
+    {key:'A',label:'VAE-A — Barreiras Operacionais Internas Efetivas',items:[
+      item('VAE-A.1','Dupla checagem aplicada em etapa de alto risco'),
+      item('VAE-A.2','Procedimentos operacionais padronizados seguidos'),
+      item('VAE-A.3','Plano de contingência atualizado e testado')
+    ]},
+    {key:'B',label:'VAE-B — Capacidades Resilientes Internas (Hollnagel)',items:[
+      item('VAE-B.1','Capacidade de monitorar sinais e indicadores internos'),
+      item('VAE-B.2','Capacidade de responder estruturadamente a eventos adversos'),
+      item('VAE-B.3','Capacidade de antecipar mudanças e perturbações')
+    ]},
+    {key:'C',label:'VAE-C — Maturidade em Governança de Dados Interna',items:[
+      item('VAE-C.1','Alta qualidade e confiabilidade dos dados internos'),
+      item('VAE-C.2','Políticas e responsabilidades de dados bem definidas'),
+      item('VAE-C.3','Tomada de decisão baseada em evidências sólidas')
+    ]},
+    {key:'D',label:'VAE-D — Recursos Internos Robustos',items:[
+      item('VAE-D.1','Redundância'),
+      item('VAE-D.2','Backup'),
+      item('VAE-D.3','Disaster recovery')
+    ]},
+    {key:'E',label:'VAE-E — Adaptação Sociotécnica Interna',items:[
+      item('VAE-E.1','Cooperação efetiva entre equipes internas'),
+      item('VAE-E.2','Compartilhamento de conhecimento operacional interno'),
+      item('VAE-E.3','Flexibilidade na execução de atividades críticas')
+    ]}
+  ],get items(){return this.groups.flatMap(g=>g.items);}};
+
+  TAXO.VAX={label:'VAX — Variabilidade Adaptativa Exógena',color:'#138a2e',bg:'#ecfdf5',groups:[
+    {key:'A',label:'VAX-A — Barreiras Operacionais Efetivas entre Funções',items:[
+      item('VAX-A.1','Apoio de outra equipe reforçando barreira crítica'),
+      item('VAX-A.2','Supervisão colaborativa entre funções acopladas'),
+      item('VAX-A.3','Coordenação interfuncional para acionamento de contingência')
+    ]},
+    {key:'B',label:'VAX-B — Governança de Dados como Mecanismo Sociotécnico Exógeno',items:[
+      item('VAX-B.1','Compartilhamento de informações de alta qualidade entre funções'),
+      item('VAX-B.2','Evidências transferidas adequadamente para suporte à decisão'),
+      item('VAX-B.3','Rastreabilidade e custódia dos dados entre funções')
+    ]},
+    {key:'C',label:'VAX-C — Adaptação Sociotécnica Interfuncional',items:[
+      item('VAX-C.1','Reorganização de recursos entre funções em crise'),
+      item('VAX-C.2','Cooperação entre atores de funções distintas'),
+      item('VAX-C.3','Comunicação eficaz entre funções acopladas')
+    ]},
+    {key:'D',label:'VAX-D — Recursos Compartilhados',items:[
+      item('VAX-D.1','Site alternativo'),
+      item('VAX-D.2','Operação distribuída'),
+      item('VAX-D.3','Contingência entre unidades')
+    ]},
+    {key:'E',label:'VAX-E — Continuidade Operacional Compartilhada',items:[
+      item('VAX-E.1','Plano de continuidade compartilhado entre funções críticas'),
+      item('VAX-E.2','Redundância de infraestrutura crítica entre funções'),
+      item('VAX-E.3','Exercícios periódicos de continuidade interfuncionais')
+    ]}
+  ],get items(){return this.groups.flatMap(g=>g.items);}};
+
+  TAXO.MR={label:'MR — Mecanismos de Resiliência',color:'#185fa5',bg:'#eef2ff',groups:[
+    {key:'A',label:'MR-A — Barreiras Estruturadas',items:[
+      item('MR-A.1','Dupla checagem'),
+      item('MR-A.2','Procedimentos operacionais padronizados'),
+      item('MR-A.3','Checklists críticos e permissão formal de trabalho')
+    ]},
+    {key:'B',label:'MR-B — Governança de Dados como Barreira de Resiliência',items:[
+      item('MR-B.1','Políticas de qualidade de dados'),
+      item('MR-B.2','Processo decisório baseado em evidências'),
+      item('MR-B.3','Trilhas de auditoria e rastreabilidade')
+    ]},
+    {key:'C',label:'MR-C — Capacidades Resilientes como Mecanismos',items:[
+      item('MR-C.1','Monitoramento contínuo de variáveis críticas'),
+      item('MR-C.2','Resposta estruturada a perturbações'),
+      item('MR-C.3','Antecipação baseada em dados e modelos')
+    ]},
+    {key:'D',label:'MR-D — Continuidade Operacional em Infraestrutura Crítica',items:[
+      item('MR-D.1','Redundância de infraestrutura crítica'),
+      item('MR-D.2','Plano de recuperação de serviços essenciais'),
+      item('MR-D.3','Procedimentos de disaster recovery')
+    ]},
+    {key:'E',label:'MR-E — Adaptação Sociotécnica',items:[
+      item('MR-E.1','Cooperação interfuncional'),
+      item('MR-E.2','Reorganização dinâmica de recursos'),
+      item('MR-E.3','Tomada de decisão descentralizada')
+    ]},
+    {key:'F',label:'MR-F — Inteligência Informacional',items:[
+      item('MR-F.1','Dashboards operacionais em tempo real'),
+      item('MR-F.2','Alertas automatizados de risco'),
+      item('MR-F.3','Analytics para apoio à decisão')
+    ]}
+  ],get items(){return this.groups.flatMap(g=>g.items);}};
   TAXO.RE=TAXO.VDE; TAXO.RX=TAXO.VDX;
 
   const allTaxos = () => [...TAXO.VDE.items,...TAXO.VDX.items,...TAXO.VAE.items,...TAXO.VAX.items,...TAXO.MR.items];
@@ -2805,7 +3066,7 @@ let openSubcatFn = {};
         grpDiv.appendChild(row);
         // itens como bullets informativos (sempre visíveis)
         const exDiv=document.createElement('div'); exDiv.className='subcat-examples';
-        exDiv.innerHTML=`<b>Exemplos de manifestação:</b><ul>${grp.items.map(it=>`<li><span style="font-family:monospace;font-size:11px;font-weight:700;color:${color}">${esc(it.code)}</span> ${esc(it.name)}</li>`).join('')}</ul>`;
+        exDiv.innerHTML=`<b>Exemplos de manifestação:</b><ul style="margin:4px 0;padding-left:16px">${grp.items.map(it=>`<li style="padding:2px 0"><span style="font-family:monospace;font-weight:700;color:${color};font-size:11px">${esc(it.code)}</span> <span style="font-size:11px">${esc(it.name)}</span></li>`).join('')}</ul>`;
         grpDiv.appendChild(exDiv);
         // seletor de intensidade (só se selecionado)
         if(sv.sel){
@@ -6359,6 +6620,117 @@ let openSubcatFn = {};
       doc.setFont(PDF_FONT,'normal'); doc.setFontSize(8); doc.setTextColor(30,35,50);
     }
 
+    // ── Página DGR-OPS: Capacidades Resilientes Desenvolvidas ──
+    if(typeof window.DGRCalcIndices === 'function'){
+      var dgrIdx = window.DGRCalcIndices();
+      var dgrMatrix = window.DGR_MATRIX || [];
+      var hasDGR = dgrIdx.IM||dgrIdx.IR||dgrIdx.IA||dgrIdx.IAn;
+
+      if(hasDGR){
+        add('Capacidades Resilientes DGR-OPS');
+
+        // Título
+        tx('Capacidades Resilientes Desenvolvidas (DGR-OPS)', margin, y, 13, true, [24,30,50]); y+=5;
+        tx('Monitorar  ·  Responder  ·  Aprender  ·  Antecipar', margin, y, 8, false, [100,105,120]); y+=10;
+
+        // Cards das 4 capacidades
+        var caps=[
+          {label:'Monitorar', v:dgrIdx.IM,  desc:'Perceber e detectar sinais de degradação'},
+          {label:'Responder', v:dgrIdx.IR,  desc:'Absorver perturbações com agilidade'},
+          {label:'Aprender',  v:dgrIdx.IA,  desc:'Aprender com experiências anteriores'},
+          {label:'Antecipar', v:dgrIdx.IAn, desc:'Antecipar riscos e cenários futuros'},
+        ];
+        function capColor(v){ return v>=75?[15,110,86]:v>=50?[24,95,165]:v>=25?[180,120,0]:[192,57,43]; }
+        var cw=42, ch=28, cx=margin;
+        caps.forEach(function(c){
+          var col=capColor(c.v);
+          doc.setDrawColor(220,225,235); doc.setFillColor(255,255,255);
+          doc.roundedRect(cx,y,cw,ch,2,2,'FD');
+          doc.setFont(PDF_FONT,'bold'); doc.setFontSize(7); doc.setTextColor(100,105,120);
+          doc.text(c.label, cx+cw/2, y+6, {align:'center'});
+          doc.setFontSize(14); doc.setTextColor(col[0],col[1],col[2]);
+          doc.text(c.v+'%', cx+cw/2, y+16, {align:'center'});
+          // barra
+          doc.setFillColor(230,232,240); doc.rect(cx+4,y+20,cw-8,3,'F');
+          doc.setFillColor(col[0],col[1],col[2]); doc.rect(cx+4,y+20,(cw-8)*c.v/100,3,'F');
+          doc.setFont(PDF_FONT,'normal'); doc.setFontSize(5.5); doc.setTextColor(120,125,140);
+          doc.text(c.desc, cx+cw/2, y+26, {align:'center', maxWidth:cw-2});
+          cx+=cw+4;
+        });
+        doc.setFont(PDF_FONT,'normal'); doc.setFontSize(8); doc.setTextColor(30,35,50);
+        y+=ch+8;
+
+        // Radar via canvas → imagem
+        try {
+          var radarCanvas = document.getElementById('dgr-radar');
+          if(radarCanvas && radarCanvas.width > 0){
+            var img = radarCanvas.toDataURL('image/png');
+            doc.addImage(img, 'PNG', margin, y, 80, 80);
+          }
+        } catch(e){}
+
+        // Matriz ao lado do radar
+        var mx = margin+86, my = y;
+        doc.setFillColor(240,241,246); doc.rect(mx,my,100,7,'F');
+        doc.setFont(PDF_FONT,'bold'); doc.setFontSize(6); doc.setTextColor(60,65,80);
+        doc.text('Mecanismo', mx+2, my+4.5);
+        doc.text('Monit.', mx+28, my+4.5);
+        doc.text('Resp.', mx+48, my+4.5);
+        doc.text('Apren.', mx+65, my+4.5);
+        doc.text('Antec.', mx+82, my+4.5);
+        my+=8;
+        (dgrMatrix||[]).forEach(function(r,i){
+          if(i%2===0){doc.setFillColor(250,251,254);}else{doc.setFillColor(255,255,255);}
+          doc.rect(mx,my-3.5,100,7,'F');
+          doc.setFont(PDF_FONT,'bold'); doc.setFontSize(6); doc.setTextColor(24,95,165);
+          doc.text(r.mec, mx+2, my+1);
+          doc.setFont(PDF_FONT,'normal'); doc.setTextColor(40,45,60);
+          function dotsP(n){return '●'.repeat(n)+'○'.repeat(3-n);}
+          doc.text(dotsP(r.IM),  mx+28, my+1);
+          doc.text(dotsP(r.IR),  mx+48, my+1);
+          doc.text(dotsP(r.IA),  mx+65, my+1);
+          doc.text(dotsP(r.IAn), mx+82, my+1);
+          my+=7;
+        });
+        y = Math.max(y+82, my+4);
+
+        // Interpretação automática
+        need(50, 'Capacidades Resilientes DGR-OPS');
+        var sortedCaps=[
+          {label:'Monitorar',v:dgrIdx.IM},
+          {label:'Responder',v:dgrIdx.IR},
+          {label:'Aprender', v:dgrIdx.IA},
+          {label:'Antecipar',v:dgrIdx.IAn}
+        ].sort(function(a,b){return b.v-a.v;});
+
+        doc.setFillColor(232,238,255); doc.setDrawColor(24,95,165);
+        doc.roundedRect(margin,y,186,4,1,1,'FD');
+        doc.setFont(PDF_FONT,'bold'); doc.setFontSize(7); doc.setTextColor(24,95,165);
+        doc.text('Interpretação Automática DGR-OPS', margin+3, y+2.8);
+        doc.setFont(PDF_FONT,'normal'); doc.setFontSize(8); doc.setTextColor(30,35,50);
+        y+=7;
+
+        var interpLines=[
+          'Contribuição da Governança e Gestão de Dados para a Resiliência',
+          'Os mecanismos selecionados demonstram que a governança e a gestão de dados contribuem para o',
+          'fortalecimento das capacidades resilientes organizacionais.',
+          'A capacidade mais desenvolvida foi '+sortedCaps[0].label+' ('+sortedCaps[0].v+'%), seguida de '+sortedCaps[1].label+' ('+sortedCaps[1].v+'%).',
+          'Os mecanismos MR-B (Governança de Dados) e MR-F (Inteligência Informacional) apresentaram',
+          'contribuição significativa para as capacidades de Monitorar, Aprender e Antecipar.',
+          'Os resultados sugerem que a resiliência observada não decorre apenas de adaptações locais, mas',
+          'também da qualidade, disponibilidade e utilização estratégica das informações.',
+          'Esses resultados corroboram a proposição central do DGR-OPS de que a governança de dados atua',
+          'como mecanismo sociotécnico estruturante da resiliência organizacional.'
+        ];
+        interpLines.forEach(function(line,i){
+          need(5,'Capacidades Resilientes DGR-OPS');
+          if(i===0){doc.setFont(PDF_FONT,'bold'); doc.setFontSize(7.5); doc.setTextColor(24,30,50);}
+          else{doc.setFont(PDF_FONT,'normal'); doc.setFontSize(7); doc.setTextColor(40,45,60);}
+          doc.text(line, margin, y); y+=5;
+        });
+      }
+    }
+
     if(doc.putTotalPages) doc.putTotalPages(TOTAL_PAGES_ALIAS);
     doc.save('dgr-fram-relatorio-montecarlo-corrigido-definitivo-v4.pdf');
   }
@@ -6402,6 +6774,243 @@ let openSubcatFn = {};
   // Reaplica em múltiplos instantes para vencer definitivamente quaisquer reinstalações
   // tardias de patches anteriores (a última delas ocorre em torno de 1500ms).
   [50,150,400,800,1500,2500,4000,6000].forEach(function(ms){ setTimeout(tick, ms); });
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// DGR-OPS — Capacidades Resilientes
+// ═══════════════════════════════════════════════════════════════
+(function(){
+  // Mapa de intensidade → valor numérico
+  function lvlVal(lv){
+    if(lv==='minima') return 25;
+    if(lv==='media')  return 50;
+    if(lv==='maxima') return 100;
+    return 50; // default média
+  }
+
+  // Retorna valor médio dos grupos selecionados de uma taxonomia para códigos dados
+  // codes = ['A','B','F'] → busca subs[fnId]['VAE-A'], subs[fnId]['VAE-B']...
+  function grpVal(fnId, prefix, keys){
+    const sb = (DGRState.subs||{})[fnId]||{};
+    const vals=[];
+    keys.forEach(k=>{
+      const v=sb[prefix+'-'+k];
+      if(v&&v.sel) vals.push(lvlVal(v.level||'media'));
+    });
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+  }
+
+  // Calcula os 4 índices agregando todos os fns
+  function calcIndices(){
+    const fns = DGRState.fns||[];
+    if(!fns.length) return {IM:0,IR:0,IA:0,IAn:0};
+
+    const sums={IM:0,IR:0,IA:0,IAn:0};
+    fns.forEach(fn=>{
+      const id=fn.id;
+      // IM: MR-A, MR-B, MR-F, VAE-B, VAX-B
+      sums.IM += avg([
+        grpVal(id,'MR',['A']),
+        grpVal(id,'MR',['B']),
+        grpVal(id,'MR',['F']),
+        grpVal(id,'VAE',['B']),
+        grpVal(id,'VAX',['B'])
+      ].filter(v=>v>0));
+      // IR: MR-A, MR-D, MR-E, VAE-A, VAE-D, VAE-E, VAX-A, VAX-D, VAX-E
+      sums.IR += avg([
+        grpVal(id,'MR',['A']),
+        grpVal(id,'MR',['D']),
+        grpVal(id,'MR',['E']),
+        grpVal(id,'VAE',['A']),
+        grpVal(id,'VAE',['D']),
+        grpVal(id,'VAE',['E']),
+        grpVal(id,'VAX',['A']),
+        grpVal(id,'VAX',['D']),
+        grpVal(id,'VAX',['E'])
+      ].filter(v=>v>0));
+      // IA: MR-B, MR-C, MR-F, VAE-B, VAE-C
+      sums.IA += avg([
+        grpVal(id,'MR',['B']),
+        grpVal(id,'MR',['C']),
+        grpVal(id,'MR',['F']),
+        grpVal(id,'VAE',['B']),
+        grpVal(id,'VAE',['C'])
+      ].filter(v=>v>0));
+      // IAn: MR-B, MR-C, MR-F, VAE-B, VAE-C, VAX-B
+      sums.IAn += avg([
+        grpVal(id,'MR',['B']),
+        grpVal(id,'MR',['C']),
+        grpVal(id,'MR',['F']),
+        grpVal(id,'VAE',['B']),
+        grpVal(id,'VAE',['C']),
+        grpVal(id,'VAX',['B'])
+      ].filter(v=>v>0));
+    });
+
+    const n=fns.length;
+    return {
+      IM:  Math.round(sums.IM /n),
+      IR:  Math.round(sums.IR /n),
+      IA:  Math.round(sums.IA /n),
+      IAn: Math.round(sums.IAn/n)
+    };
+  }
+
+  function avg(arr){ return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0; }
+
+  // Matriz MR × Capacidades (●=contribuição)
+  const MATRIX = [
+    {mec:'MR-A', label:'Barreiras Estruturadas',           IM:3, IR:3, IA:1, IAn:1},
+    {mec:'MR-B', label:'Governança de Dados',               IM:3, IR:2, IA:3, IAn:3},
+    {mec:'MR-C', label:'Capacidades Resilientes',           IM:2, IR:3, IA:3, IAn:3},
+    {mec:'MR-D', label:'Continuidade Operacional',          IM:1, IR:3, IA:1, IAn:1},
+    {mec:'MR-E', label:'Adaptação Sociotécnica',            IM:2, IR:3, IA:2, IAn:1},
+    {mec:'MR-F', label:'Inteligência Informacional',        IM:3, IR:2, IA:2, IAn:3},
+  ];
+
+  function dots(n){ return '●'.repeat(n)+'○'.repeat(3-n); }
+
+  function pct(v){ return v+'%'; }
+
+  function colorCap(v){
+    if(v>=75) return '#0f6e56';
+    if(v>=50) return '#185fa5';
+    if(v>=25) return '#d97706';
+    return '#c0392b';
+  }
+
+  // Render Cards
+  function renderCards(idx){
+    const el=document.getElementById('dgr-cards'); if(!el) return;
+    const caps=[
+      {label:'Monitorar', key:'IM',  icon:'👁', desc:'Perceber mudanças e detectar sinais de degradação'},
+      {label:'Responder', key:'IR',  icon:'⚡', desc:'Absorver perturbações e responder com agilidade'},
+      {label:'Aprender',  key:'IA',  icon:'📚', desc:'Aprender com experiências e incorporar melhorias'},
+      {label:'Antecipar', key:'IAn', icon:'🔭', desc:'Antecipar riscos e projetar cenários futuros'},
+    ];
+    el.innerHTML=caps.map(c=>{
+      const v=idx[c.key]||0;
+      const col=colorCap(v);
+      return `<div style="background:#fff;border:1px solid #e8eaf0;border-radius:10px;padding:16px 14px;box-shadow:0 2px 8px #0001">
+        <div style="font-size:22px;margin-bottom:4px">${c.icon}</div>
+        <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px">${c.label}</div>
+        <div style="font-size:32px;font-weight:800;color:${col};margin:4px 0">${pct(v)}</div>
+        <div style="height:6px;background:#eee;border-radius:3px;margin:6px 0">
+          <div style="height:6px;width:${v}%;background:${col};border-radius:3px;transition:width .6s"></div>
+        </div>
+        <div style="font-size:10px;color:#888;line-height:1.4">${c.desc}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Render Radar
+  let radarChart=null;
+  function renderRadar(idx){
+    const canvas=document.getElementById('dgr-radar'); if(!canvas) return;
+    if(typeof Chart==='undefined') return;
+    if(radarChart){radarChart.destroy();}
+    radarChart=new Chart(canvas,{
+      type:'radar',
+      data:{
+        labels:['Monitorar','Responder','Aprender','Antecipar'],
+        datasets:[{
+          label:'Capacidades DGR-OPS',
+          data:[idx.IM,idx.IR,idx.IA,idx.IAn],
+          backgroundColor:'rgba(24,95,165,0.15)',
+          borderColor:'#185fa5',
+          borderWidth:2,
+          pointBackgroundColor:'#185fa5',
+          pointRadius:5,
+        }]
+      },
+      options:{
+        scales:{r:{min:0,max:100,ticks:{stepSize:25,font:{size:10}},pointLabels:{font:{size:12,weight:'bold'}}}},
+        plugins:{legend:{display:false}},
+        responsive:false,
+      }
+    });
+  }
+
+  // Render Matrix
+  function renderMatrix(){
+    const el=document.getElementById('dgr-matrix'); if(!el) return;
+    el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:#f0f2f8">
+          <th style="padding:8px 10px;text-align:left;border:1px solid #dde">Mecanismo</th>
+          <th style="padding:8px;text-align:center;border:1px solid #dde">Monitorar</th>
+          <th style="padding:8px;text-align:center;border:1px solid #dde">Responder</th>
+          <th style="padding:8px;text-align:center;border:1px solid #dde">Aprender</th>
+          <th style="padding:8px;text-align:center;border:1px solid #dde">Antecipar</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${MATRIX.map((r,i)=>`
+        <tr style="background:${i%2?'#f8f9fc':'#fff'}">
+          <td style="padding:7px 10px;border:1px solid #dde;font-weight:600;color:#185fa5">${r.mec}<br><span style="font-weight:400;color:#666;font-size:10px">${r.label}</span></td>
+          <td style="padding:7px;text-align:center;border:1px solid #dde;letter-spacing:2px;color:#185fa5">${dots(r.IM)}</td>
+          <td style="padding:7px;text-align:center;border:1px solid #dde;letter-spacing:2px;color:#0f6e56">${dots(r.IR)}</td>
+          <td style="padding:7px;text-align:center;border:1px solid #dde;letter-spacing:2px;color:#6b21a8">${dots(r.IA)}</td>
+          <td style="padding:7px;text-align:center;border:1px solid #dde;letter-spacing:2px;color:#c0392b">${dots(r.IAn)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="margin-top:6px;font-size:10px;color:#888">● contribuição plena &nbsp; ○ contribuição parcial ou ausente</div>`;
+  }
+
+  // Render Interpretação
+  function renderInterp(idx){
+    const el=document.getElementById('dgr-interp'); if(!el) return;
+    const caps=[
+      {label:'Monitorar',v:idx.IM},
+      {label:'Responder',v:idx.IR},
+      {label:'Aprender', v:idx.IA},
+      {label:'Antecipar',v:idx.IAn}
+    ].sort((a,b)=>b.v-a.v);
+    const top=caps[0], sec=caps[1];
+    const allZero=caps.every(c=>c.v===0);
+
+    if(allZero){
+      el.innerHTML='<em style="color:#999">Selecione critérios VAE, VAX ou MR para gerar a interpretação automática.</em>';
+      return;
+    }
+
+    el.innerHTML=`
+      <p><strong>Contribuição da Governança e Gestão de Dados para a Resiliência</strong></p>
+      <p>Os mecanismos selecionados demonstram que a governança e a gestão de dados contribuem para o fortalecimento das capacidades resilientes organizacionais.</p>
+      <p>A capacidade mais desenvolvida foi <strong>${top.label} (${top.v}%)</strong>, seguida de <strong>${sec.label} (${sec.v}%)</strong>.</p>
+      <p>Os mecanismos MR-B (Governança de Dados) e MR-F (Inteligência Informacional) apresentaram contribuição significativa para as capacidades de Monitorar, Aprender e Antecipar.</p>
+      <p>Os resultados sugerem que a resiliência observada não decorre apenas de adaptações locais, mas também da qualidade, disponibilidade e utilização estratégica das informações.</p>
+      <p>Esses resultados corroboram a proposição central do DGR-OPS de que a governança de dados atua como mecanismo sociotécnico estruturante da resiliência organizacional.</p>`;
+  }
+
+  // Render completo da página DGR
+  function renderDGR(){
+    const idx=calcIndices();
+    renderCards(idx);
+    renderRadar(idx);
+    renderMatrix();
+    renderInterp(idx);
+  }
+
+  // Hook no switchPage
+  const _orig=DGRManager.switchPage.bind(DGRManager);
+  DGRManager.switchPage=function(page){
+    _orig(page);
+    if(page==='dgr') setTimeout(renderDGR,50);
+  };
+
+  // Hook no refreshUI para atualizar se a página dgr estiver ativa
+  const _origRefresh=DGRManager.refreshUI.bind(DGRManager);
+  DGRManager.refreshUI=function(){
+    _origRefresh();
+    if(DGRState.curPage==='dgr') setTimeout(renderDGR,80);
+  };
+
+  // Expor para o PDF
+  window.DGRCalcIndices=calcIndices;
+  window.DGR_MATRIX=MATRIX;
+  window.dgrDots=dots;
 })();
 </script>
 
