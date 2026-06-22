@@ -2142,46 +2142,51 @@ const DGRManager = {
 
   // ── IMPORTAÇÃO / EXPORTAÇÃO CORPORATIVA ──
   exportHTMLComDados() {
-    // Serializa apenas dados estruturais (sem mcRes pesado).
-    // Injeta como seed no proprio HTML via fetch, seguro para GitHub Pages.
-    var payload = JSON.stringify({
-      fns:   DGRState.fns   || [],
-      coups: DGRState.coups || [],
-      vars:  DGRState.vars  || [],
-      mechs: DGRState.mechs || [],
-      params:DGRState.params|| {},
-      subs:  DGRState.subs  || {},
-      mcRes: {},
-      mcN:   DGRState.mcN   || 5000
-    });
-    // Escapa o que pode quebrar um bloco <script>
-    var safe = payload
-      .replace(/\\/g, '\\\\')
-      .replace(/'/g, "\\'")
-      .replace(/<\/script>/gi, '<\\/script>');
-    fetch(window.location.href)
-      .then(function(r){ return r.text(); })
-      .then(function(html){
-        // Remove seed anterior
-        html = html.replace(/<script id="dgr-seed">[\s\S]*?<\/script>\n?/g, '');
-        // Seed: grava no localStorage antes do init()
-        var seed = '<script id="dgr-seed">\n'
-          + '(function(){\n'
-          + "  try{ localStorage.setItem('dgr_autosave','" + safe + "'); }catch(e){}\n"
-          + '})();\n'
-          + '<\/script>\n';
-        html = html.replace('</head>', seed + '</head>');
-        var blob = new Blob([html], {type:'text/html;charset=utf-8'});
-        var url  = URL.createObjectURL(blob);
-        var a    = document.createElement('a');
-        a.href = url;
-        a.download = 'dgr-fram-' + new Date().toISOString().slice(0,10) + '.html';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        setTimeout(function(){ URL.revokeObjectURL(url); }, 3000);
-      })
-      .catch(function(err){
-        alert('Erro: ' + err.message + '\nSe estiver em file://, use um servidor HTTP (python3 -m http.server).');
+    // Usa o DOM atual (outerHTML) — funciona em file://, localhost e GitHub Pages.
+    // Injeta o estado como seed antes do </head> para persistir no localStorage.
+    try {
+      var payload = JSON.stringify({
+        fns:   DGRState.fns   || [],
+        coups: DGRState.coups || [],
+        vars:  DGRState.vars  || [],
+        mechs: DGRState.mechs || [],
+        params:DGRState.params|| {},
+        subs:  DGRState.subs  || {},
+        mcRes: {},
+        mcN:   DGRState.mcN   || 5000
       });
+
+      // Escapa para não quebrar o bloco <script>
+      var safe = payload
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/<\/script>/gi, '<\\/script>');
+
+      // Pega o HTML do DOM atual (já inclui todas as modificações do arquivo servido)
+      var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+      // Remove seed anterior se existir
+      html = html.replace(/<script id="dgr-seed">[\s\S]*?<\/script>\s*/g, '');
+
+      // Injeta seed antes de </head>
+      var seed = '<script id="dgr-seed">\n'
+        + '(function(){\n'
+        + "  try{ localStorage.setItem('dgr_autosave','" + safe + "'); }catch(e){}\n"
+        + '})();\n'
+        + '<\/script>\n';
+
+      html = html.replace('</head>', seed + '</head>');
+
+      var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+      var url  = URL.createObjectURL(blob);
+      var a    = document.createElement('a');
+      a.href = url;
+      a.download = 'dgr-fram-' + new Date().toISOString().slice(0,10) + '.html';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 3000);
+    } catch(err) {
+      alert('Erro ao exportar: ' + err.message);
+    }
   },
 
   exportProject() {
