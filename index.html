@@ -6971,6 +6971,50 @@ let openSubcatFn = {};
     renderRadar(idx);
     renderMatrix();
     renderInterp(idx);
+    renderDebug(idx);
+  }
+
+  function renderDebug(idx){
+    let el=document.getElementById('dgr-debug');
+    if(!el){
+      el=document.createElement('div');
+      el.id='dgr-debug';
+      el.style.cssText='margin-top:18px;background:#f8f9fc;border:1px solid #dde;border-radius:6px;padding:12px 14px;font-size:11px;color:#555';
+      const parent=document.getElementById('dgr-interp');
+      if(parent) parent.parentNode.insertBefore(el, parent.nextSibling);
+    }
+
+    const fns=DGRState.fns||[];
+    const groups=[
+      {prefix:'MR',  keys:['A','B','C','D','E','F']},
+      {prefix:'VAE', keys:['A','B','C','D','E']},
+      {prefix:'VAX', keys:['A','B','C','D','E']},
+    ];
+
+    let html='<div style="font-weight:700;margin-bottom:8px;color:#333">Valores lidos por critério (diagnóstico)</div>';
+    if(!fns.length){ el.innerHTML=html+'<em>Nenhuma função cadastrada.</em>'; return; }
+
+    fns.forEach(fn=>{
+      html+=`<div style="font-weight:600;margin:6px 0 3px;color:#185fa5">${fn.name}</div>`;
+      html+='<table style="border-collapse:collapse;width:100%"><tr><th style="text-align:left;padding:2px 6px;color:#888">Critério</th><th style="padding:2px 6px;color:#888">Sel.</th><th style="padding:2px 6px;color:#888">Nível</th><th style="padding:2px 6px;color:#888">Valor</th></tr>';
+      groups.forEach(({prefix,keys})=>{
+        keys.forEach(k=>{
+          const code=prefix+'-'+k;
+          const v=(DGRState.subs||{})[fn.id]?.[code];
+          const sel=v&&v.sel;
+          const level=v?.(v.level||'media'):'—';
+          const val=sel?lvlVal(v.level||'media'):'—';
+          const color=sel?'#0f6e56':'#bbb';
+          html+=`<tr><td style="padding:2px 6px;font-family:monospace;color:${color}">${code}</td><td style="padding:2px 6px;text-align:center">${sel?'✔':'○'}</td><td style="padding:2px 6px">${sel?(v.level||'media'):'—'}</td><td style="padding:2px 6px;font-weight:${sel?700:400};color:${color}">${val}</td></tr>`;
+        });
+      });
+      html+='</table>';
+    });
+
+    html+=`<div style="margin-top:10px;padding-top:8px;border-top:1px solid #dde;font-weight:700">
+      IM=${idx.IM}% &nbsp; IR=${idx.IR}% &nbsp; IA=${idx.IA}% &nbsp; IAn=${idx.IAn}%
+    </div>`;
+    el.innerHTML=html;
   }
 
   // Hook no switchPage
