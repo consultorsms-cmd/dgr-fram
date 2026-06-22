@@ -6785,79 +6785,54 @@ let openSubcatFn = {};
 // DGR-OPS — Capacidades Resilientes
 // ═══════════════════════════════════════════════════════════════
 (function(){
-  // Mapa de intensidade → valor numérico
+  // Escala: Mínima=25, Média=50, Máxima=100
   function lvlVal(lv){
     if(lv==='minima') return 25;
     if(lv==='media')  return 50;
     if(lv==='maxima') return 100;
-    return 50; // default média
+    return 0;
   }
 
-  // Retorna valor médio dos grupos selecionados de uma taxonomia para códigos dados
-  // codes = ['A','B','F'] → busca subs[fnId]['VAE-A'], subs[fnId]['VAE-B']...
-  function grpVal(fnId, prefix, keys){
-    const sb = (DGRState.subs||{})[fnId]||{};
-    const vals=[];
-    keys.forEach(k=>{
-      const v=sb[prefix+'-'+k];
-      if(v&&v.sel) vals.push(lvlVal(v.level||'media'));
+  // Coleta o valor numérico de um grupo se selecionado, null se não
+  function grpVal(fnId, prefix, key){
+    const v = (DGRState.subs||{})[fnId]?.[prefix+'-'+key];
+    return (v && v.sel) ? lvlVal(v.level||'media') : null;
+  }
+
+  // Média apenas dos grupos efetivamente selecionados em todas as funções
+  // Cada critério (ex: MR-A) pode aparecer em N funções — coleta todos os valores não-nulos
+  function indexAvg(groups){
+    // groups = [{prefix, key}, ...]
+    const vals = [];
+    (DGRState.fns||[]).forEach(fn=>{
+      groups.forEach(({prefix,key})=>{
+        const v = grpVal(fn.id, prefix, key);
+        if(v !== null) vals.push(v);
+      });
     });
-    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+    return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
   }
 
-  // Calcula os 4 índices agregando todos os fns
+  // Calcula os 4 índices com base nas seleções reais (mínima/média/máxima)
   function calcIndices(){
-    const fns = DGRState.fns||[];
-    if(!fns.length) return {IM:0,IR:0,IA:0,IAn:0};
-
-    const sums={IM:0,IR:0,IA:0,IAn:0};
-    fns.forEach(fn=>{
-      const id=fn.id;
-      // IM: MR-A, MR-B, MR-F, VAE-B, VAX-B
-      sums.IM += avg([
-        grpVal(id,'MR',['A']),
-        grpVal(id,'MR',['B']),
-        grpVal(id,'MR',['F']),
-        grpVal(id,'VAE',['B']),
-        grpVal(id,'VAX',['B'])
-      ].filter(v=>v>0));
-      // IR: MR-A, MR-D, MR-E, VAE-A, VAE-D, VAE-E, VAX-A, VAX-D, VAX-E
-      sums.IR += avg([
-        grpVal(id,'MR',['A']),
-        grpVal(id,'MR',['D']),
-        grpVal(id,'MR',['E']),
-        grpVal(id,'VAE',['A']),
-        grpVal(id,'VAE',['D']),
-        grpVal(id,'VAE',['E']),
-        grpVal(id,'VAX',['A']),
-        grpVal(id,'VAX',['D']),
-        grpVal(id,'VAX',['E'])
-      ].filter(v=>v>0));
-      // IA: MR-B, MR-C, MR-F, VAE-B, VAE-C
-      sums.IA += avg([
-        grpVal(id,'MR',['B']),
-        grpVal(id,'MR',['C']),
-        grpVal(id,'MR',['F']),
-        grpVal(id,'VAE',['B']),
-        grpVal(id,'VAE',['C'])
-      ].filter(v=>v>0));
-      // IAn: MR-B, MR-C, MR-F, VAE-B, VAE-C, VAX-B
-      sums.IAn += avg([
-        grpVal(id,'MR',['B']),
-        grpVal(id,'MR',['C']),
-        grpVal(id,'MR',['F']),
-        grpVal(id,'VAE',['B']),
-        grpVal(id,'VAE',['C']),
-        grpVal(id,'VAX',['B'])
-      ].filter(v=>v>0));
-    });
-
-    const n=fns.length;
     return {
-      IM:  Math.round(sums.IM /n),
-      IR:  Math.round(sums.IR /n),
-      IA:  Math.round(sums.IA /n),
-      IAn: Math.round(sums.IAn/n)
+      IM: indexAvg([
+        {prefix:'MR',  key:'A'}, {prefix:'MR',  key:'B'}, {prefix:'MR',  key:'F'},
+        {prefix:'VAE', key:'B'}, {prefix:'VAX',  key:'B'}
+      ]),
+      IR: indexAvg([
+        {prefix:'MR',  key:'A'}, {prefix:'MR',  key:'D'}, {prefix:'MR',  key:'E'},
+        {prefix:'VAE', key:'A'}, {prefix:'VAE',  key:'D'}, {prefix:'VAE', key:'E'},
+        {prefix:'VAX', key:'A'}, {prefix:'VAX',  key:'D'}, {prefix:'VAX', key:'E'}
+      ]),
+      IA: indexAvg([
+        {prefix:'MR',  key:'B'}, {prefix:'MR',  key:'C'}, {prefix:'MR',  key:'F'},
+        {prefix:'VAE', key:'B'}, {prefix:'VAE',  key:'C'}
+      ]),
+      IAn: indexAvg([
+        {prefix:'MR',  key:'B'}, {prefix:'MR',  key:'C'}, {prefix:'MR',  key:'F'},
+        {prefix:'VAE', key:'B'}, {prefix:'VAE',  key:'C'}, {prefix:'VAX', key:'B'}
+      ])
     };
   }
 
