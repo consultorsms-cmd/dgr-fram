@@ -2596,7 +2596,96 @@ let openSubcatFn = {};
     'MR-A.1':['Revisão por segundo operador','Conferência cruzada','Aprovação em dois níveis','Validação independente antes da continuidade'],
     'MR-A.2':['Auditoria periódica','Verificação amostral','Rastreabilidade de execução','Revisão formal de conformidade'],
     'MR-A.3':['Painel de acompanhamento','Alerta em tempo real','Indicador de degradação','Monitoramento contínuo de condição crítica'],
-    'MR-A.4':['Procedimento de contingência documentado','Plano alternativo de execução','Acionamento previamente definido','Roteiro de resposta a falha crítica']
+    'MR-A.4':['Procedimento de contingência documentado','Plano alternativo de execução','Acionamento previamente definido','Roteiro de resposta a falha crítica'],
+
+    'VDE-B.1':['Registro com campos incompletos ou inconsistentes','Dado desatualizado em sistema crítico','Informação duplicada sem controle de versão','Base de dados com lacunas não identificadas'],
+    'VDE-B.2':['Ausência de responsável pela integridade do dado','Política de uso de dados inexistente','Critérios de qualidade não definidos','Falta de procedimento para atualização de registros'],
+    'VDE-B.3':['Gestor sem clareza sobre quem responde pelo ativo informacional','Acesso sem controle de responsabilidade','Conflito de custódia entre áreas','Atribuição informal e não documentada'],
+    'VDE-B.4':['Processo autuado por órgão regulador','Uso de dado sem consentimento adequado','Violação de norma de proteção de dados','Descumprimento de requisito legal interno'],
+    'VDE-B.5':['Decisão tomada sem base em dado verificado','Indicador gerado sem fonte confiável','Análise feita com dado desatualizado','Relatório sem rastreabilidade de origem'],
+    'VDE-B.6':['Acesso indevido a dado sensível','Dado exposto sem criptografia','Ausência de controle de acesso por perfil','Violação de confidencialidade interna'],
+
+    'VDE-C.1':['Banco de dados indisponível em momento crítico','Corrupção de registros por falha de sistema','Perda de dados por falta de backup','Inconsistência entre bases replicadas'],
+    'VDE-C.2':['ERP inoperante durante operação','Módulo crítico do sistema com erro de processamento','Falha de autenticação no sistema interno','Sistema legado sem suporte causando instabilidade'],
+    'VDE-C.3':['Ferramenta de BI offline durante tomada de decisão','Dashboard sem atualização em tempo real','Ambiente de análise com dados defasados','Relatório automatizado com erro de geração'],
+    'VDE-C.4':['API interna retornando erro','Falha no processo de ETL','Integração entre módulos corrompida','Sincronização de dados interrompida'],
+    'VDE-C.5':['Portal interno fora do ar','Aplicação mobile instável para operadores','Interface de trabalho com falhas de usabilidade crítica','Plataforma de gestão com lentidão severa'],
+    'VDE-C.6':['Fila de processamento represada por capacidade insuficiente','Tempo de resposta do sistema acima do tolerável','Processamento em lote não concluído no prazo','Infraestrutura subdimensionada para demanda real'],
+
+    'VDE-D.1':['Ausência de painel de monitoramento de indicadores','Sinais de degradação ignorados por falta de processo','Sensor ou alerta desativado','Falta de rotina de acompanhamento de variáveis críticas'],
+    'VDE-D.2':['Plano de resposta inexistente ou desatualizado','Equipe sem treinamento para situação crítica','Resposta lenta a evento já identificado','Ausência de protocolo de escalada'],
+    'VDE-D.3':['Ocorrência repetida sem análise de causa raiz','Lição aprendida não documentada','Melhoria não implementada após falha anterior','Cultura organizacional avessa a feedback'],
+    'VDE-D.4':['Cenários de risco não mapeados','Planejamento sem análise de vulnerabilidades futuras','Ausência de exercícios simulados','Falta de inteligência preditiva operacional'],
+    'VDE-D.5':['Rigidez de processo impedindo ajuste em tempo real','Falta de autonomia para adaptar resposta local','Procedimento engessado diante de situação nova','Incapacidade de reconfigurar recursos rapidamente'],
+
+    'VDX-B.1':['Dado recebido de outra função com erros não sinalizados','Informação enviada sem validação de origem','Qualidade do dado não verificada antes da transmissão','Arquivo com inconsistências estruturais recebido'],
+    'VDX-B.2':['Outra função retém informação crítica por processo isolado','Dado relevante não compartilhado entre áreas acopladas','Ausência de canal formal de troca de informação','Função a montante não notifica atualização relevante'],
+    'VDX-B.3':['Dado recebido sem conformidade regulatória','Informação transmitida sem atender requisito legal','Ausência de evidência de conformidade na entrega','Recebimento de dado sem assinatura digital ou rastreabilidade'],
+    'VDX-B.4':['Decisão tomada sem evidência transferida pela função anterior','Informação de contexto não encaminhada junto ao produto','Dado entregue sem metadados de suporte','Relatório recebido sem referência de base de cálculo'],
+    'VDX-B.5':['Dado recebido sem histórico de modificações','Ausência de trilha de auditoria na transferência','Responsabilidade pela custódia não transferida formalmente','Dado alterado em trânsito sem registro'],
+
+    'VDX-C.1':['Falha no webservice entre sistemas de funções diferentes','API de integração retornando timeout','Quebra de contrato de integração entre plataformas','Conector de dados entre áreas inoperante'],
+    'VDX-C.2':['Sistema de origem offline impedindo recebimento de dado','Plataforma da função a montante fora do ar','Portal de envio de informação indisponível','Falha no sistema de outra área bloqueando fluxo'],
+    'VDX-C.3':['Rede compartilhada congestionada','Falha de comunicação entre data centers de diferentes funções','Interrupção de canal dedicado entre áreas','Latência severa na transferência de dados entre sistemas'],
+    'VDX-C.4':['Base de dados de origem corrompida propagando erro','Dado inválido na fonte impactando função receptora','Banco de outra área com dado deletado indevidamente','Registro de origem modificado sem controle'],
+    'VDX-C.5':['Serviço de processamento externo à função com falha','Nuvem compartilhada com instabilidade afetando múltiplas funções','Serviço de terceiro que suporta integração interrompido','Microserviço da função a montante degradado'],
+
+    'VDX-D.1':['Serviço essencial paralisado por dependência não cumprida','Função crítica bloqueada por falha a montante','Entrega de produto final comprometida por ruptura em elo anterior','Beneficiário afetado por interrupção em cadeia'],
+    'VDX-D.2':['Falha em uma função propagando-se por toda a rede','Erro em sistema de infraestrutura afetando múltiplas funções','Cascata de indisponibilidade por dependência acoplada','Colapso de serviço por reação em cadeia'],
+    'VDX-D.3':['Função crítica parada por dependência não mapeada no planejamento','Interrupção inesperada por acoplamento oculto','Dependência informal não gerenciada causando ruptura','Serviço não documentado utilizado por múltiplas funções'],
+    'VDX-D.4':['Equipes de funções diferentes sem comunicação em crise','Ruptura de protocolo social entre áreas acopladas','Desalinhamento de prioridades entre funções interdependentes','Conflito de agenda entre atores de funções distintas'],
+
+    'VAE-B.1':['Painel de indicadores atualizado em tempo real','Rotina estruturada de análise de sinais críticos','Alerta configurado para desvio de parâmetro','Monitoramento ativo de variáveis de risco'],
+    'VAE-B.2':['Protocolo de resposta a incidentes ativado com agilidade','Equipe treinada para resposta em cenário crítico','Plano de contingência executado efetivamente','Capacidade de mobilização rápida de recursos'],
+    'VAE-B.3':['Registro sistemático de lições aprendidas','Análise de causa raiz implementada após evento','Incorporação de melhorias ao processo','Cultura de aprendizado contínuo consolidada'],
+    'VAE-B.4':['Mapeamento de cenários de risco prospectivos','Exercício simulado de situação crítica realizado','Identificação precoce de tendências de degradação','Planejamento de contingência atualizado'],
+    'VAE-B.5':['Ajuste local de prioridades sem perda de controle','Reconfiguração da ordem de execução em tempo real','Adaptação de recurso disponível à demanda atual','Decisão operacional segura tomada em contexto imprevisto'],
+
+    'VAE-C.1':['Dado com procedência verificada e rastreável','Sistema com registro confiável e atualizado','Informação validada antes da utilização','Base de dados com alta taxa de completude e precisão'],
+    'VAE-C.2':['Política de dados formalmente definida e comunicada','Responsabilidades sobre ativos informacionais documentadas','Processo de governança de dados em operação','Papéis de gestão da informação claramente atribuídos'],
+    'VAE-C.3':['Conformidade com LGPD e normas setoriais verificada','Controle de acesso por perfil implementado','Auditoria de segurança da informação realizada','Dado sensível protegido com criptografia adequada'],
+    'VAE-C.4':['Relatório gerado com fonte verificada','Indicador baseado em dado rastreável','Decisão documentada com referência à evidência utilizada','Análise produzida com metodologia validada'],
+    'VAE-C.5':['Dado disponível no momento da necessidade','Sistema acessível durante janela operacional crítica','Informação consistente entre diferentes pontos de consulta','Base de dados sem lacunas para os campos essenciais'],
+
+    'VAE-D.1':['Sistema com redundância ativa operando','Backup executado e testado regularmente','Falha de hardware absorvida sem interrupção de serviço','Infraestrutura com alta disponibilidade comprovada'],
+    'VAE-D.2':['Ferramenta analítica acessível para suporte à decisão em tempo real','Dashboard com dados atualizados disponível para gestores','Ambiente de análise responsivo durante operação crítica','BI corporativo integrado ao processo decisório'],
+    'VAE-D.3':['Rede com redundância de link garantindo conectividade','Canal de comunicação alternativo disponível','Infraestrutura de TI com failover automático','Comunicação mantida mesmo com falha parcial de infraestrutura'],
+    'VAE-D.4':['Capacidade de processamento adequada ao pico de demanda','Infraestrutura escalável ativada antes da saturação','Desempenho do sistema mantido sob carga máxima','Recurso computacional suficiente para demanda operacional real'],
+
+    'VAX-B.1':['Dado de alta qualidade compartilhado tempestivamente entre funções','Informação crítica enviada com metadados completos','Compartilhamento proativo de indicador relevante para função acoplada','Transferência de dado verificado e rastreável'],
+    'VAX-B.2':['Evidência encaminhada junto com o produto da função','Relatório de suporte enviado para função receptora','Base de cálculo disponibilizada para decisão compartilhada','Dado de contexto incluído na transferência interfuncional'],
+    'VAX-B.3':['Conformidade verificada antes da entrega interfuncional','Requisito legal atendido na transmissão de dado','Dado enviado com certificação de conformidade','Processo de transferência auditado e validado'],
+    'VAX-B.4':['Integração de bases de dados entre funções funcionando','Repositório compartilhado alimentado por múltiplas áreas','Ativo informacional acessível para continuidade da cadeia','Dado centralizado utilizado por funções dependentes'],
+    'VAX-B.5':['Histórico de modificações mantido na transferência','Trilha de auditoria preservada entre funções','Responsabilidade de custódia transferida formalmente','Rastreabilidade garantida ao longo de toda a cadeia'],
+
+    'VAX-C.1':['Recurso realocado de outra função para cobrir lacuna crítica','Pessoal de área acoplada mobilizado em situação de crise','Redistribuição interfuncional de capacidade operacional','Apoio emergencial negociado rapidamente entre funções'],
+    'VAX-C.2':['Função acoplada adapta sua entrega ao contexto da receptora','Processo ajustado entre funções para absorver perturbação','Flexibilidade do parceiro funcional absorvendo variabilidade extra','Ajuste mútuo de ritmo e prioridade entre áreas'],
+    'VAX-C.3':['Decisão conjunta tomada entre atores de funções diferentes','Coordenação interfuncional resolvendo conflito de recurso','Cooperação entre equipes para superar ruptura na cadeia','Trabalho colaborativo interfuncional em cenário crítico'],
+    'VAX-C.4':['Ajuste de desempenho compartilhado entre funções da rede','Compensação distribuída de variabilidade ao longo da cadeia','Função a jusante absorve variação gerada a montante','Redistribuição de carga operacional entre elos da rede'],
+    'VAX-C.5':['Comunicação clara entre funções durante perturbação','Alinhamento rápido de expectativas entre áreas acopladas','Canal direto de comunicação entre funções ativo em crise','Notificação imediata entre funções interdependentes'],
+
+    'VAX-D.1':['Plataforma de dados acessível para múltiplas funções simultaneamente','Sistema integrado utilizado por toda a cadeia operacional','Dado centralizado disponível para consulta interfuncional','Infraestrutura compartilhada com alta disponibilidade garantida'],
+    'VAX-D.2':['Integração entre sistemas de funções distintas funcionando','API compartilhada entre áreas respondendo corretamente','Conector de dados entre plataformas operacional','Fluxo automatizado entre sistemas de funções diferentes'],
+    'VAX-D.3':['Base de dados compartilhada com uptime elevado','Repositório central acessível para todas as funções dependentes','Banco de dados replicado garantindo disponibilidade distribuída','Dado disponível mesmo com falha parcial de infraestrutura'],
+    'VAX-D.4':['Ambiente de análise acessível para gestores de múltiplas funções','BI interfuncional disponível para suporte à decisão distribuída','Ferramenta analítica compartilhada operando durante crise','Dashboard integrado consultado por diferentes áreas da rede'],
+
+    'MR-B.1':['Critério de qualidade do dado verificado antes do uso','Política de dados aplicada como barreira ao erro informacional','Dado rejeitado por não atender padrão mínimo de qualidade','Regra de validação impedindo uso de informação corrompida'],
+    'MR-B.2':['Responsável pelo dado identificado e acionado diante de falha','Gestor de ativo informacional corrigindo anomalia antes da propagação','Estrutura de governança respondendo a incidente de dado','Papel de steward de dados ativo em situação crítica'],
+    'MR-B.3':['Controle de acesso impedindo uso indevido de dado sensível','Criptografia protegendo dado em trânsito e em repouso','Auditoria de segurança identificando vulnerabilidade antes da exploração','Conformidade verificada como barreira a risco regulatório'],
+    'MR-B.4':['Decisão baseada em evidência verificada revertendo erro potencial','Análise com fonte rastreável impedindo decisão equivocada','Processo decisório documentado como barreira a viés','Evidência auditável protegendo a organização em contestação'],
+    'MR-B.5':['Compartilhamento controlado impedindo vazamento entre funções','Protocolo de transferência garantindo integridade do dado','Rastreabilidade preservada ao longo da cadeia como barreira','Log de acesso e modificação impedindo adulteração'],
+
+    'MR-C.1':['Indicador de criticidade acompanhado em tempo real','Alerta configurado identificando degradação precoce','Painel de monitoramento ativo durante toda a operação','Métrica de risco monitorada com frequência definida'],
+    'MR-C.2':['Protocolo de resposta acionado dentro do tempo tolerável','Equipe de resposta a incidentes mobilizada com agilidade','Plano de contingência executado reduzindo impacto','Resposta estruturada absorvendo perturbação antes da escalada'],
+    'MR-C.3':['Análise pós-evento gerando melhoria formal de processo','Relatório de ocorrência incorporado à base de conhecimento','Lição aprendida documentada e disseminada','Revisão de procedimento após falha anterior evitando recorrência'],
+    'MR-C.4':['Modelo preditivo identificando risco antes da manifestação','Simulação de cenário crítico orientando decisão preventiva','Dado histórico utilizado para antecipar degradação','Inteligência operacional reduzindo surpresa diante de evento'],
+    'MR-C.5':['Processo ajustado proativamente diante de mudança de contexto','Recurso realocado antes da saturação detectada','Estratégia operacional revisada em resposta a sinal fraco','Adaptação planejada reduzindo exposição a risco emergente'],
+
+    'MR-D.1':['Servidor de backup assumindo operação sem interrupção','Dado replicado em ambiente alternativo garantindo continuidade','Sistema redundante ativado diante de falha do principal','Infraestrutura de contingência testada e operacional'],
+    'MR-D.2':['Plano de recuperação acionado restabelecendo serviço no prazo','RTO e RPO atingidos após incidente de infraestrutura','Processo de restauração executado dentro do tempo tolerável','Serviço essencial retomado com base em plano validado'],
+    'MR-D.3':['Falha contida sem propagação para sistema adjacente','Componente afetado isolado preservando funcionamento da rede','Segmentação de rede impedindo cascata de indisponibilidade','Barreira técnica impedindo contaminação entre ambientes'],
+    'MR-D.4':['Protocolo de continuidade de serviço digital ativado','Processo crítico mantido em modo degradado dentro do tolerável','SLA de disponibilidade respeitado mesmo sob incidente','Acordo de continuidade com parceiro tecnológico acionado'],
+    'MR-D.5':['Equipe reorganizada para manter entrega mínima do serviço','Função realocada para canal alternativo durante interrupção','Processo manual ativado como substituto temporário do sistema','Coordenação sociotécnica mantendo operação durante crise de infraestrutura']
   };
 
   function item(code,name){return {code,name,examples:EXAMPLES[code]||[]};}
@@ -2611,7 +2700,8 @@ let openSubcatFn = {};
   const byPrefix = p => allTaxos().filter(i=>i.code.startsWith(p+'-'));
   const avgSel = (fnId,prefix,manualCats=[]) => {
     const vals=[];
-    byPrefix(prefix).forEach(i=>{const s=DGRState.subs[fnId]?.[i.code]; if(s&&s.sel) vals.push(s);});
+    // seleção por GRUPO (ex: VAX-A, MR-B)
+    (TAXO[prefix]&&TAXO[prefix].groups||[]).forEach(g=>{const s=DGRState.subs[fnId]?.[prefix+'-'+g.key]; if(s&&s.sel) vals.push(s);});
     DGRState.vars.forEach(v=>{ if(idsOfVar(v).includes(fnId)&&manualCats.includes(String(v.category||'').toLowerCase())) vals.push({mn:.25,mp:.50,mx:.70}); });
     if(!vals.length) return {mn:0,mp:0,mx:0};
     return {mn:vals.reduce((a,b)=>a+(+b.mn||0),0)/vals.length, mp:vals.reduce((a,b)=>a+(+b.mp||0),0)/vals.length, mx:vals.reduce((a,b)=>a+(+b.mx||0),0)/vals.length};
@@ -2679,7 +2769,7 @@ let openSubcatFn = {};
     DGRState.params[fnId].ve=DGRState.params[fnId].vde; DGRState.params[fnId].vx=DGRState.params[fnId].vdx; DGRState.params[fnId].ar=DGRState.params[fnId].mr;
   };
 
-  DGRManager.countTaxo=function(prefix){ return Object.values(DGRState.subs||{}).reduce((t,subs)=>t+Object.entries(subs||{}).filter(([code,v])=>code.startsWith(prefix+'-')&&v&&v.sel).length,0); };
+  DGRManager.countTaxo=function(prefix){ const T=TAXO[prefix]; if(!T) return 0; return Object.values(DGRState.subs||{}).reduce((t,subs)=>t+T.groups.filter(g=>{const v=subs[prefix+'-'+g.key];return v&&v.sel;}).length,0); };
   DGRManager.countVDE=function(){return this.countTaxo('VDE')+DGRState.vars.filter(v=>['endogena','re','vde'].includes(String(v.category||'').toLowerCase())).length;};
   DGRManager.countVDX=function(){return this.countTaxo('VDX')+DGRState.vars.filter(v=>['exogena','rx','vdx'].includes(String(v.category||'').toLowerCase())).length;};
   DGRManager.countVAE=function(){return this.countTaxo('VAE')+DGRState.vars.filter(v=>String(v.category||'').toLowerCase()==='vae').length;};
@@ -2687,18 +2777,49 @@ let openSubcatFn = {};
   DGRManager.countRE=DGRManager.countVDE; DGRManager.countRX=DGRManager.countVDX;
 
   DGRManager.renderTaxonomyAccordion=function(taxoKey,containerId){
-    addStyle(); const container=document.getElementById(containerId); if(!container) return; if(!DGRState.fns.length){container.innerHTML='<div class="empty">Cadastre funções para parametrizar esta taxonomia.</div>';return;}
-    const T=TAXO[taxoKey]; if(!T) return; const color=T.color; if(typeof openSubcatFn==='undefined') window.openSubcatFn={}; container.innerHTML='';
-    DGRState.fns.forEach(fn=>{ if(!DGRState.subs[fn.id]) DGRState.subs[fn.id]={}; const isOpen=openSubcatFn[containerId]===fn.id; const selCount=T.items.filter(i=>DGRState.subs[fn.id]?.[i.code]?.sel).length; const block=document.createElement('div'); block.className='subcat-fn-block'; block.style.setProperty('--sc-color',color);
-      const hdr=document.createElement('div'); hdr.className='subcat-fn-hdr'; hdr.onclick=()=>{openSubcatFn[containerId]=isOpen?null:fn.id; this.renderTaxonomyAccordion(taxoKey,containerId);}; hdr.innerHTML=`<span style="flex:1;font-weight:600">${esc(fn.name)}</span><span class="count-badge" style="background:${selCount>0?color+'22':'#f0f0f5'};color:${selCount>0?color:'#9898b0'}">${selCount} selecionadas</span><span style="font-size:10px;color:#9898b0;margin-left:6px">${isOpen?'▲':'▼'}</span>`; block.appendChild(hdr);
+    addStyle(); const container=document.getElementById(containerId); if(!container) return;
+    if(!DGRState.fns.length){container.innerHTML='<div class="empty">Cadastre funções para parametrizar esta taxonomia.</div>';return;}
+    const T=TAXO[taxoKey]; if(!T) return; const color=T.color;
+    if(typeof openSubcatFn==='undefined') window.openSubcatFn={};
+    container.innerHTML='';
+    DGRState.fns.forEach(fn=>{
+      if(!DGRState.subs[fn.id]) DGRState.subs[fn.id]={};
+      const isOpen=openSubcatFn[containerId]===fn.id;
+      // contagem: quantos GRUPOS selecionados
+      const selCount=T.groups.filter(g=>DGRState.subs[fn.id]?.[taxoKey+'-'+g.key]?.sel).length;
+      const block=document.createElement('div'); block.className='subcat-fn-block'; block.style.setProperty('--sc-color',color);
+      const hdr=document.createElement('div'); hdr.className='subcat-fn-hdr';
+      hdr.onclick=()=>{openSubcatFn[containerId]=isOpen?null:fn.id; this.renderTaxonomyAccordion(taxoKey,containerId);};
+      hdr.innerHTML=`<span style="flex:1;font-weight:600">${esc(fn.name)}</span><span class="count-badge" style="background:${selCount>0?color+'22':'#f0f0f5'};color:${selCount>0?color:'#9898b0'}">${selCount} selecionadas</span><span style="font-size:10px;color:#9898b0;margin-left:6px">${isOpen?'▲':'▼'}</span>`;
+      block.appendChild(hdr);
       const body=document.createElement('div'); body.className=`subcat-fn-body ${isOpen?'open':''}`;
-      T.groups.forEach(grp=>{ const grpDiv=document.createElement('div'); grpDiv.className='subcat-group'; grpDiv.innerHTML=`<span class="subcat-group-lbl" style="background:${color}15;color:${color}">${esc(grp.label)}</span>`;
-        grp.items.forEach(item=>{ const sv=DGRState.subs[fn.id][item.code]||{sel:false,level:'media',mn:.25,mp:.50,mx:.70}; DGRState.subs[fn.id][item.code]=sv; const itemDiv=document.createElement('div'); itemDiv.className=`subcat-item ${sv.sel?'sel':''}`; const row=document.createElement('div'); row.className='subcat-item-row'; row.onclick=()=>{DGRHistory.push(); sv.sel=!sv.sel; this.applyEvalLevel(fn.id,item.code,sv.level||'media'); this.recalcParams(fn.id); DGRHistory.push(); this.saveToLocalStorage(true); this.refreshUI();}; const exs=item.examples||[]; row.innerHTML=`<div class="subcat-check ${sv.sel?'on':''}">${sv.sel?'<span style="color:#fff;font-size:10px;">✔</span>':''}</div><span style="font-family:monospace;font-weight:700;color:${color}">${esc(item.code)}</span><span style="font-size:12px;margin-left:4px">${esc(item.name)}</span>${exs.length?'<span class="subcat-help">exemplos</span>':''}`; itemDiv.appendChild(row);
-          if(exs.length){ const exDiv=document.createElement('div'); exDiv.className='subcat-examples'; exDiv.innerHTML=`<b>Possibilidades de manifestação:</b><ul>${exs.map(e=>`<li>${esc(e)}</li>`).join('')}</ul>`; itemDiv.appendChild(exDiv); }
-          if(sv.sel){ const vals=document.createElement('div'); vals.className='subcat-vals'; const level=sv.level||this.inferEvalLevel(sv); vals.innerHTML=`<div class="subcat-val-cell"><label>Avaliação da intensidade</label><select class="pinp" style="text-align:left;padding:6px 8px"><option value="minima" ${level==='minima'?'selected':''}>Mínima</option><option value="media" ${level==='media'?'selected':''}>Média</option><option value="maxima" ${level==='maxima'?'selected':''}>Máxima</option></select><div class="mini-note">Convertido internamente para Beta-PERT.</div></div>`; vals.querySelector('select').onchange=e=>{DGRHistory.push();this.applyEvalLevel(fn.id,item.code,e.target.value);this.recalcParams(fn.id);DGRHistory.push();this.saveToLocalStorage(true);this.refreshUI();}; itemDiv.appendChild(vals); }
-          grpDiv.appendChild(itemDiv); }); body.appendChild(grpDiv); }); block.appendChild(body); container.appendChild(block); });
-  };
-
+      T.groups.forEach(grp=>{
+        const grpCode=taxoKey+'-'+grp.key;
+        let sv=DGRState.subs[fn.id][grpCode];
+        if(!sv){sv={sel:false,level:'media',mn:0.25,mp:0.50,mx:0.70};DGRState.subs[fn.id][grpCode]=sv;}
+        const grpDiv=document.createElement('div'); grpDiv.className=`subcat-item ${sv.sel?'sel':''}`;
+        // linha clicável do grupo
+        const row=document.createElement('div'); row.className='subcat-item-row';
+        row.onclick=()=>{DGRHistory.push();sv.sel=!sv.sel;this.applyEvalLevel(fn.id,grpCode,sv.level||'media');this.recalcParams(fn.id);DGRHistory.push();this.saveToLocalStorage(true);this.refreshUI();};
+        row.innerHTML=`<div class="subcat-check ${sv.sel?'on':''}">${sv.sel?'<span style="color:#fff;font-size:10px;">✔</span>':''}</div><span style="font-family:monospace;font-weight:700;color:${color}">${esc(grpCode)}</span><span style="font-size:12px;margin-left:6px;font-weight:600">${esc(grp.label)}</span>`;
+        grpDiv.appendChild(row);
+        // itens como bullets informativos (sempre visíveis)
+        const exDiv=document.createElement('div'); exDiv.className='subcat-examples';
+        exDiv.innerHTML=`<b>Exemplos de manifestação:</b><ul>${grp.items.map(it=>`<li><span style="font-family:monospace;font-size:11px;font-weight:700;color:${color}">${esc(it.code)}</span> ${esc(it.name)}</li>`).join('')}</ul>`;
+        grpDiv.appendChild(exDiv);
+        // seletor de intensidade (só se selecionado)
+        if(sv.sel){
+          const level=sv.level||'media';
+          const vals=document.createElement('div'); vals.className='subcat-vals';
+          vals.innerHTML=`<div class="subcat-val-cell"><label>Avaliação da intensidade</label><select class="pinp" style="text-align:left;padding:6px 8px"><option value="minima" ${level==='minima'?'selected':''}>Mínima</option><option value="media" ${level==='media'?'selected':''}>Média</option><option value="maxima" ${level==='maxima'?'selected':''}>Máxima</option></select><div class="mini-note">Convertido internamente para Beta-PERT.</div></div>`;
+          vals.querySelector('select').onchange=e=>{DGRHistory.push();this.applyEvalLevel(fn.id,grpCode,e.target.value);this.recalcParams(fn.id);DGRHistory.push();this.saveToLocalStorage(true);this.refreshUI();};
+          grpDiv.appendChild(vals);
+        }
+        body.appendChild(grpDiv);
+      });
+      block.appendChild(body); container.appendChild(block);
+    });
+  }
   DGRManager.refreshUI=function(){ sanitizeUI(); this.syncSelectBoxes(); this.renderFunctions(); this.renderConnections(); this.renderEndogenous(); this.renderExogenous(); this.renderMechs(); this.renderTaxonomyAccordion('VDE','endo-subcat-sel'); this.renderTaxonomyAccordion('VAE','vae-subcat-sel-inline'); this.renderTaxonomyAccordion('VDX','exo-subcat-sel'); this.renderTaxonomyAccordion('VAX','vax-subcat-sel-inline'); this.renderTaxonomyAccordion('MR','mr-subcat-sel'); if(DGRState.curPage==='fram') this.renderFramMap(); if(DGRState.curPage==='mc'){ const hasRes=DGRState.fns.some(f=>DGRState.mcRes[f.id]); this.renderKPIs(hasRes); this.renderCharts(hasRes); this.renderMCPanel(hasRes); this.renderAdvancedAnalytics(hasRes);} };
 
   DGRManager.saveEndoVar=function(){ const name=document.getElementById('endo-name').value.trim(); const fn=document.getElementById('endo-fn').value; const desc=document.getElementById('endo-desc').value.trim(); const id=document.getElementById('edit-endo-id').value; const cls=(document.getElementById('endo-class')?.value||'vde').toLowerCase(); if(!name||!fn) return; DGRHistory.push(); if(id){const v=DGRState.vars.find(x=>x.id===id); if(v){v.name=name;v.category=cls;v.affected_function_id=fn;v.affected_function_ids=[fn];v.description=desc;}} else DGRState.vars.push({id:this.uid(),category:cls,name,affected_function_id:fn,affected_function_ids:[fn],description:desc}); this.clearEndoForm(); DGRHistory.push(); this.refreshUI(); };
@@ -2711,8 +2832,8 @@ let openSubcatFn = {};
   DGRManager.clearExoForm=function(){ document.getElementById('edit-exo-id').value=''; document.getElementById('exo-name').value=''; Array.from(document.getElementById('exo-fn')?.options||[]).forEach(o=>o.selected=false); document.getElementById('exo-desc').value=''; const c=document.getElementById('exo-class'); if(c)c.value='vdx'; document.getElementById('exoh3').textContent='Novo Fator de Variabilidade Exógena'; document.getElementById('btn-cancel-exo').style.display='none'; };
   DGRManager.renderExogenous=function(){ const target=document.getElementById('exo-list-target'); if(!target)return; const filtered=DGRState.vars.filter(v=>['exogena','rx','vdx','vax'].includes(String(v.category||'').toLowerCase())); if(!filtered.length){target.innerHTML='<div class="empty">Nenhuma variabilidade exógena manual.</div>';return;} target.innerHTML=filtered.map(v=>{const cat=String(v.category||'').toLowerCase()==='vax'?'VAX — adaptativa':'VDX — degradadora'; const names=idsOfVar(v).map(id=>DGRState.fns.find(f=>f.id===id)?.name).filter(Boolean); return `<div class="item-card"><div class="item-card-body"><div class="item-card-title">${esc(v.name)}</div><div class="item-card-sub">Classificação: <b>${cat}</b> | Funções afetadas: <span style="color:#c0392b">${esc(names.join(', ')||'?')}</span></div></div><div class="item-card-actions"><button class="rtab" onclick="DGRManager.editExo('${v.id}')">Editar</button><button class="bdel" onclick="DGRManager.deleteVar('${v.id}')">Excluir</button></div></div>`;}).join(''); };
 
-  DGRManager.hasFunctionVariability=function(fnId){ const hasReg=DGRState.vars.some(v=>idsOfVar(v).includes(fnId)&&['endogena','re','vde','exogena','rx','vdx'].includes(String(v.category||'').toLowerCase())); const hasTax=Object.entries(DGRState.subs[fnId]||{}).some(([code,v])=>v&&v.sel&&(code.startsWith('VDE-')||code.startsWith('VDX-'))); return !!(hasReg||hasTax); };
-  DGRManager.hasFunctionMR=function(fnId){ const hasReg=DGRState.mechs.some(m=>m.controlled_function_id===fnId); const hasAdapt=DGRState.vars.some(v=>idsOfVar(v).includes(fnId)&&['vae','vax'].includes(String(v.category||'').toLowerCase())); const hasTax=Object.entries(DGRState.subs[fnId]||{}).some(([code,v])=>v&&v.sel&&(code.startsWith('VAE-')||code.startsWith('VAX-')||code.startsWith('MR-'))); return !!(hasReg||hasAdapt||hasTax); };
+  DGRManager.hasFunctionVariability=function(fnId){ const hasReg=DGRState.vars.some(v=>idsOfVar(v).includes(fnId)&&['endogena','re','vde','exogena','rx','vdx'].includes(String(v.category||'').toLowerCase())); const sb=DGRState.subs[fnId]||{}; const hasTax=['VDE','VDX'].some(p=>(TAXO[p]&&TAXO[p].groups||[]).some(g=>{const v=sb[p+'-'+g.key];return v&&v.sel;})); return !!(hasReg||hasTax); };
+  DGRManager.hasFunctionMR=function(fnId){ const hasReg=DGRState.mechs.some(m=>m.controlled_function_id===fnId); const hasAdapt=DGRState.vars.some(v=>idsOfVar(v).includes(fnId)&&['vae','vax'].includes(String(v.category||'').toLowerCase())); const sb=DGRState.subs[fnId]||{}; const hasTax=['VAE','VAX','MR'].some(p=>(TAXO[p]&&TAXO[p].groups||[]).some(g=>{const v=sb[p+'-'+g.key];return v&&v.sel;})); return !!(hasReg||hasAdapt||hasTax); };
 
   DGRManager.runSimulation=function(){
     if(!DGRState.fns.length){alert('Adicione funções.');return;} const N=DGRState.mcN; DGRState.fns.forEach(fn=>{ this.recalcParams(fn.id); const p=DGRState.params[fn.id]||{}; const arr=[], details={vde:[],vdx:[],vae:[],vax:[],mr:[],vd:[],va:[],vfr:[]}; for(let i=0;i<N;i++){ const VDE=this.betaPertSample(p.vde?.mn||0,p.vde?.mp||0,p.vde?.mx||0); const VDX=this.betaPertSample(p.vdx?.mn||0,p.vdx?.mp||0,p.vdx?.mx||0); const VAE=this.betaPertSample(p.vae?.mn||0,p.vae?.mp||0,p.vae?.mx||0); const VAX=this.betaPertSample(p.vax?.mn||0,p.vax?.mp||0,p.vax?.mx||0); const MR=this.betaPertSample(p.mr?.mn||0,p.mr?.mp||0,p.mr?.mx||0); const VD=VDE+VDX; const VA=VAE+VAX; const VFR=Math.max(0,VD-VA); const VFRR=Math.max(0,Math.min(2,VFR*(1-MR))); arr.push(VFRR); details.vde.push(VDE); details.vdx.push(VDX); details.vae.push(VAE); details.vax.push(VAX); details.mr.push(MR); details.vd.push(VD); details.va.push(VA); details.vfr.push(VFR); } arr.sort((a,b)=>a-b); Object.values(details).forEach(a=>a.sort((x,y)=>x-y)); const mean=arr.reduce((a,b)=>a+b,0)/N; const p95=arr[Math.floor(N*.95)]||0; const hist=Array(20).fill(0); arr.forEach(v=>hist[Math.min(19,Math.floor(Math.min(v,.9999)*20))]++); const hmax=Math.max(...hist,1); const avg=a=>a.reduce((x,y)=>x+y,0)/N; DGRState.mcRes[fn.id]={mean,p90:arr[Math.floor(N*.90)]||0,p95,p99:arr[Math.floor(N*.99)]||0,probCrit:arr.filter(v=>v>=.70).length/N,hist:hist.map(h=>h/hmax),vde:avg(details.vde),vdx:avg(details.vdx),vae:avg(details.vae),vax:avg(details.vax),vd:avg(details.vd),va:avg(details.va),mr:avg(details.mr),vfr:avg(details.vfr),vfrr:mean,centrality:0,incomingResonance:0,incomingResonanceNorm:0,functionalResonance:0,iis:p95}; }); this.calculateNetworkResonance(); this.refreshUI(); };
@@ -5973,16 +6094,7 @@ let openSubcatFn = {};
     var doc = new jsPDF('p','mm','a4');
     var PDF_FONT = registerUnicodeFont(doc);
     var W = 210, H = 297, margin = 12, page = 1, y = 24;
-    // calcula total de páginas antes de gerar qualquer página
-    var totalPages = (function(){
-      var sb = DGRState.subs || {};
-      return (DGRState.fns||[]).some(function(fn){
-        var s = sb[fn.id]||{};
-        return Object.keys(s).some(function(c){
-          var v=s[c]; return v&&v.sel&&(c.indexOf('VAE-')===0||c.indexOf('VAX-')===0||c.indexOf('MR-')===0);
-        });
-      }) ? 6 : 5;
-    })();
+    var TOTAL_PAGES_ALIAS = '{total_pages}';
 
     function header(title){
       doc.setFillColor(31,37,50); doc.rect(0,0,W,16,'F');
@@ -5991,7 +6103,7 @@ let openSubcatFn = {};
       doc.setFont(PDF_FONT,'normal'); doc.setFontSize(7);
       doc.text(title, W-margin, 10, {align:'right'});
       doc.setTextColor(90,95,110);
-      doc.text('Página '+page+' de '+totalPages, W/2, H-8, {align:'center'});
+      doc.text('Página '+page+' de '+TOTAL_PAGES_ALIAS, W/2, H-8, {align:'center'});
       doc.setTextColor(30,35,50);
     }
     function add(title){ doc.addPage(); page++; y = 24; header(title); }
@@ -6131,43 +6243,54 @@ let openSubcatFn = {};
       y += 2;
     });
 
-    // ── Página 6: VAE / VAX / MR com nome do critério e barra de intensidade ──
-    var taxoMap = {};
+    // ── Página 6: Critérios VAE/VAX/MR selecionados, agrupados por categoria da TAXO ──
+    // Monta mapa code->name e code->groupLabel a partir dos grupos de TAXO
+    var taxoMap = {}, taxoGroupMap = {};
     try {
-      [].concat(
-        (TAXO.VAE && TAXO.VAE.items) || [],
-        (TAXO.VAX && TAXO.VAX.items) || [],
-        (TAXO.MR  && TAXO.MR.items)  || []
-      ).forEach(function(it){ if(it && it.code) taxoMap[it.code] = it.name || ''; });
+      [
+        { T: TAXO.VAE, prefix:'VAE' },
+        { T: TAXO.VAX, prefix:'VAX' },
+        { T: TAXO.MR,  prefix:'MR'  }
+      ].forEach(function(entry){
+        (entry.T && entry.T.groups || []).forEach(function(grp){
+          (grp.items || []).forEach(function(it){
+            taxoMap[it.code]      = it.name  || '';
+            taxoGroupMap[it.code] = grp.label || '';
+          });
+        });
+      });
     } catch(e){}
 
-    function getSel(fnId, prefix){
-      var out = [], sb = (DGRState.subs || {})[fnId] || {};
-      Object.keys(sb).forEach(function(code){
-        var v = sb[code];
-        if(v && v.sel && code.indexOf(prefix) === 0)
-          out.push({ code: code, name: taxoMap[code] || code, level: v.level || 'media' });
+    // Retorna grupos SELECIONADOS (chave: prefix+'-'+grp.key, ex: 'VAX-A')
+    // com os itens do grupo como lista informativa
+    function getSelGroups(fnId, taxoObj, prefix){
+      var sb = (DGRState.subs || {})[fnId] || {};
+      var out = [];
+      (taxoObj && taxoObj.groups || []).forEach(function(grp){
+        var grpCode = prefix + '-' + grp.key;
+        var v = sb[grpCode];
+        if(v && v.sel) out.push({ grpCode: grpCode, grpLabel: grp.label, level: v.level||'media', items: grp.items||[] });
       });
-      return out.sort(function(a,b){ return a.code < b.code ? -1 : 1; });
+      return out;
     }
 
     var hasSel = (DGRState.fns || []).some(function(fn){
-      return getSel(fn.id,'VAE-').length || getSel(fn.id,'VAX-').length || getSel(fn.id,'MR-').length;
+      return getSelGroups(fn.id, TAXO.VAE,'VAE').length ||
+             getSelGroups(fn.id, TAXO.VAX,'VAX').length ||
+             getSelGroups(fn.id, TAXO.MR, 'MR' ).length;
     });
 
     if(hasSel){
-      totalPages = 6;
       add('Capacidades Adaptativas e Mecanismos de Resiliência');
 
-      // título
       tx('Capacidades Adaptativas (VAE / VAX) e Mecanismos de Resiliência (MR) por Função', margin, y, 11, true, [24,30,50]); y += 8;
 
       // cabeçalho de colunas
       doc.setFillColor(240,241,246); doc.rect(margin, y-4, 186, 7, 'F');
       doc.setFont(PDF_FONT,'bold'); doc.setFontSize(6); doc.setTextColor(90,95,110);
-      doc.text('Cód.', margin+2, y);
-      doc.text('Critério Avaliado', margin+22, y);
-      doc.text('Intensidade', 162, y);
+      doc.text('Código', margin+2, y);
+      doc.text('Critério Avaliado', margin+24, y);
+      doc.text('Intensidade', 155, y);
       doc.setFont(PDF_FONT,'normal'); doc.setFontSize(8); doc.setTextColor(30,35,50);
       y += 8;
 
@@ -6177,68 +6300,66 @@ let openSubcatFn = {};
         return { frac:0.66, rgb:[180,120,0], txt:'Média' };
       }
 
-      function printRow(item, tc){
-        need(7, 'Capacidades Adaptativas e Mecanismos de Resiliência');
-        var m2 = lvlMeta(item.level);
-        var bx = 150, by = y-2.5, bw = 28, bh = 3.2;
-        // código
-        doc.setFont(PDF_FONT,'bold'); doc.setFontSize(6); doc.setTextColor(tc[0],tc[1],tc[2]);
-        doc.text(item.code, margin+2, y);
-        // nome do critério (até 72 chars)
+      // Por grupo selecionado: linha com código+label+barra intensidade, depois items como bullets
+      function printGrpRow(grp, tc, bg){
+        var m2 = lvlMeta(grp.level);
+        var bx=145, bw=28, bh=3.5;
+        need(8 + grp.items.length*4.5, 'Capacidades Adaptativas e Mecanismos de Resiliência');
+        // linha do grupo
+        doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(margin+2, y-4, 184, 7, 'F');
+        doc.setFont(PDF_FONT,'bold'); doc.setFontSize(7); doc.setTextColor(tc[0],tc[1],tc[2]);
+        doc.text(grp.grpCode, margin+4, y);
         doc.setFont(PDF_FONT,'normal'); doc.setFontSize(6.5); doc.setTextColor(40,45,60);
-        doc.text(String(item.name).substring(0,72), margin+22, y);
-        // barra fundo
-        doc.setFillColor(220,225,235); doc.rect(bx, by, bw, bh, 'F');
-        // barra preenchida
-        doc.setFillColor(m2.rgb[0],m2.rgb[1],m2.rgb[2]); doc.rect(bx, by, bw*m2.frac, bh, 'F');
-        // rótulo
+        doc.text(String(grp.grpLabel).replace(/^[A-Z]+-[A-Z] — /,'').substring(0,58), margin+18, y);
+        // barra intensidade
+        doc.setFillColor(220,225,235); doc.rect(bx, y-2.8, bw, bh, 'F');
+        doc.setFillColor(m2.rgb[0],m2.rgb[1],m2.rgb[2]); doc.rect(bx, y-2.8, bw*m2.frac, bh, 'F');
         doc.setFont(PDF_FONT,'bold'); doc.setFontSize(5.5); doc.setTextColor(m2.rgb[0],m2.rgb[1],m2.rgb[2]);
         doc.text(m2.txt, bx+bw+2, y);
         doc.setFont(PDF_FONT,'normal'); doc.setFontSize(8); doc.setTextColor(30,35,50);
         y += 6.5;
+        // items como bullets informativos
+        grp.items.forEach(function(it){
+          need(4.5, 'Capacidades Adaptativas e Mecanismos de Resiliência');
+          doc.setFont(PDF_FONT,'bold'); doc.setFontSize(5.5); doc.setTextColor(tc[0],tc[1],tc[2]);
+          doc.text('• ' + it.code, margin+6, y);
+          doc.setFont(PDF_FONT,'normal'); doc.setFontSize(5.5); doc.setTextColor(60,65,80);
+          doc.text(String(it.name).substring(0,78), margin+20, y);
+          y += 4.5;
+        });
+        y += 2;
       }
 
-      function printGroup(sigla, desc, list, bg, tc){
-        if(!list.length) return;
-        need(8, 'Capacidades Adaptativas e Mecanismos de Resiliência');
-        doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(margin+2, y-4, 184, 6, 'F');
-        doc.setFont(PDF_FONT,'bold'); doc.setFontSize(6.5); doc.setTextColor(tc[0],tc[1],tc[2]);
-        doc.text(sigla, margin+4, y);
-        doc.setFont(PDF_FONT,'normal'); doc.setFontSize(6); doc.setTextColor(tc[0],tc[1],tc[2]);
-        doc.text(desc, margin+16, y);
-        doc.setFont(PDF_FONT,'normal'); doc.setFontSize(8); doc.setTextColor(30,35,50);
-        y += 7;
-        list.forEach(function(it){ printRow(it, tc); });
-      }
+      var tVAE=0, tVAX=0, tMR=0;
 
       (DGRState.fns || []).forEach(function(fn){
-        var vae = getSel(fn.id,'VAE-'), vax = getSel(fn.id,'VAX-'), mr = getSel(fn.id,'MR-');
-        if(!vae.length && !vax.length && !mr.length) return;
+        var gVAE = getSelGroups(fn.id, TAXO.VAE,'VAE');
+        var gVAX = getSelGroups(fn.id, TAXO.VAX,'VAX');
+        var gMR  = getSelGroups(fn.id, TAXO.MR, 'MR' );
+        if(!gVAE.length && !gVAX.length && !gMR.length) return;
+
         need(12, 'Capacidades Adaptativas e Mecanismos de Resiliência');
-        // cabeçalho da função
         doc.setFillColor(31,37,50); doc.rect(margin, y-4, 186, 7, 'F');
         doc.setFont(PDF_FONT,'bold'); doc.setFontSize(8); doc.setTextColor(255,255,255);
         doc.text(fullName(fn).substring(0,75), margin+3, y);
         doc.setFont(PDF_FONT,'normal'); doc.setFontSize(8); doc.setTextColor(30,35,50);
         y += 8;
-        printGroup('VAE','— Variabilidade Adaptativa Endógena', vae, [230,248,238],[15,110,86]);
-        printGroup('VAX','— Variabilidade Adaptativa Exógena',  vax, [230,245,235],[19,138,46]);
-        printGroup('MR', '— Mecanismos de Resiliência',          mr,  [232,238,255],[24,95,165]);
+
+        gVAE.forEach(function(grp){ printGrpRow(grp,[15,110,86],[225,245,235]); tVAE++; });
+        gVAX.forEach(function(grp){ printGrpRow(grp,[19,138,46],[220,242,228]); tVAX++; });
+        gMR.forEach( function(grp){ printGrpRow(grp,[24,95,165],[228,235,255]); tMR++;  });
         y += 3;
       });
 
-      // rodapé com totais
+      // rodapé
       need(10, 'Capacidades Adaptativas e Mecanismos de Resiliência');
-      var tVAE=0,tVAX=0,tMR=0;
-      (DGRState.fns||[]).forEach(function(fn){
-        tVAE+=getSel(fn.id,'VAE-').length; tVAX+=getSel(fn.id,'VAX-').length; tMR+=getSel(fn.id,'MR-').length;
-      });
       doc.setFillColor(240,241,246); doc.rect(margin, y-1, 186, 8, 'F');
       doc.setFont(PDF_FONT,'bold'); doc.setFontSize(7); doc.setTextColor(24,30,50);
-      doc.text('Total selecionado — VAE: '+tVAE+'   VAX: '+tVAX+'   MR: '+tMR+'   Total: '+(tVAE+tVAX+tMR), margin+4, y+4);
+      doc.text('Total selecionado — VAE: '+tVAE+'   VAX: '+tVAX+'   MR: '+tMR+'   Total geral: '+(tVAE+tVAX+tMR), margin+4, y+4);
       doc.setFont(PDF_FONT,'normal'); doc.setFontSize(8); doc.setTextColor(30,35,50);
     }
 
+    if(doc.putTotalPages) doc.putTotalPages(TOTAL_PAGES_ALIAS);
     doc.save('dgr-fram-relatorio-montecarlo-corrigido-definitivo-v4.pdf');
   }
 
