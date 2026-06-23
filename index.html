@@ -6791,27 +6791,18 @@ let openSubcatFn = {};
   // tardias de patches anteriores (a última delas ocorre em torno de 1500ms).
   [50,150,400,800,1500,2500,4000,6000].forEach(function(ms){ setTimeout(tick, ms); });
 })();
+</script>
 
-// ═══════════════════════════════════════════════════════════════
-// DGR-OPS — Capacidades Resilientes
-// ═══════════════════════════════════════════════════════════════
+
+<script id="dgr-ops-capacidades">
 (function(){
-
-  // ── Escala numérica ──────────────────────────────────────────
   function lvlVal(lv){
-    if(lv==='minima') return 25;
-    if(lv==='media')  return 50;
-    if(lv==='maxima') return 100;
-    return 0;
+    return lv==='minima'?25:lv==='maxima'?100:50;
   }
-
-  // ── Lê valor de um grupo (ex: subs[fnId]['VAE-B']) ───────────
-  function gv(fnId, prefix, key){
-    var v = (DGRState.subs||{})[fnId]?.[prefix+'-'+key];
-    return (v && v.sel) ? lvlVal(v.level||'media') : null;
+  function gv(fnId,prefix,key){
+    var v=(DGRState.subs||{})[fnId] && (DGRState.subs||{})[fnId][prefix+'-'+key];
+    return (v&&v.sel)?lvlVal(v.level||'media'):null;
   }
-
-  // ── Média de todos os valores não-nulos coletados ─────────────
   function poolAvg(specs){
     var vals=[];
     (DGRState.fns||[]).forEach(function(fn){
@@ -6820,10 +6811,8 @@ let openSubcatFn = {};
         if(v!==null) vals.push(v);
       });
     });
-    return vals.length ? Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length) : 0;
+    return vals.length?Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length):0;
   }
-
-  // ── Índices ───────────────────────────────────────────────────
   function calcIndices(){
     return {
       IM:  poolAvg([['MR','A'],['MR','B'],['MR','F'],['VAE','B'],['VAX','B']]),
@@ -6832,192 +6821,124 @@ let openSubcatFn = {};
       IAn: poolAvg([['MR','B'],['MR','C'],['MR','F'],['VAE','B'],['VAE','C'],['VAX','B']])
     };
   }
-
-  // ── Matriz fixa ───────────────────────────────────────────────
   var MATRIX=[
-    {mec:'MR-A',label:'Barreiras Estruturadas',      IM:3,IR:3,IA:1,IAn:1},
-    {mec:'MR-B',label:'Governança de Dados',          IM:3,IR:2,IA:3,IAn:3},
-    {mec:'MR-C',label:'Capacidades Resilientes',      IM:2,IR:3,IA:3,IAn:3},
-    {mec:'MR-D',label:'Continuidade Operacional',     IM:1,IR:3,IA:1,IAn:1},
-    {mec:'MR-E',label:'Adaptação Sociotécnica',       IM:2,IR:3,IA:2,IAn:1},
-    {mec:'MR-F',label:'Inteligência Informacional',   IM:3,IR:2,IA:2,IAn:3}
+    {mec:'MR-A',label:'Barreiras Estruturadas',    IM:3,IR:3,IA:1,IAn:1},
+    {mec:'MR-B',label:'Governança de Dados',        IM:3,IR:2,IA:3,IAn:3},
+    {mec:'MR-C',label:'Capacidades Resilientes',    IM:2,IR:3,IA:3,IAn:3},
+    {mec:'MR-D',label:'Continuidade Operacional',   IM:1,IR:3,IA:1,IAn:1},
+    {mec:'MR-E',label:'Adaptação Sociotécnica',     IM:2,IR:3,IA:2,IAn:1},
+    {mec:'MR-F',label:'Inteligência Informacional', IM:3,IR:2,IA:2,IAn:3}
   ];
+  function dots(n){return '&#9679;'.repeat(n)+'&#9675;'.repeat(3-n);}
+  function col(v){return v>=75?'#0f6e56':v>=50?'#185fa5':v>=25?'#d97706':'#c0392b';}
 
-  function dots(n){ return '●'.repeat(n)+'○'.repeat(3-n); }
-
-  function capColor(v){
-    return v>=75?'#0f6e56':v>=50?'#185fa5':v>=25?'#d97706':'#c0392b';
-  }
-
-  // ── Render Cards ──────────────────────────────────────────────
   function renderCards(idx){
     var el=document.getElementById('dgr-cards');
-    if(!el) return;
+    if(!el)return;
     var caps=[
-      {label:'Monitorar',k:'IM', icon:'👁',desc:'Perceber e detectar sinais de degradação'},
-      {label:'Responder',k:'IR', icon:'⚡',desc:'Absorver perturbações com agilidade'},
-      {label:'Aprender', k:'IA', icon:'📚',desc:'Aprender com experiências anteriores'},
-      {label:'Antecipar',k:'IAn',icon:'🔭',desc:'Antecipar riscos e cenários futuros'}
+      {l:'Monitorar',k:'IM', i:'&#128065;',d:'Perceber e detectar sinais de degradação'},
+      {l:'Responder',k:'IR', i:'&#9889;',  d:'Absorver perturbações com agilidade'},
+      {l:'Aprender', k:'IA', i:'&#128218;',d:'Aprender com experiências anteriores'},
+      {l:'Antecipar',k:'IAn',i:'&#128301;',d:'Antecipar riscos e cenários futuros'}
     ];
     el.innerHTML=caps.map(function(c){
-      var v=idx[c.k]||0, col=capColor(v);
-      return '<div style="background:#fff;border:1px solid #e8eaf0;border-radius:10px;padding:16px 14px;box-shadow:0 2px 8px rgba(0,0,0,.06)">'
-        +'<div style="font-size:22px;margin-bottom:4px">'+c.icon+'</div>'
-        +'<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px">'+c.label+'</div>'
-        +'<div style="font-size:32px;font-weight:800;color:'+col+';margin:4px 0">'+v+'%</div>'
-        +'<div style="height:6px;background:#eee;border-radius:3px;margin:6px 0">'
-        +'<div style="height:6px;width:'+v+'%;background:'+col+';border-radius:3px"></div></div>'
-        +'<div style="font-size:10px;color:#888;line-height:1.4">'+c.desc+'</div>'
+      var v=idx[c.k]||0,co=col(v);
+      return '<div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:16px 12px;box-shadow:0 2px 6px rgba(0,0,0,.06);text-align:center">'
+        +'<div style="font-size:24px">'+c.i+'</div>'
+        +'<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin:4px 0">'+c.l+'</div>'
+        +'<div style="font-size:30px;font-weight:800;color:'+co+'">'+v+'%</div>'
+        +'<div style="height:5px;background:#eee;border-radius:3px;margin:6px 0">'
+        +'<div style="height:5px;width:'+v+'%;background:'+co+';border-radius:3px"></div></div>'
+        +'<div style="font-size:10px;color:#999;line-height:1.3">'+c.d+'</div>'
         +'</div>';
     }).join('');
   }
 
-  // ── Render Radar (Chart.js) ───────────────────────────────────
   var _chart=null;
   function renderRadar(idx){
     var canvas=document.getElementById('dgr-radar');
-    if(!canvas) return;
-    if(typeof Chart==='undefined'){ canvas.parentNode.innerHTML='<p style="color:#999;font-size:12px;padding:20px">Chart.js não carregado.</p>'; return; }
-    if(_chart){try{_chart.destroy();}catch(e){} _chart=null;}
+    if(!canvas||typeof Chart==='undefined')return;
+    if(_chart){try{_chart.destroy();}catch(e){}_chart=null;}
     _chart=new Chart(canvas,{
       type:'radar',
       data:{
         labels:['Monitorar','Responder','Aprender','Antecipar'],
-        datasets:[{
-          label:'DGR-OPS',
-          data:[idx.IM,idx.IR,idx.IA,idx.IAn],
-          backgroundColor:'rgba(24,95,165,.15)',
-          borderColor:'#185fa5',
-          borderWidth:2,
-          pointBackgroundColor:'#185fa5',
-          pointRadius:5
-        }]
+        datasets:[{data:[idx.IM,idx.IR,idx.IA,idx.IAn],
+          backgroundColor:'rgba(24,95,165,.15)',borderColor:'#185fa5',
+          borderWidth:2,pointBackgroundColor:'#185fa5',pointRadius:5}]
       },
-      options:{
-        scales:{r:{min:0,max:100,ticks:{stepSize:25,font:{size:10}},pointLabels:{font:{size:12,weight:'bold'}}}},
-        plugins:{legend:{display:false}},
-        responsive:false
-      }
+      options:{scales:{r:{min:0,max:100,ticks:{stepSize:25}}},plugins:{legend:{display:false}},responsive:false}
     });
   }
 
-  // ── Render Matriz ─────────────────────────────────────────────
   function renderMatrix(){
     var el=document.getElementById('dgr-matrix');
-    if(!el) return;
-    var rows=MATRIX.map(function(r,i){
-      return '<tr style="background:'+(i%2?'#f8f9fc':'#fff')+'">'
-        +'<td style="padding:7px 8px;border:1px solid #dde"><span style="font-weight:700;color:#185fa5">'+r.mec+'</span><br>'
-        +'<span style="font-size:10px;color:#666">'+r.label+'</span></td>'
-        +'<td style="padding:7px;text-align:center;border:1px solid #dde;letter-spacing:1px;color:#185fa5">'+dots(r.IM)+'</td>'
-        +'<td style="padding:7px;text-align:center;border:1px solid #dde;letter-spacing:1px;color:#0f6e56">'+dots(r.IR)+'</td>'
-        +'<td style="padding:7px;text-align:center;border:1px solid #dde;letter-spacing:1px;color:#6b21a8">'+dots(r.IA)+'</td>'
-        +'<td style="padding:7px;text-align:center;border:1px solid #dde;letter-spacing:1px;color:#c0392b">'+dots(r.IAn)+'</td>'
-        +'</tr>';
-    }).join('');
-    el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px">'
+    if(!el)return;
+    var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'
       +'<thead><tr style="background:#f0f2f8">'
-      +'<th style="padding:8px;text-align:left;border:1px solid #dde">Mecanismo</th>'
-      +'<th style="padding:8px;text-align:center;border:1px solid #dde">Monitorar</th>'
-      +'<th style="padding:8px;text-align:center;border:1px solid #dde">Responder</th>'
-      +'<th style="padding:8px;text-align:center;border:1px solid #dde">Aprender</th>'
-      +'<th style="padding:8px;text-align:center;border:1px solid #dde">Antecipar</th>'
-      +'</tr></thead><tbody>'+rows+'</tbody></table>'
-      +'<div style="margin-top:6px;font-size:10px;color:#888">● contribuição plena &nbsp;○ ausente/parcial</div>';
+      +'<th style="padding:7px 8px;text-align:left;border:1px solid #dde">Mecanismo</th>'
+      +'<th style="padding:7px;text-align:center;border:1px solid #dde;color:#185fa5">Monitorar</th>'
+      +'<th style="padding:7px;text-align:center;border:1px solid #dde;color:#0f6e56">Responder</th>'
+      +'<th style="padding:7px;text-align:center;border:1px solid #dde;color:#6b21a8">Aprender</th>'
+      +'<th style="padding:7px;text-align:center;border:1px solid #dde;color:#c0392b">Antecipar</th>'
+      +'</tr></thead><tbody>';
+    MATRIX.forEach(function(r,i){
+      html+='<tr style="background:'+(i%2?'#f8f9fc':'#fff')+'">'
+        +'<td style="padding:7px 8px;border:1px solid #dde"><b style="color:#185fa5">'+r.mec+'</b><br>'
+        +'<span style="font-size:10px;color:#777">'+r.label+'</span></td>'
+        +'<td style="padding:7px;text-align:center;border:1px solid #dde;letter-spacing:2px">'+dots(r.IM)+'</td>'
+        +'<td style="padding:7px;text-align:center;border:1px solid #dde;letter-spacing:2px">'+dots(r.IR)+'</td>'
+        +'<td style="padding:7px;text-align:center;border:1px solid #dde;letter-spacing:2px">'+dots(r.IA)+'</td>'
+        +'<td style="padding:7px;text-align:center;border:1px solid #dde;letter-spacing:2px">'+dots(r.IAn)+'</td>'
+        +'</tr>';
+    });
+    html+='</tbody></table><div style="margin-top:5px;font-size:10px;color:#999">&#9679; contribuição plena &nbsp; &#9675; parcial/ausente</div>';
+    el.innerHTML=html;
   }
 
-  // ── Render Interpretação ──────────────────────────────────────
   function renderInterp(idx){
     var el=document.getElementById('dgr-interp');
-    if(!el) return;
-    var caps=[
-      {label:'Monitorar',v:idx.IM},
-      {label:'Responder',v:idx.IR},
-      {label:'Aprender', v:idx.IA},
-      {label:'Antecipar',v:idx.IAn}
-    ].sort(function(a,b){return b.v-a.v;});
-    if(caps[0].v===0){
-      el.innerHTML='<em style="color:#999">Selecione critérios VAE, VAX ou MR para gerar a interpretação automática.</em>';
+    if(!el)return;
+    var caps=[{l:'Monitorar',v:idx.IM},{l:'Responder',v:idx.IR},{l:'Aprender',v:idx.IA},{l:'Antecipar',v:idx.IAn}]
+      .sort(function(a,b){return b.v-a.v;});
+    if(!caps[0].v){
+      el.innerHTML='<em style="color:#aaa">Selecione critérios MR, VAE ou VAX para gerar a interpretação.</em>';
       return;
     }
-    el.innerHTML=
-      '<p><strong>Contribuição da Governança e Gestão de Dados para a Resiliência</strong></p>'
+    el.innerHTML='<p><strong>Contribuição da Governança e Gestão de Dados para a Resiliência</strong></p>'
       +'<p>Os mecanismos selecionados demonstram que a governança e a gestão de dados contribuem para o fortalecimento das capacidades resilientes organizacionais.</p>'
-      +'<p>A capacidade mais desenvolvida foi <strong>'+caps[0].label+' ('+caps[0].v+'%)</strong>, seguida de <strong>'+caps[1].label+' ('+caps[1].v+'%)</strong>.</p>'
-      +'<p>Os mecanismos MR-B (Governança de Dados) e MR-F (Inteligência Informacional) apresentaram contribuição significativa para as capacidades de Monitorar, Aprender e Antecipar.</p>'
-      +'<p>Os resultados sugerem que a resiliência observada não decorre apenas de adaptações locais, mas também da qualidade, disponibilidade e utilização estratégica das informações.</p>'
+      +'<p>A capacidade mais desenvolvida foi <strong>'+caps[0].l+' ('+caps[0].v+'%)</strong>, seguida de <strong>'+caps[1].l+' ('+caps[1].v+'%)</strong>.</p>'
+      +'<p>MR-B (Governança de Dados) e MR-F (Inteligência Informacional) contribuem significativamente para Monitorar, Aprender e Antecipar.</p>'
       +'<p>Esses resultados corroboram a proposição central do DGR-OPS de que a governança de dados atua como mecanismo sociotécnico estruturante da resiliência organizacional.</p>';
   }
 
-  // ── Render Diagnóstico ────────────────────────────────────────
-  function renderDebug(idx){
-    var el=document.getElementById('dgr-debug');
-    if(!el){
-      el=document.createElement('details');
-      el.id='dgr-debug';
-      el.style.cssText='margin-top:14px;font-size:11px;color:#666;border:1px solid #e0e0ea;border-radius:6px;padding:8px 12px';
-      el.innerHTML='<summary style="cursor:pointer;font-weight:600;color:#555">Diagnóstico de valores lidos</summary>';
-      var wrap=document.getElementById('dgr-interp');
-      if(wrap) wrap.parentNode.appendChild(el);
-    }
-    var fns=DGRState.fns||[];
-    var specs=[
-      ['MR','A'],['MR','B'],['MR','C'],['MR','D'],['MR','E'],['MR','F'],
-      ['VAE','A'],['VAE','B'],['VAE','C'],['VAE','D'],['VAE','E'],
-      ['VAX','A'],['VAX','B'],['VAX','C'],['VAX','D'],['VAX','E']
-    ];
-    var html='<table style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="text-align:left;padding:2px 6px;color:#888">Critério</th>';
-    fns.forEach(function(fn){ html+='<th style="padding:2px 6px;color:#888;text-align:center">'+fn.name.substring(0,14)+'</th>'; });
-    html+='</tr>';
-    specs.forEach(function(s){
-      var code=s[0]+'-'+s[1];
-      html+='<tr><td style="padding:2px 6px;font-family:monospace;font-weight:600">'+code+'</td>';
-      fns.forEach(function(fn){
-        var v=(DGRState.subs||{})[fn.id]?.[code];
-        var sel=v&&v.sel;
-        html+='<td style="padding:2px 6px;text-align:center;color:'+(sel?capColor(lvlVal(v.level||'media')):'#ccc')+'">'
-          +(sel?lvlVal(v.level||'media')+'<br><span style=\'font-size:9px\'>'+(v.level||'media')+'</span>':'—')+'</td>';
-      });
-      html+='</tr>';
-    });
-    html+='</table>';
-    html+='<div style="margin-top:8px;font-weight:700;color:#333">IM='+idx.IM+'% IR='+idx.IR+'% IA='+idx.IA+'% IAn='+idx.IAn+'%</div>';
-    el.innerHTML='<summary style="cursor:pointer;font-weight:600;color:#555">Diagnóstico de valores lidos</summary>'+html;
-  }
-
-  // ── Render principal ──────────────────────────────────────────
   function renderDGR(){
     if(DGRState.curPage!=='dgr') return;
     var idx=calcIndices();
     renderCards(idx);
     renderMatrix();
     renderInterp(idx);
-    renderDebug(idx);
-    // Radar com delay para garantir que Chart.js está pronto
-    setTimeout(function(){ renderRadar(idx); }, 100);
+    setTimeout(function(){renderRadar(idx);},150);
   }
 
-  // ── Hooks ─────────────────────────────────────────────────────
-  var _origSwitch=DGRManager.switchPage.bind(DGRManager);
-  DGRManager.switchPage=function(page){
-    _origSwitch(page);
-    if(page==='dgr') setTimeout(renderDGR, 80);
-  };
-
-  var _origRefresh=DGRManager.refreshUI.bind(DGRManager);
-  DGRManager.refreshUI=function(){
-    _origRefresh();
-    if(DGRState.curPage==='dgr') setTimeout(renderDGR, 80);
-  };
-
-  // Expor para PDF
-  window.DGRCalcIndices=calcIndices;
-  window.DGR_MATRIX=MATRIX;
-  window.dgrDots=dots;
-  window.dgrCapColor=capColor;
-
+  // Aguarda DGRManager estar disponível
+  function install(){
+    if(typeof DGRManager==='undefined'||typeof DGRManager.switchPage!=='function'){
+      setTimeout(install,100); return;
+    }
+    var _sw=DGRManager.switchPage.bind(DGRManager);
+    DGRManager.switchPage=function(p){_sw(p);if(p==='dgr')setTimeout(renderDGR,100);};
+    var _rf=DGRManager.refreshUI.bind(DGRManager);
+    DGRManager.refreshUI=function(){_rf();if(DGRState.curPage==='dgr')setTimeout(renderDGR,100);};
+    window.DGRCalcIndices=calcIndices;
+    window.DGR_MATRIX=MATRIX;
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',install);
+  } else {
+    install();
+  }
 })();
 </script>
-
 </body>
 </html>
