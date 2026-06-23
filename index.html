@@ -4852,15 +4852,43 @@ function install(){
   ────────────────────────────────────────────────────────────────────── */
   function selectedGroupWeights(){
     var acc={};
+    function add(code,w){
+      w=num(w);
+      if(w<=0) return;
+      if(!acc[code]) acc[code]={sum:0,count:0};
+      acc[code].sum+=w;
+      acc[code].count++;
+    }
     (S.fns||[]).forEach(function(fn){
       var sb=(S.subs||{})[fn.id]||{};
       DGR_MAP.forEach(function(row){
-        var entry=sb[row.g];
-        if(!entry||!entry.sel) return;
-        var w=levelWeight(entry);
-        if(w<=0) return;
-        if(!acc[row.g]) acc[row.g]={sum:0,count:0};
-        acc[row.g].sum+=w; acc[row.g].count++;
+        var groupEntry=sb[row.g];
+        var groupWeight=0;
+
+        /* 1) Seleção direta do grupo, ex.: VAE-A, VAX-B, MR-C */
+        if(groupEntry && groupEntry.sel){
+          groupWeight=levelWeight(groupEntry);
+        }
+
+        /* 2) Compatibilidade com projetos/telas que gravaram itens filhos,
+              ex.: VAE-A.1, VAE-A.2, MR-B.3. Nesse caso, o peso do grupo
+              é a média dos itens selecionados. */
+        var childWeights=[];
+        Object.keys(sb||{}).forEach(function(k){
+          if(k.indexOf(row.g+'.')!==0) return;
+          var e=sb[k];
+          if(e && e.sel){
+            var w=levelWeight(e);
+            if(w>0) childWeights.push(w);
+          }
+        });
+        if(!groupWeight && childWeights.length){
+          groupWeight=avg(childWeights);
+        }
+
+        /* 3) Se grupo e itens filhos estiverem marcados, prevalece a seleção
+              do grupo para evitar dupla contagem. */
+        add(row.g,groupWeight);
       });
     });
     var vals={};
@@ -4894,6 +4922,7 @@ function install(){
     return out;
   }
   window.DGRCalcIndices=calcDgrOps;
+  M.calculateDGROPS = calcDgrOps;
 
   /* ── estatísticas globais agregadas ─────────────────────────────────── */
   function globalStats(){
@@ -5492,6 +5521,8 @@ function install(){
   /* Expõe como M.exportPDF */
   M.exportPDF = doExportPDF;
 
+  M.renderDGROPS = renderDgrUI;
+
   /* ── refreshUI ───────────────────────────────────────────────────────── */
   if(!M.__defB_refresh){
     M.__defB_refresh=true;
@@ -5512,10 +5543,10 @@ function install(){
   renderDgrUI();
   try{ if(M.refreshUI) M.refreshUI(); }catch(e){}
 
-  /* Atualiza DGR-OPS a cada 600ms quando na página */
+  /* Atualiza DGR-OPS quando a página estiver aberta e também evita cache visual. */
   if(!M.__defB_interval){
     M.__defB_interval=true;
-    setInterval(function(){ if(S.curPage==='dgr') renderDgrUI(); },600);
+    setInterval(function(){ if(S.curPage==='dgr') renderDgrUI(); },300);
   }
 
   /* REBIND BOTÃO — aqui e só aqui, garante que clique sempre chame doExportPDF */
