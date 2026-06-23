@@ -4747,7 +4747,7 @@ let openSubcatFn = {};
   Substitui TODOS os patches anteriores de exportPDF, renderKPIs, renderMCPanel,
   renderCharts, DGR-OPS e simulação.
   Garante: pctSmart, Prob.Estatística, Prob.Operacional, LC Operacional,
-           DGR-OPS Global com pesos 0.25/0.50/1.00, PDF completo.
+           DGR-OPS Global com pesos 0.33/0.66/1.00, PDF completo.
   Este é o ÚNICO script que define exportPDF e rebinda o botão.
   ═══════════════════════════════════════════════════════════════════════════ -->
 <script id="dgr-definitivo-final-2026b">
@@ -4847,13 +4847,13 @@ function install(){
       });
   }
 
-  /* ── pesos de intensidade DGR-OPS: 0.25 / 0.50 / 1.00 ────────────── */
+  /* ── pesos de intensidade DGR-OPS: 0.33 / 0.66 / 1.00 ────────────── */
   function levelWeight(v){
     if(!v||!v.sel) return 0;
     var lv=String(v.level||'').toLowerCase();
     if(lv.indexOf('max')!==-1) return 1.00;
-    if(lv.indexOf('min')!==-1) return 0.25;
-    return 0.50; // Média (padrão)
+    if(lv.indexOf('min')!==-1) return 0.33;
+    return 0.66; // Média (padrão)
   }
 
   /* ── mapa DGR-OPS ──────────────────────────────────────────────────── */
@@ -4929,7 +4929,7 @@ function install(){
     DGR_MAP.forEach(function(row){ selected[row.g]=0; eligible[row.g]=0; });
 
     function isEligible(sb,row){
-      // Selecionado = grupo efetivamente marcado/avaliado para a função.
+      // Elegível = grupo efetivamente cadastrado/avaliado para a função.
       // Como o sistema inicializa critérios vazios para todas as funções, a elegibilidade
       // é inferida por seleção real no próprio grupo. Assim, não há penalização por
       // função × grupo possível que nunca foi cadastrado/avaliado.
@@ -4941,7 +4941,7 @@ function install(){
       DGR_MAP.forEach(function(row){
         if(!isEligible(sb,row)) return;
         var itemCount=groupItemCount(row.g);
-        var intensity=groupScoreFromSubs(sb,row.g); // 0,25 / 0,50 / 1,00 ponderado por critérios selecionados
+        var intensity=groupScoreFromSubs(sb,row.g); // 0,33 / 0,66 / 1,00 ponderado por critérios selecionados
         selected[row.g]+=intensity;
         eligible[row.g]+=1;
         ['IM','IR','IA','IAn'].forEach(function(k){
@@ -5156,7 +5156,7 @@ function install(){
      ['Antecipar',d.IAn,'#c0392b'],['DGR-OPS Global',d.global,'#1a1a2e']].forEach(function(c){
       html+='<div class="sbox"><span class="sval" style="color:'+c[2]+'">'+num(c[1]).toFixed(1).replace('.',',')+'%</span><span class="slbl">'+c[0]+'</span></div>';
     });
-    html+='</div><div style="font-size:11px;color:#4c5570;margin-top:8px">DGR-OPS = Σ(função × grupo selecionado × intensidade × peso da capacidade × número de critérios do grupo) / Σ(função × grupo selecionado × peso da capacidade × número de critérios do grupo) × 100. Pesos: Mínima=0,25 | Média=0,50 | Máxima=1,00 | Não selecionado=0. O denominador considera somente os grupos VAE/VAX/MR selecionados para cada função; grupos não cadastrados para a função não entram no denominador.</div></div>';
+    html+='</div><div style="font-size:11px;color:#4c5570;margin-top:8px">DGR-OPS = Σ(função × grupo selecionado × intensidade × peso da capacidade × número de critérios do grupo) / Σ(função × grupo elegível × peso da capacidade × número de critérios do grupo) × 100. Pesos: Mínima=0,33 | Média=0,66 | Máxima=1,00 | Não selecionado=0. O denominador considera somente os grupos VAE/VAX/MR elegíveis para cada função; grupos não cadastrados para a função não entram no denominador.</div></div>';
 
     /* Ranking */
     html+='<div class="dash-section"><h3>Ranking de Criticidade — P95 Individual</h3>';
@@ -5358,7 +5358,7 @@ function install(){
           +'Capacidade mais desenvolvida: <b>'+sorted[0][0]+'</b> ('+sorted[0][1].toFixed(1).replace('.',',')+'%), '
           +'seguida de <b>'+sorted[1][0]+'</b> ('+sorted[1][1].toFixed(1).replace('.',',')+'%).<br>'
           +'<b>DGR-OPS Global = '+d.global.toFixed(1).replace('.',',')+'%</b> (média das quatro capacidades).<br>'
-          +'<span style="font-size:11px;color:#667">As capacidades resilientes desenvolvidas foram calculadas a partir da combinação de VAE, VAX e MR ponderados pela intensidade selecionada e pela quantidade de critérios efetivamente avaliados em cada grupo. Pesos: Mínima=0,25 | Média=0,50 | Máxima=1,00. O denominador considera somente grupos selecionados para cada função.</span>';
+          +'<span style="font-size:11px;color:#667">As capacidades resilientes desenvolvidas foram calculadas a partir da combinação de VAE, VAX e MR ponderados pela intensidade selecionada e pela quantidade de critérios efetivamente avaliados em cada grupo. Pesos: Mínima=0,33 | Média=0,66 | Máxima=1,00. O denominador considera somente grupos elegíveis/cadastrados para cada função.</span>';
       }
     }
   }
@@ -5578,7 +5578,7 @@ function install(){
     y+=27;
     tx('Radar DGR-OPS',mg,y,9,true); y+=5;
     drawRadarPdf(mg+42,y+32,28,[d.IM,d.IR,d.IA,d.IAn]);
-    var formula='DGR-OPS = Σ(função × grupo selecionado × intensidade × peso da capacidade × número de critérios do grupo) / Σ(função × grupo selecionado × peso da capacidade × número de critérios do grupo) × 100. Os índices são calculados a partir de VAE, VAX e MR, ponderados pela intensidade e pelo número de critérios efetivamente avaliados em cada grupo. Grupos não cadastrados para a função não entram no denominador; grupos elegíveis não selecionados valem zero no numerador. Pesos: Mínima = 0,25 | Média = 0,50 | Máxima = 1,00. DGR-OPS Global = (Monitorar + Responder + Aprender + Antecipar) / 4.';
+    var formula='DGR-OPS = Σ(função × grupo selecionado × intensidade × peso da capacidade × número de critérios do grupo) / Σ(função × grupo elegível × peso da capacidade × número de critérios do grupo) × 100. Os índices são calculados a partir de VAE, VAX e MR, ponderados pela intensidade e pelo número de critérios efetivamente avaliados em cada grupo. Grupos não cadastrados para a função não entram no denominador; grupos elegíveis não selecionados valem zero no numerador. Pesos: Mínima = 0,33 | Média = 0,66 | Máxima = 1,00. DGR-OPS Global = (Monitorar + Responder + Aprender + Antecipar) / 4.';
     y += txCanvas(formula,mg+95,y,170,7.5,false,[30,35,50]) + 4;
     tx('Probabilidade Operacional por Capacidade',mg+95,y,9,true); y+=6;
     [['Monitorar',d.IM],['Responder',d.IR],['Aprender',d.IA],['Antecipar',d.IAn]].forEach(function(c){
@@ -5813,128 +5813,5 @@ if(document.readyState==='loading'){
 </script>
 
 <!-- Correções aplicadas nesta versão: título CRD/DGR-OPS; Σ; UTF-8; radar no PDF; probabilidade operacional por capacidade; denominador DGR-OPS por grupos elegíveis; ponderação por critérios. Correções 2026-06-23: Σ no PDF, caracteres VFRR_i, DGR-OPS denominador por grupos avaliados, título CRD e radar no PDF. -->
-
-<!-- PATCH FINAL DGR-OPS DEFINITIVO — aplicado por último para vencer patches anteriores -->
-<script id="dgr-ops-final-fix-2026-06-23">
-(function(){
-'use strict';
-function install(){
-  var M=(typeof DGRManager!=='undefined')?DGRManager:(window.DGRManager||null);
-  var S=(typeof DGRState!=='undefined')?DGRState:(window.DGRState||null);
-  var T=(typeof TAXO!=='undefined')?TAXO:(window.TAXO||null);
-  if(!M||!S||!T) return false;
-  function num(v){v=Number(v);return isFinite(v)?v:0;}
-  function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  function pct(v,d){d=d==null?1:d;return (num(v)*100).toFixed(d).replace('.',',')+'%';}
-  function valPct(v,d){d=d==null?1:d;return num(v).toFixed(d).replace('.',',')+'%';}
-  function avg(a){a=(a||[]).map(num);return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:0;}
-  function percentile(arr,p){var s=(arr||[]).map(num).filter(isFinite).sort(function(a,b){return a-b;});if(!s.length)return 0;var pos=(s.length-1)*p,lo=Math.floor(pos),hi=Math.ceil(pos);return lo===hi?s[lo]:s[lo]+(s[hi]-s[lo])*(pos-lo);}
-  function fnName(fn){return String((fn&&(fn.name||fn.nome||fn.title))||'Função sem nome').trim();}
-  var TITLE='Capacidades Resilientes Desenvolvidas (DGR-OPS)';
-  var DGR_MAP=[
-    {g:'VAE-A',label:'Barreiras Operacionais Internas Efetivas',IM:0,IR:3,IA:1,IAn:1},
-    {g:'VAE-B',label:'Capacidades Resilientes Internas',IM:3,IR:2,IA:2,IAn:3},
-    {g:'VAE-C',label:'Aprendizagem e Melhoria Interna',IM:1,IR:1,IA:3,IAn:2},
-    {g:'VAE-D',label:'Adaptação Operacional Interna',IM:1,IR:3,IA:2,IAn:1},
-    {g:'VAE-E',label:'Coordenação Interna',IM:2,IR:3,IA:1,IAn:1},
-    {g:'VAX-A',label:'Barreiras Operacionais entre Funções',IM:1,IR:3,IA:1,IAn:1},
-    {g:'VAX-B',label:'Governança de Dados Sociotécnica Exógena',IM:3,IR:2,IA:3,IAn:3},
-    {g:'VAX-C',label:'Aprendizagem Interfuncional',IM:2,IR:1,IA:3,IAn:2},
-    {g:'VAX-D',label:'Coordenação Interfuncional',IM:2,IR:3,IA:1,IAn:1},
-    {g:'VAX-E',label:'Redundância e Apoio Externo',IM:1,IR:3,IA:1,IAn:2},
-    {g:'MR-A',label:'Barreiras Estruturadas',IM:2,IR:3,IA:1,IAn:1},
-    {g:'MR-B',label:'Governança de Dados — Barreira de Resiliência',IM:3,IR:2,IA:3,IAn:3},
-    {g:'MR-C',label:'Capacidades Resilientes',IM:2,IR:3,IA:3,IAn:3},
-    {g:'MR-D',label:'Continuidade Operacional',IM:1,IR:3,IA:1,IAn:1},
-    {g:'MR-E',label:'Adaptação Sociotécnica',IM:2,IR:3,IA:2,IAn:1},
-    {g:'MR-F',label:'Inteligência Informacional',IM:3,IR:2,IA:2,IAn:3}
-  ];
-  window.DGR_MAP=DGR_MAP;
-  function dgrClass(v){v=num(v);if(v>=70)return{plain:'Capacidade resiliente muito alta',color:'#0f6e56',rgb:[15,110,86]};if(v>=50)return{plain:'Capacidade resiliente alta',color:'#185fa5',rgb:[24,95,165]};if(v>=30)return{plain:'Capacidade resiliente moderada',color:'#854f0b',rgb:[133,79,11]};return{plain:'Baixa capacidade resiliente',color:'#c0392b',rgb:[192,57,43]};}
-  function mcClass(v){v=num(v);if(v>=.70)return{plain:'Crítica',rgb:[124,0,0]};if(v>=.50)return{plain:'Alta',rgb:[192,57,43]};if(v>=.30)return{plain:'Moderada',rgb:[133,79,11]};return{plain:'Baixa',rgb:[15,110,86]};}
-  function intensity(v){var l=String((v&&v.level)||'media').toLowerCase();if(l.indexOf('max')>=0)return 1;if(l.indexOf('min')>=0)return .25;return .50;}
-  function tax(prefix){return T[prefix]||(prefix==='RE'?T.VDE:null)||(prefix==='RX'?T.VDX:null);}
-  function group(prefix,key){var tx=tax(prefix),gs=(tx&&tx.groups)||[];return gs.find(function(g){return g.key===key;})||{items:[]};}
-  function groupInfo(sb,code){
-    sb=sb||{}; var p=String(code).split('-'), prefix=p[0], key=p[1], g=group(prefix,key), items=g.items||[], cnt=Math.max(1,items.length);
-    var direct=sb[code];
-    if(direct&&direct.sel) return {selected:true,intensity:intensity(direct),criteria:cnt,selectedCriteria:cnt};
-    var sum=0, sel=0;
-    items.forEach(function(it){var v=sb[it.code]; if(v&&v.sel){sum+=intensity(v);sel++;}});
-    if(sel>0) return {selected:true,intensity:sum/sel,criteria:cnt,selectedCriteria:sel};
-    return {selected:false,intensity:0,criteria:cnt,selectedCriteria:0};
-  }
-  function calc(){
-    var acc={IM:{n:0,d:0},IR:{n:0,d:0},IA:{n:0,d:0},IAn:{n:0,d:0}}, rows=[], totals={VAE:0,VAX:0,MR:0,total:0};
-    (S.fns||[]).forEach(function(fn){
-      var sb=(S.subs||{})[fn.id]||{};
-      DGR_MAP.forEach(function(row){
-        var gi=groupInfo(sb,row.g); if(!gi.selected) return;
-        var prefix=row.g.split('-')[0]; totals[prefix]=(totals[prefix]||0)+1; totals.total++;
-        rows.push({fn:fnName(fn),group:row.g,label:row.label,intensity:gi.intensity,criteria:gi.criteria,selectedCriteria:gi.selectedCriteria});
-        ['IM','IR','IA','IAn'].forEach(function(k){var wk=num(row[k]); if(wk>0){acc[k].n+=gi.intensity*wk*gi.criteria; acc[k].d+=wk*gi.criteria;}});
-      });
-    });
-    function cap(k){return acc[k].d?parseFloat((acc[k].n/acc[k].d*100).toFixed(1)):0;}
-    var out={IM:cap('IM'),IR:cap('IR'),IA:cap('IA'),IAn:cap('IAn'),rows:rows,totals:totals,denominators:acc};
-    out.global=parseFloat(avg([out.IM,out.IR,out.IA,out.IAn]).toFixed(1)); out.classification=dgrClass(out.global); return out;
-  }
-  M.calculateDGROPS=calc; window.DGRCalcIndices=calc; window.DGRClassificacaoOPS=dgrClass;
-  function drawRadar(canvas,vals){
-    if(!canvas) return; var w=360,h=320,dpr=window.devicePixelRatio||1; canvas.width=w*dpr; canvas.height=h*dpr; canvas.style.width='360px'; canvas.style.height='320px';
-    var ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
-    var cx=w/2,cy=160,R=95,labs=['Monitorar','Responder','Aprender','Antecipar'];
-    ctx.font='12px Segoe UI, Arial'; ctx.textAlign='center'; ctx.lineWidth=1;
-    for(var ring=1;ring<=4;ring++){var rr=R*ring/4;ctx.beginPath();for(var i=0;i<4;i++){var a=-Math.PI/2+i*Math.PI/2,x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.strokeStyle='#dfe3ee';ctx.stroke();}
-    for(var i=0;i<4;i++){var a=-Math.PI/2+i*Math.PI/2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);ctx.strokeStyle='#edf0f6';ctx.stroke();}
-    ctx.beginPath(); vals.forEach(function(v,i){var a=-Math.PI/2+i*Math.PI/2,rr=R*Math.max(0,Math.min(100,num(v)))/100,x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}); ctx.closePath(); ctx.fillStyle='rgba(24,95,165,.20)'; ctx.strokeStyle='#185fa5'; ctx.lineWidth=2; ctx.fill(); ctx.stroke();
-    vals.forEach(function(v,i){var a=-Math.PI/2+i*Math.PI/2,rr=R*Math.max(0,Math.min(100,num(v)))/100,x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fillStyle='#185fa5';ctx.fill();});
-    labs.forEach(function(l,i){var a=-Math.PI/2+i*Math.PI/2,x=cx+Math.cos(a)*(R+42),y=cy+Math.sin(a)*(R+28);ctx.fillStyle='#1a1a2e';ctx.font='bold 12px Segoe UI, Arial';ctx.fillText(l,x,y);ctx.font='11px Segoe UI, Arial';ctx.fillText(valPct(vals[i]),x,y+14);});
-  }
-  function renderUI(){
-    var d=calc();
-    document.querySelectorAll('.page-title').forEach(function(el){if((el.textContent||'').indexOf('Capacidades Resilientes Desenvolvidas')>=0)el.textContent=TITLE;});
-    var nav=document.getElementById('ni-dgr'); if(nav) nav.childNodes[nav.childNodes.length-1].textContent=' '+TITLE;
-    var cards=document.getElementById('dgr-cards');
-    if(cards){cards.style.gridTemplateColumns='repeat(auto-fit,minmax(150px,1fr))';var arr=[['Monitorar',d.IM],['Responder',d.IR],['Aprender',d.IA],['Antecipar',d.IAn],['DGR-OPS Global',d.global],['Classificação DGR-OPS',d.classification.plain]];cards.innerHTML=arr.map(function(c){var isText=typeof c[1]==='string',dc=isText?d.classification:dgrClass(c[1]);return '<div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:14px 12px;text-align:center"><div style="font-size:10px;font-weight:700;color:#777;text-transform:uppercase;margin-bottom:7px">'+esc(c[0])+'</div><div style="font-size:'+(isText?'15':'28')+'px;font-weight:800;color:'+dc.color+'">'+(isText?esc(c[1]):valPct(c[1]))+'</div></div>';}).join('');}
-    var radar=document.getElementById('dgr-radar'); if(radar){radar.innerHTML='<canvas id="dgr-radar-canvas" width="360" height="320" style="max-width:100%;height:320px;display:block"></canvas>';drawRadar(document.getElementById('dgr-radar-canvas'),[d.IM,d.IR,d.IA,d.IAn]);}
-    var matrix=document.getElementById('dgr-matrix'); if(matrix){matrix.innerHTML='<table class="adv-table"><thead><tr><th>Grupo</th><th>Intensidade média</th><th>Funções</th></tr></thead><tbody>'+DGR_MAP.map(function(row){var rr=d.rows.filter(function(x){return x.group===row.g;});if(!rr.length)return '';return '<tr><td><b>'+row.g+'</b><br>'+esc(row.label)+'</td><td>'+valPct(avg(rr.map(function(x){return x.intensity;}))*100)+'</td><td>'+rr.length+'</td></tr>';}).join('')+'</tbody></table>';}
-    var interp=document.getElementById('dgr-interp'); if(interp){interp.innerHTML='O DGR-OPS Global é <b>'+valPct(d.global)+'</b>, com <b>'+esc(d.classification.plain)+'</b>. O cálculo considera somente grupos selecionados em VAE, VAX e MR, com intensidades Máxima = 1,00, Média = 0,50 e Mínima = 0,25. A classificação DGR-OPS é independente da criticidade probabilística do Monte Carlo.';}
-    var dbg=document.getElementById('dgr-debug'); if(dbg){dbg.textContent='Total selecionado — VAE: '+d.totals.VAE+'\nTotal selecionado — VAX: '+d.totals.VAX+'\nTotal selecionado — MR: '+d.totals.MR+'\nTotal geral: '+d.totals.total;}
-  }
-  M.renderDGROPS=renderUI;
-  function rowsMC(){return (S.fns||[]).filter(function(fn){return S.mcRes&&S.mcRes[fn.id];}).map(function(fn){return{fn:fn,r:S.mcRes[fn.id]||{}};}).sort(function(a,b){return num(b.r.p95)-num(a.r.p95);});}
-  function globalStats(){var g=S.mcGlobal||{},samples=Array.isArray(g.samples)?g.samples.map(num):[];var p95=samples.length?percentile(samples,.95):num(g.p95||g.lc);var op=num(g.operationalLC||S.operationalLC||.30);return{samples:samples,total:samples.length||num(g.total),mean:samples.length?avg(samples):num(g.mean),p90:samples.length?percentile(samples,.90):num(g.p90),p95:p95,p99:samples.length?percentile(samples,.99):num(g.p99),probCrit:samples.length?samples.filter(function(v){return v>p95;}).length/samples.length:num(g.probCrit),operationalLC:op,operationalProb:samples.length?samples.filter(function(v){return v>op;}).length/samples.length:num(g.operationalProb),maxIndividualP95:Math.max.apply(null,[0].concat(rowsMC().map(function(x){return num(x.r.p95);}))) };}
-  M.exportPDF=async function(){
-    var jsPDF=window.jspdf&&window.jspdf.jsPDF; if(!jsPDF){alert('Biblioteca jsPDF não carregada.');return;}
-    var d=calc(); renderUI(); await new Promise(function(r){setTimeout(r,120);}); var radarCanvas=document.getElementById('dgr-radar-canvas'); var radarImg=radarCanvas?radarCanvas.toDataURL('image/png'):null;
-    var doc=new jsPDF('l','mm','a4'), W=297,H=210,mg=14,y=16,page=0; function footer(){doc.setFontSize(7);doc.setTextColor(120);doc.text('DGR-FRAM Analyze — '+page, W-mg, H-8,{align:'right'});} function newPage(t){if(page)footer();doc.addPage();page++;y=16;doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(30,35,50);doc.text(t,mg,y);y+=9;doc.setDrawColor(220);doc.line(mg,y,W-mg,y);y+=8;} doc.deletePage(1);
-    function tx(s,x,yy,sz,bold,rgb){doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(sz||8);rgb=rgb||[30,35,50];doc.setTextColor(rgb[0],rgb[1],rgb[2]);doc.text(String(s),x,yy);} function card(x,yy,w,h,lbl,val,rgb){rgb=rgb||[24,95,165];doc.setDrawColor(225);doc.setFillColor(248,249,252);doc.roundedRect(x,yy,w,h,2,2,'FD');tx(lbl,x+3,yy+6,6.5,false,[90,95,110]);tx(val,x+3,yy+15,10,true,rgb);} function need(h,t){if(y+h>H-15)newPage(t);}
-    var g=globalStats(), rs=rowsMC();
-    newPage('Síntese Executiva');
-    tx('Monte Carlo preservado: total agregado com amostras válidas, estatísticas globais e ranking por P95.',mg,y,8,false,[70,75,90]);y+=8;
-    [['VFRR Média Global',pct(g.mean)],[ 'P90 Global',pct(g.p90)],['P95 Global',pct(g.p95)],['P99 Global',pct(g.p99)],['Probabilidade Estatística',pct(g.probCrit,2)],['Probabilidade Operacional',pct(g.operationalProb,2)],['LC Operacional',pct(g.operationalLC,0)],['Maior P95 Individual',pct(g.maxIndividualP95)],['Classificação Global',mcClass(g.p95).plain],['DGR-OPS Global',valPct(d.global)],['Classificação DGR-OPS',d.classification.plain]].forEach(function(c,i){card(mg+(i%4)*68,y+Math.floor(i/4)*23,64,19,c[0],c[1],i===10?d.classification.rgb:mcClass(i===8?g.p95:0).rgb);}); y+=74;
-    tx('A Classificação Global permanece baseada na criticidade Monte Carlo. A Classificação DGR-OPS é separada e usa faixas próprias de capacidade resiliente.',mg,y,8,false,[70,75,90]);
-    newPage('Ranking por P95 e interpretações automáticas');
-    tx('P95 Global: '+pct(g.p95)+' | Maior P95 Individual: '+pct(g.maxIndividualP95)+' | LC Operacional: '+pct(g.operationalLC,0),mg,y,8,true);y+=8;
-    rs.forEach(function(row,i){need(7,'Ranking por P95 e interpretações automáticas');var r=row.r,ci=mcClass(r.p95);tx((i+1)+'. '+fnName(row.fn).slice(0,62),mg,y,7.2,true);tx('P95 '+pct(r.p95)+' | Média '+pct(r.mean)+' | P90 '+pct(r.p90)+' | P99 '+pct(r.p99)+' | Classe '+ci.plain,130,y,7.2,false,ci.rgb);y+=5.3;});
-    newPage(TITLE);
-    [['Monitorar',d.IM],['Responder',d.IR],['Aprender',d.IA],['Antecipar',d.IAn],['DGR-OPS Global',d.global],['Classificação DGR-OPS',d.classification.plain]].forEach(function(c,i){card(mg+(i%3)*88,y+Math.floor(i/3)*23,82,19,c[0],typeof c[1]==='string'?c[1]:valPct(c[1]),typeof c[1]==='string'?d.classification.rgb:dgrClass(c[1]).rgb);}); y+=52;
-    tx('Radar DGR-OPS',mg,y,10,true); if(radarImg) doc.addImage(radarImg,'PNG',mg,y+4,86,76); else tx('Radar indisponível para captura.',mg,y+12,8,false,[192,57,43]);
-    var fx=110, fy=y+4; tx('Fórmula implementada',fx,fy,9,true); fy+=6; var formula='DGR-OPS = Σ(função × grupo selecionado × intensidade × peso da capacidade × número de critérios do grupo) / Σ(função × grupo selecionado × peso da capacidade × número de critérios do grupo). O denominador inclui apenas grupos selecionados em VAE, VAX e MR.'; doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(30,35,50);doc.splitTextToSize(formula,160).forEach(function(l){doc.text(l,fx,fy);fy+=4.2;}); fy+=2; [['Monitorar',d.IM],['Responder',d.IR],['Aprender',d.IA],['Antecipar',d.IAn]].forEach(function(c){var dc=dgrClass(c[1]);tx(c[0]+': '+valPct(c[1])+' — '+dc.plain,fx,fy,7.5,true,dc.rgb);fy+=4.6;});
-    y+=88; tx('Grupos selecionados: intensidade média ponderada por função',mg,y,9,true); y+=6; tx('Grupo',mg,y,7,true);tx('Intensidade média',45,y,7,true);tx('Funções',85,y,7,true);tx('Descrição',108,y,7,true);y+=5;
-    DGR_MAP.forEach(function(row){var rr=d.rows.filter(function(x){return x.group===row.g;});if(!rr.length)return;need(6,TITLE);tx(row.g,mg,y,7,true);tx(valPct(avg(rr.map(function(x){return x.intensity;}))*100),45,y,7);tx(String(rr.length),85,y,7);tx(row.label.slice(0,80),108,y,7);y+=5;});
-    y+=3; tx('Total selecionado — VAE: '+d.totals.VAE+' | Total selecionado — VAX: '+d.totals.VAX+' | Total selecionado — MR: '+d.totals.MR+' | Total geral: '+d.totals.total,mg,y,8,true);
-    footer(); doc.save('dgr-fram-relatorio-definitivo-2026b.pdf');
-  };
-  var oldRefresh=M.refreshUI?M.refreshUI.bind(M):null; if(!M.__dgrOpsFinalRefresh){M.__dgrOpsFinalRefresh=true;M.refreshUI=function(){if(oldRefresh)oldRefresh(); if(S.curPage==='dgr')renderUI();};}
-  try{renderUI();}catch(e){}
-  try{document.querySelectorAll('button').forEach(function(b){if((b.textContent||'').toLowerCase().indexOf('exportar pdf')>=0)b.onclick=function(){M.exportPDF();};});}catch(e){}
-  return true;
-}
-install(); if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install); [100,500,1500,3500,7000,9500].forEach(function(ms){setTimeout(install,ms);});
-})();
-</script>
-
 </body>
 </html>
