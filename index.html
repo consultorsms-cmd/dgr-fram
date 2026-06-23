@@ -191,7 +191,6 @@ textarea.fi{resize:vertical;min-height:55px}
       <button class="gbtn" onclick="DGRManager.saveToLocalStorage()">Salvar</button>
       <button class="gbtn" onclick="DGRManager.exportProject()">Exportar Projeto</button>
       <button class="gbtn" onclick="DGRManager.exportHTMLComDados()" style="background:#185fa5;border-color:#185fa5" title="Gera HTML com dados embutidos para publicar no GitHub">&#128279; HTML+Dados</button>
-      <button class="gbtn" onclick="DGRManager.exportHTMLComDados()" style="background:#185fa5;border-color:#185fa5" title="Gera HTML com dados embutidos para publicar no GitHub">&#128279; HTML+Dados</button>
       <label class="gbtn" style="margin-bottom:0">Importar Projeto<input type="file" accept=".dgrfram,.json" onchange="DGRManager.importProject(event)" style="display:none"></label>
       <button class="gbtn" onclick="DGRManager.exportPDF()">Exportar PDF</button>
       <span style="width:1px;height:18px;background:#303747;margin:0 4px"></span>
@@ -6025,6 +6024,11 @@ let openSubcatFn = {};
 
   function num(v){ var x = Number(v); return isFinite(x) ? x : 0; }
   function pctBR(v,d){ d = (d==null?1:d); return (num(v)*100).toFixed(d).replace('.', ',') + '%'; }
+  function pctSmart(v,d){
+    v = num(v);
+    if(d == null && v > 0 && Math.abs(v) < 0.01) d = 2;
+    return pctBR(v, d==null?1:d);
+  }
   function esc(s){ return String(s||'').replace(/[&<>"]/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]; }); }
   function fullName(fn){ return String((fn && fn.name) || 'Função sem nome').trim(); }
 
@@ -6195,11 +6199,13 @@ let openSubcatFn = {};
   function calculationBoxHTML(g){
     var ev = Math.round(g.eventsCrit).toLocaleString('pt-BR');
     var tot = Math.round(g.total).toLocaleString('pt-BR');
+    var fns = Math.max(1,(DGRState.fns||[]).length);
     return '<div style="background:#fff5f5;border:1.5px solid #c0392b;border-radius:8px;padding:14px 16px;margin-top:10px">'
          + '<div style="font-size:12px;font-weight:700;color:#7c0000;margin-bottom:8px">Cálculo da Probabilidade de Criticidade Global nesta rodada</div>'
          + '<div style="font-family:Consolas,Menlo,monospace;font-size:13px;color:#1a1a2e;line-height:1.7">'
+         + 'Base: <b>'+num(DGRState.mcN).toLocaleString('pt-BR')+'</b> iterações por função × <b>'+fns+'</b> funções = <b>'+tot+'</b> amostras agregadas<br>'
          + 'Nº de simulações com VFRR &gt; LC&nbsp;&nbsp;=&nbsp;&nbsp;<b>' + ev + '</b><br>'
-         + 'Nº total de simulações (distribuição agregada)&nbsp;&nbsp;=&nbsp;&nbsp;<b>' + tot + '</b><br>'
+         + 'Nº total de amostras agregadas (funções × iterações)&nbsp;&nbsp;=&nbsp;&nbsp;<b>' + tot + '</b><br>'
          + '<div style="border-top:1px solid #e0a8a0;margin-top:6px;padding-top:6px">'
          + ev + ' ÷ ' + tot + ' × 100&nbsp;&nbsp;=&nbsp;&nbsp;<b style="color:#c0392b;font-size:16px">' + pctBR(g.probCrit,2) + '</b>'
          + '</div></div></div>';
@@ -6291,7 +6297,7 @@ let openSubcatFn = {};
     var html = '';
 
     html += '<div class="dash-section"><h3>Metodologia e Fórmula da Probabilidade de Criticidade</h3><div class="adv-text">';
-    html += '<b>Distribuição:</b> Beta-PERT &nbsp;|&nbsp; <b>Iterações:</b> '+ num(DGRState.mcN).toLocaleString('pt-BR') +'<br>';
+    html += '<b>Distribuição:</b> Beta-PERT &nbsp;|&nbsp; <b>Iterações:</b> '+ num(DGRState.mcN).toLocaleString('pt-BR') +' por função &nbsp;|&nbsp; <b>Total agregado:</b> '+ (g.total||0).toLocaleString('pt-BR') +' amostras<br>';
     html += '<b>VD = VE + VX</b>; <b>VA = VAE + VAX</b>; <b>VFR = máx(0, VD − VA)</b>; <b>VFRR = VFR × (1 − MR)</b><br>';
     html += formulaHTML(g);
     html += calculationBoxHTML(g);
@@ -6415,7 +6421,7 @@ let openSubcatFn = {};
 
     header('Síntese Executiva');
     tx('Síntese Monte Carlo', margin, y, 16, true); y += 9;
-    tx('Monte Carlo: '+num(DGRState.mcN).toLocaleString('pt-BR')+' iterações. P95 Global explícito e separado do Maior P95 Individual.', margin, y, 8); y += 12;
+    tx('Monte Carlo: '+num(DGRState.mcN).toLocaleString('pt-BR')+' iterações por função. Total agregado: '+num(g.total).toLocaleString('pt-BR')+' amostras. P95 Global separado do Maior P95 Individual.', margin, y, 8); y += 12;
 
     var cards = [
       ['VFRR Média Global', g.mean, [71,120,232], 1],
@@ -6438,7 +6444,7 @@ let openSubcatFn = {};
     var boxH = 22;
     doc.setDrawColor(192,57,43); doc.setFillColor(255,245,245); doc.roundedRect(margin, y, 182, boxH, 2, 2, 'FD');
     tx('Cálculo da Probabilidade de Criticidade Global nesta rodada', margin+4, y+6, 8, true, [124,0,0]);
-    tx('Nº simulações com VFRR > LC = '+calcEv+'   |   Nº total de simulações = '+calcTot, margin+4, y+12.5, 8, false, [40,45,60]);
+    tx('VFRR > LC = '+calcEv+'   |   Total agregado = '+calcTot+' amostras (funções × iterações)', margin+4, y+12.5, 8, false, [40,45,60]);
     tx(calcEv+' ÷ '+calcTot+' × 100 = '+pctBR(g.probCrit,2), margin+4, y+18.5, 10, true, [192,57,43]);
     y += boxH + 6;
 
@@ -6466,7 +6472,7 @@ let openSubcatFn = {};
       var rowH = Math.max(6, nameLines.length*3.5+1);
       need(rowH+2, 'Indicadores por função');
       nameLines.forEach(function(l,k){ tx(l, xs[0], y+k*3.5, 5.8, false, [30,35,50]); });
-      var vals = [pctBR(r.vde||r.ve,1), pctBR(r.vdx||r.vx,1), pctBR(r.mr,1), pctBR(r.beforeMR||r.vfr,1), pctBR(r.mean,1), pctBR(r.p90,1), pctBR(r.p95,1), pctBR(r.p99,1), ci.plain];
+      var vals = [pctSmart(r.vde||r.ve,1), pctSmart(r.vdx||r.vx,1), pctSmart(r.mr,1), pctSmart(r.beforeMR||r.vfr,1), pctSmart(r.mean), pctSmart(r.p90), pctSmart(r.p95), pctSmart(r.p99), ci.plain];
       vals.forEach(function(v,j){ tx(v, xs[j+1], y, 5.8, (j===6 || j===8), j===8 ? critRGB(r.p95) : [30,35,50]); });
       y += rowH;
     });
@@ -6483,7 +6489,7 @@ let openSubcatFn = {};
       nameLines.forEach(function(l,k){ tx(l, margin, y+k*4, 7, false, [30,35,50]); });
       doc.setFillColor(238,240,246); doc.rect(96,y-4,60,5,'F');
       doc.setFillColor.apply(doc, rgb); doc.rect(96,y-4,60*v/maxP,5,'F');
-      tx(pctBR(v)+' '+ci.plain, 160, y, 7, true, rgb);
+      tx(pctSmart(v)+' '+ci.plain, 160, y, 7, true, rgb);
       y += rowH;
     });
 
@@ -6514,7 +6520,7 @@ let openSubcatFn = {};
     tx('Interpretações automáticas por função', margin, y, 13, true); y += 8;
     rs.forEach(function(row){
       var r = row.r || {}, ci = critInfo(num(r.p95));
-      var line = fullName(row.fn)+': criticidade '+ci.plain+'. Em 95% das simulações, o VFRR final fica até '+pctBR(r.p95)+'. Prob. Criticidade desta função (vs. LC Global) = '+pctBR(r.probCrit,2)+'.';
+      var line = fullName(row.fn)+': criticidade '+ci.plain+'. Em 95% das simulações, o VFRR final fica até '+pctSmart(r.p95)+'. Prob. Criticidade desta função (vs. LC Global) = '+pctBR(r.probCrit,2)+'.';
       var lines = split(line, 184);
       need(lines.length*4.5+4, 'Interpretações automáticas por função');
       lines.forEach(function(l){ tx(l, margin, y, 7.2, false, [45,50,65]); y += 4.4; });
@@ -6561,7 +6567,21 @@ let openSubcatFn = {};
     if(hasSel){
       add('Capacidades Adaptativas e Mecanismos de Resiliência');
 
-      tx('Capacidades Adaptativas (VAE / VAX) e Mecanismos de Resiliência (MR) por Função', margin, y, 11, true, [24,30,50]); y += 8;
+      tx('Capacidades Adaptativas (VAE / VAX), Mecanismos de Resiliência (MR) e Capacidades DGR-OPS', margin, y, 11, true, [24,30,50]); y += 8;
+
+      var dgrIdx = (typeof window !== 'undefined' && window.DGRCalcIndices) ? window.DGRCalcIndices() : null;
+      if(dgrIdx){
+        tx('Índices de Capacidades Resilientes Desenvolvidas', margin, y, 9, true, [24,30,50]); y += 7;
+        card(margin,y,43,20,'Monitorar',pctBR((dgrIdx.IM||0)/100,0),[24,95,165]);
+        card(margin+47,y,43,20,'Responder',pctBR((dgrIdx.IR||0)/100,0),[15,110,86]);
+        card(margin+94,y,43,20,'Aprender',pctBR((dgrIdx.IA||0)/100,0),[107,33,168]);
+        card(margin+141,y,43,20,'Antecipar',pctBR((dgrIdx.IAn||0)/100,0),[192,57,43]);
+        y += 27;
+        split('Os índices DGR-OPS são calculados a partir dos grupos VAE, VAX e MR selecionados. Grupos não selecionados entram como zero no denominador, evitando superestimar capacidades resilientes.', 184).forEach(function(line){ tx(line, margin, y, 7.3, false, [70,75,90]); y += 4.4; });
+        y += 4;
+      }
+
+      tx('Capacidades Adaptativas (VAE / VAX) e Mecanismos de Resiliência (MR) por Função', margin, y, 9, true, [24,30,50]); y += 8;
 
       // cabeçalho de colunas
       doc.setFillColor(240,241,246); doc.rect(margin, y-4, 186, 7, 'F');
