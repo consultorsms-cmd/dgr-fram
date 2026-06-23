@@ -473,7 +473,7 @@ textarea.fi{resize:vertical;min-height:55px}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:10px 0 18px;align-items:start">
       <div>
         <div style="font-weight:600;font-size:13px;margin-bottom:8px">Radar de Capacidades</div>
-        <canvas id="dgr-radar" width="320" height="320" style="max-width:100%"></canvas>
+        <div id="dgr-radar" style="width:320px;height:320px;max-width:100%"></div>
       </div>
       <div>
         <div style="font-weight:600;font-size:13px;margin-bottom:8px">Matriz Mecanismos × Capacidades</div>
@@ -4727,106 +4727,82 @@ let openSubcatFn = {};
    Roda imediatamente e re-aplica nos tempos abaixo para vencer qualquer
    corrida com scripts anteriores que ainda estejam em fila de timers.
 ───────────────────────────────────────────────────────────────────────── */
-/* ── Radar DGR-OPS: instância persistente via window para sobreviver
-   a múltiplas chamadas de install(). Usa Chart.getChart() para detectar
-   e destruir instâncias existentes sem depender de referência local.    */
+/* ── Radar DGR-OPS — SVG puro, sem Canvas nem Chart.js.
+   Renderiza diretamente no div#dgr-radar. Funciona em qualquer ambiente,
+   incluindo GitHub Pages com CSP restritiva.                            */
 function _renderRadar(vals){
-  var cv=document.getElementById('dgr-radar');
-  if(!cv) return;
+  var wrap=document.getElementById('dgr-radar');
+  if(!wrap) return;
 
-  /* fallback SVG quando Chart.js ainda não carregou */
-  if(typeof Chart==='undefined'){
-    _renderRadarSVG(cv, vals);
-    return;
-  }
+  var W=320, H=320;
+  var cx=W/2, cy=H/2;
+  var R=118;          /* raio máximo da grade */
+  var PAD=54;         /* espaço extra para os labels externos */
+  var total=W+PAD*2;  /* viewBox total */
+  var ocx=total/2, ocy=total/2;  /* centro no viewBox expandido */
 
-  /* destrói instância existente de forma segura */
-  var existing = Chart.getChart ? Chart.getChart(cv) : (window._dgrRC||null);
-  if(existing){ try{ existing.destroy(); }catch(e){} }
-  window._dgrRC = null;
-
-  try{
-    window._dgrRC = new Chart(cv,{
-      type:'radar',
-      data:{
-        labels:['Monitorar','Responder','Aprender','Antecipar'],
-        datasets:[{
-          data:vals,
-          backgroundColor:'rgba(24,95,165,0.13)',
-          borderColor:'#185fa5',
-          borderWidth:2,
-          pointBackgroundColor:'#185fa5',
-          pointBorderColor:'#fff',
-          pointRadius:5,
-          pointHoverRadius:7
-        }]
-      },
-      options:{
-        animation:false,
-        scales:{r:{
-          min:0, max:100,
-          ticks:{stepSize:25, backdropColor:'transparent', color:'#aaa', font:{size:10}},
-          grid:{color:'#e8e8f0'},
-          angleLines:{color:'#e0e0ea'},
-          pointLabels:{color:'#1a1a2e', font:{size:12,weight:'bold'}}
-        }},
-        plugins:{legend:{display:false}},
-        responsive:false
-      }
-    });
-  }catch(e){
-    /* Chart.js falhou — usa SVG de fallback */
-    _renderRadarSVG(cv, vals);
-  }
-}
-
-/* Radar SVG puro — não depende de Chart.js */
-function _renderRadarSVG(cv, vals){
-  /* substitui o canvas por um SVG equivalente */
-  var parent=cv.parentNode; if(!parent) return;
-  var existing=parent.querySelector('svg.dgr-radar-svg');
-  if(existing) existing.remove();
-  var size=Math.min(cv.width||320, 320);
-  var cx=size/2, cy=size/2, R=size*0.38;
   var labels=['Monitorar','Responder','Aprender','Antecipar'];
+  var colors=['#185fa5','#0f6e56','#6b21a8','#c0392b'];
   var n=4;
-  /* ângulos: começa no topo, sentido horário */
-  function angle(i){ return (Math.PI*2*i/n) - Math.PI/2; }
-  function pt(r,i){ return [cx+r*Math.cos(angle(i)), cy+r*Math.sin(angle(i))]; }
 
-  var svg='<svg class="dgr-radar-svg" width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'" xmlns="http://www.w3.org/2000/svg">';
+  function angle(i){ return (Math.PI*2*i/n)-Math.PI/2; }
+  function px(r,i){ return ocx+r*Math.cos(angle(i)); }
+  function py(r,i){ return ocy+r*Math.sin(angle(i)); }
 
-  /* grades */
+  var s='<svg viewBox="0 0 '+total+' '+total+'" width="'+W+'" height="'+H+'"'
+       +' xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible">';
+
+  /* ── grades concêntricas ── */
   [25,50,75,100].forEach(function(pct){
     var r=R*pct/100;
-    var pts=[]; for(var i=0;i<n;i++){var p=pt(r,i); pts.push(p[0]+','+p[1]);}
-    svg+='<polygon points="'+pts.join(' ')+'" fill="none" stroke="#e0e0ea" stroke-width="1"/>';
-    svg+='<text x="'+(cx+3)+'" y="'+(cy-r+4)+'" font-size="9" fill="#bbb">'+pct+'</text>';
+    var pts=''; for(var i=0;i<n;i++) pts+=px(r,i)+','+py(r,i)+' ';
+    var isDashed=pct<100;
+    s+='<polygon points="'+pts.trim()+'" fill="none" stroke="#dde" stroke-width="1"'
+      +(isDashed?' stroke-dasharray="3,3"':'')+'"/>';
+    /* rótulo da grade no eixo superior */
+    s+='<text x="'+(ocx+3)+'" y="'+(ocy-r+3)+'" font-size="9" fill="#bbb" font-family="Segoe UI,sans-serif">'+pct+'</text>';
   });
-  /* eixos */
-  for(var i=0;i<n;i++){
-    var p=pt(R,i);
-    svg+='<line x1="'+cx+'" y1="'+cy+'" x2="'+p[0]+'" y2="'+p[1]+'" stroke="#e0e0ea" stroke-width="1"/>';
-  }
-  /* polígono de dados */
-  var dpts=[]; for(var i=0;i<n;i++){var v=Math.min(100,Math.max(0,vals[i]||0)); var p=pt(R*v/100,i); dpts.push(p[0]+','+p[1]);}
-  svg+='<polygon points="'+dpts.join(' ')+'" fill="rgba(24,95,165,0.13)" stroke="#185fa5" stroke-width="2"/>';
-  /* pontos */
-  for(var i=0;i<n;i++){
-    var v=Math.min(100,Math.max(0,vals[i]||0)); var p=pt(R*v/100,i);
-    svg+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="5" fill="#185fa5" stroke="#fff" stroke-width="2"/>';
-    svg+='<text x="'+p[0]+'" y="'+(p[1]-8)+'" font-size="9" fill="#185fa5" font-weight="bold" text-anchor="middle">'+v.toFixed(0)+'%</text>';
-  }
-  /* labels */
-  for(var i=0;i<n;i++){
-    var p=pt(R+22,i);
-    var anchor=p[0]<cx-5?'end':p[0]>cx+5?'start':'middle';
-    svg+='<text x="'+p[0]+'" y="'+(p[1]+4)+'" font-size="12" font-weight="bold" fill="#1a1a2e" text-anchor="'+anchor+'">'+labels[i]+'</text>';
-  }
-  svg+='</svg>';
 
-  cv.style.display='none';
-  parent.insertAdjacentHTML('beforeend', svg);
+  /* ── eixos ── */
+  for(var i=0;i<n;i++){
+    s+='<line x1="'+ocx+'" y1="'+ocy+'" x2="'+px(R,i)+'" y2="'+py(R,i)+'"'
+      +' stroke="#dde" stroke-width="1"/>';
+  }
+
+  /* ── polígono de dados ── */
+  var dpts='';
+  for(var i=0;i<n;i++){
+    var v=Math.min(100,Math.max(0,vals[i]||0));
+    dpts+=px(R*v/100,i)+','+py(R*v/100,i)+' ';
+  }
+  s+='<polygon points="'+dpts.trim()+'" fill="rgba(24,95,165,0.13)" stroke="#185fa5" stroke-width="2"/>';
+
+  /* ── pontos e valores ── */
+  for(var i=0;i<n;i++){
+    var v=Math.min(100,Math.max(0,vals[i]||0));
+    var dx=px(R*v/100,i), dy=py(R*v/100,i);
+    s+='<circle cx="'+dx+'" cy="'+dy+'" r="5" fill="'+colors[i]+'" stroke="#fff" stroke-width="2"/>';
+    /* valor percentual próximo ao ponto */
+    var vx=px((R*v/100)+14, i), vy=py((R*v/100)+14, i);
+    s+='<text x="'+vx+'" y="'+(vy+3)+'" font-size="9" font-weight="bold" fill="'+colors[i]+'"'
+      +' text-anchor="middle" font-family="Segoe UI,sans-serif">'+v.toFixed(0)+'%</text>';
+  }
+
+  /* ── labels externos ── */
+  for(var i=0;i<n;i++){
+    var lx=px(R+30,i), ly=py(R+30,i);
+    var anchor=lx<ocx-8?'end':lx>ocx+8?'start':'middle';
+    var baseline=ly<ocy-8?'auto':ly>ocy+8?'hanging':'middle';
+    s+='<text x="'+lx+'" y="'+ly+'" font-size="12" font-weight="700" fill="'+colors[i]+'"'
+      +' text-anchor="'+anchor+'" dominant-baseline="'+baseline+'"'
+      +' font-family="Segoe UI,sans-serif">'+labels[i]+'</text>';
+  }
+
+  /* ── ponto central ── */
+  s+='<circle cx="'+ocx+'" cy="'+ocy+'" r="3" fill="#aab"/>';
+
+  s+='</svg>';
+  wrap.innerHTML=s;
 }
 
 function install(){
