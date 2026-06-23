@@ -5606,6 +5606,150 @@ if(document.readyState==='loading'){
 });
 
 })();
+
+
+/* ===== PATCH DEFINITIVO 2026-06-23: ponderação real por quantidade de critérios e funções =====
+   Corrige VDE, VDX, VAE, VAX, MR, Monte Carlo, DGR-OPS e PDF.
+   Regra aplicada:
+   - Cada grupo A, B, C... pesa pelo nº de critérios internos.
+   - O denominador considera todos os critérios possíveis da dimensão.
+   - Grupos não selecionados entram como zero.
+   - A seleção em uma função não é projetada para todas as funções.
+*/
+(function(){
+  if(!window.DGRManager || !window.DGRState || !window.TAXO) return;
+  var M=window.DGRManager, S=window.DGRState, T=window.TAXO;
+  function n(v){ return Number.isFinite(+v)?+v:0; }
+  function allItems(){
+    var arr=[];
+    ['VDE','VDX','VAE','VAX','MR','RE','RX'].forEach(function(k){
+      if(T[k] && T[k].items) arr=arr.concat(T[k].items);
+    });
+    return arr;
+  }
+  function tax(prefix){ return T[prefix] || (prefix==='RE'?T.VDE:null) || (prefix==='RX'?T.VDX:null); }
+  function levelPreset(level){
+    if(M.evalPreset) return M.evalPreset(level);
+    return level==='minima'?{mn:.05,mp:.15,mx:.30}:level==='maxima'?{mn:.60,mp:.80,mx:1}:{mn:.25,mp:.50,mx:.70};
+  }
+  function levelWeight(v){
+    var l=(v&&v.level)||'media';
+    if(l==='minima') return .33;
+    if(l==='maxima') return 1;
+    return .66;
+  }
+  function idsOfVar(v){
+    var ids=[];
+    if(v&&Array.isArray(v.affected_function_ids)) ids=ids.concat(v.affected_function_ids);
+    if(v&&v.affected_function_id) ids.push(v.affected_function_id);
+    return Array.from(new Set(ids.filter(Boolean)));
+  }
+  function groupItemCount(prefix,key){
+    var tx=tax(prefix), groups=(tx&&tx.groups)||[];
+    var g=groups.find(function(x){return x.key===key;});
+    return Math.max(1, g&&g.items ? g.items.length : 1);
+  }
+  function weightedParam(fnId,prefix,manualCats){
+    manualCats=(manualCats||[]).map(function(x){return String(x).toLowerCase();});
+    var tx=tax(prefix), groups=(tx&&tx.groups)||[], sb=(S.subs||{})[fnId]||{};
+    var den=0, mn=0, mp=0, mx=0;
+    groups.forEach(function(g){
+      var itemCount=Math.max(1,(g.items||[]).length);
+      den += itemCount;
+      var groupCode=prefix+'-'+g.key;
+      var direct=sb[groupCode];
+      if(direct && direct.sel){
+        mn += n(direct.mn)*itemCount;
+        mp += n(direct.mp)*itemCount;
+        mx += n(direct.mx)*itemCount;
+      } else {
+        (g.items||[]).forEach(function(it){
+          var v=sb[it.code];
+          if(v && v.sel){ mn+=n(v.mn); mp+=n(v.mp); mx+=n(v.mx); }
+        });
+      }
+    });
+    (S.vars||[]).forEach(function(v){
+      if(idsOfVar(v).indexOf(fnId)>=0 && manualCats.indexOf(String(v.category||'').toLowerCase())>=0){
+        den += 1; mn += .25; mp += .50; mx += .70;
+      }
+    });
+    return den ? {mn:mn/den, mp:mp/den, mx:mx/den} : {mn:0,mp:0,mx:0};
+  }
+  M.recalcParams=function(fnId){
+    if(!S.params) S.params={};
+    if(!S.params[fnId]) S.params[fnId]={};
+    S.params[fnId].vde=weightedParam(fnId,'VDE',['endogena','re','vde']);
+    S.params[fnId].vdx=weightedParam(fnId,'VDX',['exogena','rx','vdx']);
+    S.params[fnId].vae=weightedParam(fnId,'VAE',['vae']);
+    S.params[fnId].vax=weightedParam(fnId,'VAX',['vax']);
+    S.params[fnId].mr =weightedParam(fnId,'MR', []);
+  };
+  M.normalizeEvaluationLevels=function(){
+    (S.fns||[]).forEach(function(fn){
+      if(!S.subs) S.subs={};
+      if(!S.subs[fn.id]) S.subs[fn.id]={};
+      allItems().forEach(function(item){
+        var cur=S.subs[fn.id][item.code]||{sel:false};
+        var level=cur.level || (M.inferEvalLevel ? M.inferEvalLevel(cur) : 'media');
+        var preset=levelPreset(level);
+        S.subs[fn.id][item.code]=Object.assign({},cur,{level:level},preset);
+      });
+      M.recalcParams(fn.id);
+    });
+  };
+  function dgrGroupScore(sb, code){
+    sb=sb||{};
+    var direct=sb[code];
+    if(direct && direct.sel) return levelWeight(direct);
+    var parts=String(code).split('-'), prefix=parts[0], key=parts[1];
+    var tx=tax(prefix), g=(tx&&tx.groups||[]).find(function(x){return x.key===key;});
+    var items=(g&&g.items)||[];
+    var total=Math.max(1,items.length), sum=0;
+    items.forEach(function(it){ var v=sb[it.code]; if(v&&v.sel) sum+=levelWeight(v); });
+    return sum/total;
+  }
+  function dgrGroupItems(code){ var p=String(code).split('-'); return groupItemCount(p[0],p[1]); }
+  if(window.DGR_MAP){
+    M.calculateDGROPS=function(){
+      var acc={IM:{n:0,d:0},IR:{n:0,d:0},IA:{n:0,d:0},IAn:{n:0,d:0}}, selected={}, fns=S.fns||[];
+      window.DGR_MAP.forEach(function(row){ selected[row.g]=0; });
+      fns.forEach(function(fn){
+        var sb=(S.subs||{})[fn.id]||{};
+        window.DGR_MAP.forEach(function(row){
+          var itens=dgrGroupItems(row.g), w=dgrGroupScore(sb,row.g);
+          if(w>0) selected[row.g]+=w;
+          ['IM','IR','IA','IAn'].forEach(function(k){
+            var wk=n(row[k]); if(wk>0){ acc[k].d += wk*itens; acc[k].n += w*wk*itens; }
+          });
+        });
+      });
+      Object.keys(selected).forEach(function(k){ selected[k]=fns.length?selected[k]/fns.length:0; if(selected[k]<=0) delete selected[k]; });
+      function cap(k){ return acc[k].d ? parseFloat(((acc[k].n/acc[k].d)*100).toFixed(1)) : 0; }
+      var out={IM:cap('IM'),IR:cap('IR'),IA:cap('IA'),IAn:cap('IAn'),selected:selected,denominators:acc};
+      out.global=parseFloat(((out.IM+out.IR+out.IA+out.IAn)/4).toFixed(1));
+      return out;
+    };
+    window.DGRCalcIndices=M.calculateDGROPS;
+  }
+  function stamp(){
+    var sub=document.querySelector('#topbar .sub');
+    if(sub && sub.textContent.indexOf('ponderação por critérios')<0) sub.textContent += ' • ponderação por critérios';
+    var mc=document.querySelector('#s-mc .page-sub');
+    if(mc && mc.innerHTML.indexOf('ponderados pelo número de critérios')<0){
+      mc.innerHTML += ' <b>VDE, VDX, VAE, VAX e MR são ponderados pelo número de critérios internos de cada grupo.</b>';
+    }
+  }
+  var oldRefresh=M.refreshUI?M.refreshUI.bind(M):null;
+  M.refreshUI=function(){
+    (S.fns||[]).forEach(function(fn){ M.recalcParams(fn.id); });
+    if(oldRefresh) oldRefresh();
+    stamp();
+  };
+  M.normalizeEvaluationLevels();
+  stamp();
+  try{ M.refreshUI(); }catch(e){}
+})();
 </script>
 
 </body>
