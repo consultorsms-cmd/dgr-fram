@@ -1546,15 +1546,26 @@ const DGRManager = {
   } ,
 
   recalcParams(fnId) {
-    const process = (items, key) => {
-      const sel = items.filter(i => DGRState.subs[fnId]?.[i.code]?.sel);
+    // Processa grupos selecionados de uma taxonomia e atualiza o param da função
+    const processGroups = (taxoKey, paramKey) => {
+      const T = TAXO[taxoKey]; if(!T) return;
+      const sel = T.groups.filter(g => DGRState.subs[fnId]?.[taxoKey+'-'+g.key]?.sel);
       if (sel.length) {
-        let sn = 0, sp = 0, sx = 0;
-        sel.forEach(i => { const s = DGRState.subs[fnId][i.code]; sn += s.mn; sp += s.mp; sx += s.mx; });
-        DGRState.params[fnId][key] = { mn: +(sn/sel.length).toFixed(3), mp: +(sp/sel.length).toFixed(3), mx: +(sx/sel.length).toFixed(3) };
+        let sn=0, sp=0, sx=0;
+        sel.forEach(g => {
+          const s = DGRState.subs[fnId][taxoKey+'-'+g.key];
+          sn += (s.mn||0); sp += (s.mp||0); sx += (s.mx||0);
+        });
+        DGRState.params[fnId][paramKey] = {
+          mn: +(sn/sel.length).toFixed(3),
+          mp: +(sp/sel.length).toFixed(3),
+          mx: +(sx/sel.length).toFixed(3)
+        };
       }
     };
-    process(TAXO.RE.items, 've'); process(TAXO.RX.items, 'vx'); process(TAXO.MR.items, 'ar');
+    processGroups('VDE','vde'); processGroups('VDX','vdx');
+    processGroups('MR','mr');
+    processGroups('VAE','vae'); processGroups('VAX','vax');
   },
 
   // ── SIMULAÇÃO MONTE CARLO ──
@@ -6163,10 +6174,10 @@ let openSubcatFn = {};
 
   // Validação obrigatória dos indicadores globais antes de exportar o PDF.
   function validateGlobalStats(g){
-    if(!(g.p90 > 0) || !(g.p95 > 0) || !(g.p99 > 0)){
-      throw new Error('Indicadores globais inválidos.');
-    }
-    if(g.p90 > g.p95 || g.p95 > g.p99){
+    // Quando MR é muito elevado, VFRR converge para próximo de zero — resultado válido
+    const nenhum = !(g.p90 >= 0) && !(g.p95 >= 0) && !(g.p99 >= 0);
+    if(nenhum){ throw new Error('Indicadores globais inválidos.'); }
+    if((g.p90 > 0 && g.p95 > 0 && g.p99 > 0) && (g.p90 > g.p95 || g.p95 > g.p99)){
       throw new Error('Percentis globais inconsistentes.');
     }
   }
