@@ -225,7 +225,7 @@ textarea.fi{resize:vertical;min-height:55px}
         </div>
         <div class="nav-item" id="ni-dgr" onclick="DGRManager.switchPage('dgr')">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-          Capacidades DGR-OPS
+          Capacidades Resilientes Desenvolvidas
         </div>
       </div>
     </div>
@@ -4925,44 +4925,40 @@ function install(){
   ────────────────────────────────────────────────────────────────────── */
   function calcDgrOps(){
     var acc={IM:{n:0,d:0},IR:{n:0,d:0},IA:{n:0,d:0},IAn:{n:0,d:0}};
-    var selected={}, scope={};
-    var fns=(S.fns||[]);
-    DGR_MAP.forEach(function(row){ selected[row.g]=0; scope[row.g]=false; });
+    var selected={}, eligible={}, fns=(S.fns||[]);
+    DGR_MAP.forEach(function(row){ selected[row.g]=0; eligible[row.g]=0; });
 
-    // 1) Escopo efetivamente avaliado: o denominador inclui somente os grupos
-    // VAE, VAX e MR que foram selecionados ao menos uma vez no modelo.
-    // Isso evita subestimar o DGR-OPS penalizando grupos que não fizeram parte
-    // da avaliação, mas mantém zero nas funções onde o grupo avaliado não foi marcado.
+    function isEligible(sb,row){
+      // Elegível = grupo efetivamente cadastrado/avaliado para a função.
+      // Como o sistema inicializa critérios vazios para todas as funções, a elegibilidade
+      // é inferida por seleção real no próprio grupo. Assim, não há penalização por
+      // função × grupo possível que nunca foi cadastrado/avaliado.
+      return groupScoreFromSubs(sb,row.g)>0;
+    }
+
     fns.forEach(function(fn){
       var sb=(S.subs||{})[fn.id]||{};
       DGR_MAP.forEach(function(row){
-        if(groupScoreFromSubs(sb,row.g)>0) scope[row.g]=true;
-      });
-    });
-
-    // 2) Cálculo por função × grupo × capacidade × nº de critérios.
-    fns.forEach(function(fn){
-      var sb=(S.subs||{})[fn.id]||{};
-      DGR_MAP.forEach(function(row){
-        if(!scope[row.g]) return;
+        if(!isEligible(sb,row)) return;
         var itemCount=groupItemCount(row.g);
-        var w=groupScoreFromSubs(sb,row.g); // zero quando o grupo avaliado não foi marcado nesta função
-        if(w>0) selected[row.g]+=w;
+        var intensity=groupScoreFromSubs(sb,row.g); // 0,33 / 0,66 / 1,00 ponderado por critérios selecionados
+        selected[row.g]+=intensity;
+        eligible[row.g]+=1;
         ['IM','IR','IA','IAn'].forEach(function(k){
           var wk=num(row[k]);
           if(wk>0){
             acc[k].d += wk * itemCount;
-            acc[k].n += w * wk * itemCount;
+            acc[k].n += intensity * wk * itemCount;
           }
         });
       });
     });
     Object.keys(selected).forEach(function(k){
-      selected[k]=fns.length ? selected[k]/fns.length : 0;
+      selected[k]=eligible[k] ? selected[k]/eligible[k] : 0;
       if(selected[k]<=0) delete selected[k];
     });
     function cap(k){ return acc[k].d ? parseFloat(((acc[k].n/acc[k].d)*100).toFixed(1)):0; }
-    var out={IM:cap('IM'),IR:cap('IR'),IA:cap('IA'),IAn:cap('IAn'),selected:selected,denominators:acc,scope:scope};
+    var out={IM:cap('IM'),IR:cap('IR'),IA:cap('IA'),IAn:cap('IAn'),selected:selected,denominators:acc,eligible:eligible};
     out.global=parseFloat(avg([out.IM,out.IR,out.IA,out.IAn]).toFixed(1));
     return out;
   }
@@ -5160,7 +5156,7 @@ function install(){
      ['Antecipar',d.IAn,'#c0392b'],['DGR-OPS Global',d.global,'#1a1a2e']].forEach(function(c){
       html+='<div class="sbox"><span class="sval" style="color:'+c[2]+'">'+num(c[1]).toFixed(1).replace('.',',')+'%</span><span class="slbl">'+c[0]+'</span></div>';
     });
-    html+='</div><div style="font-size:11px;color:#4c5570;margin-top:8px">DGR-OPS = Σ(função × grupo avaliado × intensidade × peso da capacidade × nº de critérios do grupo) / Σ(função × grupo avaliado × peso da capacidade × nº de critérios do grupo) × 100. Pesos: Mínima=0,33 | Média=0,66 | Máxima=1,00 | Não selecionado=0. O denominador considera somente os grupos VAE/VAX/MR efetivamente avaliados no modelo; para esses grupos, funções não selecionadas entram como zero.</div></div>';
+    html+='</div><div style="font-size:11px;color:#4c5570;margin-top:8px">DGR-OPS = Σ(função × grupo selecionado × intensidade × peso da capacidade × número de critérios do grupo) / Σ(função × grupo elegível × peso da capacidade × número de critérios do grupo) × 100. Pesos: Mínima=0,33 | Média=0,66 | Máxima=1,00 | Não selecionado=0. O denominador considera somente os grupos VAE/VAX/MR elegíveis para cada função; grupos não cadastrados para a função não entram no denominador.</div></div>';
 
     /* Ranking */
     html+='<div class="dash-section"><h3>Ranking de Criticidade — P95 Individual</h3>';
@@ -5198,10 +5194,10 @@ function install(){
   function colDGR(v){ return v>=75?'#0f6e56':v>=50?'#185fa5':v>=25?'#854f0b':'#c0392b'; }
   function dgrClass(v){
     v=num(v);
-    if(v>70) return {label:'🔴 Elevada',plain:'Elevada',color:'#c0392b'};
-    if(v>=50) return {label:'🟠 Alta',plain:'Alta',color:'#f59e0b'};
-    if(v>=30) return {label:'🟡 Moderada',plain:'Moderada',color:'#854f0b'};
-    return {label:'🟢 Baixa',plain:'Baixa',color:'#0f6e56'};
+    if(v>70) return {label:'🔴 Crítica',plain:'Crítica',color:'#c0392b',rgb:[192,57,43]};
+    if(v>=50) return {label:'🟠 Alta',plain:'Alta',color:'#f59e0b',rgb:[245,158,11]};
+    if(v>=30) return {label:'🟡 Moderada',plain:'Moderada',color:'#854f0b',rgb:[133,79,11]};
+    return {label:'🟢 Baixa',plain:'Baixa',color:'#0f6e56',rgb:[15,110,86]};
   }
   function validateMath(g,d,rs){
     var problems=[];
@@ -5362,8 +5358,7 @@ function install(){
           +'Capacidade mais desenvolvida: <b>'+sorted[0][0]+'</b> ('+sorted[0][1].toFixed(1).replace('.',',')+'%), '
           +'seguida de <b>'+sorted[1][0]+'</b> ('+sorted[1][1].toFixed(1).replace('.',',')+'%).<br>'
           +'<b>DGR-OPS Global = '+d.global.toFixed(1).replace('.',',')+'%</b> (média das quatro capacidades).<br>'
-          +'<span style="font-size:11px;color:#667">Pesos: Mínima=0,33 | Média=0,66 | Máxima=1,00. '
-          +'O denominador considera os grupos efetivamente avaliados no modelo; para esses grupos, não selecionado = 0 no numerador.</span>';
+          +'<span style="font-size:11px;color:#667">As capacidades resilientes desenvolvidas foram calculadas a partir da combinação de VAE, VAX e MR ponderados pela intensidade selecionada e pela quantidade de critérios efetivamente avaliados em cada grupo. Pesos: Mínima=0,33 | Média=0,66 | Máxima=1,00. O denominador considera somente grupos elegíveis/cadastrados para cada função.</span>';
       }
     }
   }
@@ -5572,7 +5567,7 @@ function install(){
     });
 
     /* ── PÁGINA 5: DGR-OPS ───────────────────────────────────────────── */
-    newPage('Capacidades Resilientes Desenvolvidas, MR e DGR-OPS');
+    newPage('Capacidades Resilientes Desenvolvidas (DGR-OPS)');
     tx('Índices de Capacidades Resilientes Desenvolvidas',mg,y,11,true); y+=8;
     [['Monitorar',d.IM,[24,95,165]],['Responder',d.IR,[15,110,86]],
      ['Aprender',d.IA,[107,33,168]],['Antecipar',d.IAn,[192,57,43]],
@@ -5583,12 +5578,18 @@ function install(){
     y+=27;
     tx('Radar DGR-OPS',mg,y,9,true); y+=5;
     drawRadarPdf(mg+42,y+32,28,[d.IM,d.IR,d.IA,d.IAn]);
-    var formula='DGR-OPS = Σ(função × grupo avaliado × intensidade × peso da capacidade × nº de critérios do grupo) / Σ(função × grupo avaliado × peso da capacidade × nº de critérios do grupo) × 100. Os índices são calculados a partir dos grupos VAE, VAX e MR efetivamente avaliados no modelo; para esses grupos, funções não selecionadas entram como zero. Pesos: Mínima = 0,33 | Média = 0,66 | Máxima = 1,00. DGR-OPS Global = (Monitorar + Responder + Aprender + Antecipar) / 4.';
+    var formula='DGR-OPS = Σ(função × grupo selecionado × intensidade × peso da capacidade × número de critérios do grupo) / Σ(função × grupo elegível × peso da capacidade × número de critérios do grupo) × 100. Os índices são calculados a partir de VAE, VAX e MR, ponderados pela intensidade e pelo número de critérios efetivamente avaliados em cada grupo. Grupos não cadastrados para a função não entram no denominador; grupos elegíveis não selecionados valem zero no numerador. Pesos: Mínima = 0,33 | Média = 0,66 | Máxima = 1,00. DGR-OPS Global = (Monitorar + Responder + Aprender + Antecipar) / 4.';
     y += txCanvas(formula,mg+95,y,170,7.5,false,[30,35,50]) + 4;
+    tx('Probabilidade Operacional por Capacidade',mg+95,y,9,true); y+=6;
+    [['Monitorar',d.IM],['Responder',d.IR],['Aprender',d.IA],['Antecipar',d.IAn]].forEach(function(c){
+      var dc=dgrClass(c[1]);
+      tx(c[0]+': Índice '+num(c[1]).toFixed(1).replace('.',',')+'% — Classificação '+dc.plain,mg+95,y,7.5,true,dc.rgb||[30,35,50]); y+=4.6;
+    });
+    y+=2;
     tx('Grupos selecionados: intensidade média ponderada por função',mg,y,9,true); y+=6;
     var selVals=d.selected||{};
     Object.keys(selVals).sort().forEach(function(k){
-      need(6,'Capacidades DGR-OPS');
+      need(6,'Capacidades Resilientes Desenvolvidas');
       tx(k,mg,y,7.5,true);
       tx((num(selVals[k])*100).toFixed(0)+'%',mg+32,y,7.5);
       var mapRow=(DGR_MAP||[]).find(function(x){return x.g===k;});
@@ -5767,26 +5768,25 @@ if(document.readyState==='loading'){
   function dgrGroupItems(code){ var p=String(code).split('-'); return groupItemCount(p[0],p[1]); }
   if(window.DGR_MAP){
     M.calculateDGROPS=function(){
-      var acc={IM:{n:0,d:0},IR:{n:0,d:0},IA:{n:0,d:0},IAn:{n:0,d:0}}, selected={}, scope={}, fns=S.fns||[];
-      window.DGR_MAP.forEach(function(row){ selected[row.g]=0; scope[row.g]=false; });
-      fns.forEach(function(fn){
-        var sb=(S.subs||{})[fn.id]||{};
-        window.DGR_MAP.forEach(function(row){ if(dgrGroupScore(sb,row.g)>0) scope[row.g]=true; });
-      });
+      var acc={IM:{n:0,d:0},IR:{n:0,d:0},IA:{n:0,d:0},IAn:{n:0,d:0}}, selected={}, eligible={}, fns=S.fns||[];
+      window.DGR_MAP.forEach(function(row){ selected[row.g]=0; eligible[row.g]=0; });
       fns.forEach(function(fn){
         var sb=(S.subs||{})[fn.id]||{};
         window.DGR_MAP.forEach(function(row){
-          if(!scope[row.g]) return;
-          var itens=dgrGroupItems(row.g), w=dgrGroupScore(sb,row.g);
-          if(w>0) selected[row.g]+=w;
+          var w=dgrGroupScore(sb,row.g);
+          if(w<=0) return;
+          var itens=dgrGroupItems(row.g);
+          selected[row.g]+=w;
+          eligible[row.g]+=1;
           ['IM','IR','IA','IAn'].forEach(function(k){
-            var wk=n(row[k]); if(wk>0){ acc[k].d += wk*itens; acc[k].n += w*wk*itens; }
+            var wk=n(row[k]);
+            if(wk>0){ acc[k].d += wk*itens; acc[k].n += w*wk*itens; }
           });
         });
       });
-      Object.keys(selected).forEach(function(k){ selected[k]=fns.length?selected[k]/fns.length:0; if(selected[k]<=0) delete selected[k]; });
+      Object.keys(selected).forEach(function(k){ selected[k]=eligible[k]?selected[k]/eligible[k]:0; if(selected[k]<=0) delete selected[k]; });
       function cap(k){ return acc[k].d ? parseFloat(((acc[k].n/acc[k].d)*100).toFixed(1)) : 0; }
-      var out={IM:cap('IM'),IR:cap('IR'),IA:cap('IA'),IAn:cap('IAn'),selected:selected,denominators:acc,scope:scope};
+      var out={IM:cap('IM'),IR:cap('IR'),IA:cap('IA'),IAn:cap('IAn'),selected:selected,denominators:acc,eligible:eligible};
       out.global=parseFloat(((out.IM+out.IR+out.IA+out.IAn)/4).toFixed(1));
       return out;
     };
@@ -5812,6 +5812,6 @@ if(document.readyState==='loading'){
 })();
 </script>
 
-<!-- Correções 2026-06-23: Σ no PDF, caracteres VFRR_i, DGR-OPS denominador por grupos avaliados, título CRD e radar no PDF. -->
+<!-- Correções aplicadas nesta versão: título CRD/DGR-OPS; Σ; UTF-8; radar no PDF; probabilidade operacional por capacidade; denominador DGR-OPS por grupos elegíveis; ponderação por critérios. Correções 2026-06-23: Σ no PDF, caracteres VFRR_i, DGR-OPS denominador por grupos avaliados, título CRD e radar no PDF. -->
 </body>
 </html>
