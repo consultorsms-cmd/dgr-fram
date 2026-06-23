@@ -6690,23 +6690,25 @@ let openSubcatFn = {};
   function lvl(v){ return v==='minima'?25:v==='maxima'?100:50; }
 
   function calc(){
-    // subs stores item keys like 'MR-A.1', 'VAE-B.2'
-    // pool() averages all selected items whose key starts with prefix+'-'+group+'.'
-    function grpAvg(fnId, pfx, grp){
-      var sb=(DGRState.subs||{})[fnId]||{};
-      var pre=pfx+'-'+grp+'.';
-      var vals=[];
+    function gv(fnId, pfx, grp){
+      var sb=(DGRState.subs||{})[fnId]; if(!sb) return 0;
+      var v=sb[pfx+'-'+grp];
+      if(v&&v.sel) return lvl(v.level||'media');
+      var pre=pfx+'-'+grp+'.', vals=[];
       Object.keys(sb).forEach(function(k){
-        if(k.indexOf(pre)===0){var v=sb[k]; if(v&&v.sel) vals.push(lvl(v.level||'media'));}
+        if(k.indexOf(pre)===0){var vi=sb[k]; if(vi&&vi.sel) vals.push(lvl(vi.level||'media'));}
       });
-      return vals.length?vals.reduce(function(a,b){return a+b;},0)/vals.length:null;
+      return vals.length?vals.reduce(function(a,b){return a+b;},0)/vals.length:0;
     }
+    // Denominador = número de grupos na fórmula × número de funções
+    // Grupos não selecionados = 0 (contribuem para baixar a média)
     function pool(specs){
-      var vals=[];
-      (DGRState.fns||[]).forEach(function(fn){
-        specs.forEach(function(s){var v=grpAvg(fn.id,s[0],s[1]);if(v!==null)vals.push(v);});
+      var fns=DGRState.fns||[]; if(!fns.length||!specs.length) return 0;
+      var total=0;
+      fns.forEach(function(fn){
+        specs.forEach(function(s){ total+=gv(fn.id,s[0],s[1]); });
       });
-      return vals.length?Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length):0;
+      return Math.round(total/(fns.length*specs.length));
     }
     return {
       IM: pool([['MR','A'],['MR','B'],['MR','F'],['VAE','B'],['VAX','B']]),
@@ -6726,8 +6728,10 @@ let openSubcatFn = {};
   ];
 
   function dot(n){
+    var filled='<span style="color:#185fa5;font-size:16px">&#9679;</span>';
+    var empty='<span style="color:#ccc;font-size:16px">&#9675;</span>';
     var r='';
-    for(var i=0;i<3;i++) r+='<span style="font-size:14px;color:'+(i<n?'#185fa5':'#ccc')+'">'+(i<n?'●':'○')+'</span>';
+    for(var i=0;i<3;i++) r+=(i<n?filled:empty);
     return r;
   }
   function col(v){return v>=75?'#0f6e56':v>=50?'#185fa5':v>=25?'#d97706':'#c0392b';}
@@ -6799,17 +6803,7 @@ let openSubcatFn = {};
       em.innerHTML=h+'</tbody></table>';
     }
 
-    // Debug
-    var ed=document.getElementById('dgr-debug');
-    if(ed){
-      var lines=['IM='+idx.IM+' IR='+idx.IR+' IA='+idx.IA+' IAn='+idx.IAn];
-      (DGRState.fns||[]).forEach(function(fn){
-        var sb=(DGRState.subs||{})[fn.id]||{};
-        var sel=Object.keys(sb).filter(function(k){return sb[k]&&sb[k].sel;});
-        if(sel.length) lines.push(fn.name+': '+sel.map(function(k){return k+'('+sb[k].level+')';}).join(', '));
-      });
-      ed.textContent=lines.join('\n');
-    }
+
 
     // Interpretação
     var ei=document.getElementById('dgr-interp');
