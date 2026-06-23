@@ -7701,5 +7701,652 @@ let openSubcatFn = {};
 })();
 </script>
 
+<!-- ═══════════════════════════════════════════════════════════════════════
+     PATCH DEFINITIVO FINAL v2026 — sobrescreve todos os patches anteriores.
+     Corrige: pctSmart (zero ≠ <0,1%), intensidades 0.33/0.66/1.00,
+     DGR-OPS Global, Prob. Estatística, Prob. Operacional, LC Operacional,
+     Síntese Executiva, página DGR-OPS no PDF, texto metodológico.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<script id="dgr-patch-definitivo-v2026">
+(function(){
+  'use strict';
+
+  function installDefinitivePatch(){
+    if(typeof window.DGRManager === 'undefined' || typeof window.DGRState === 'undefined'){
+      setTimeout(installDefinitivePatch, 200);
+      return;
+    }
+
+    const M = window.DGRManager;
+    const S = window.DGRState;
+
+    // ── utilidades ─────────────────────────────────────────────────────────
+    function num(v){ v = Number(v); return Number.isFinite(v) ? v : 0; }
+    function clamp(v,a,b){ return Math.max(a,Math.min(b,num(v))); }
+    function mean(a){ return a&&a.length?a.reduce((s,v)=>s+num(v),0)/a.length:0; }
+    function std(a){ const m=mean(a||[]); return Math.sqrt(mean((a||[]).map(v=>Math.pow(num(v)-m,2)))); }
+    function percentile(arr,p){
+      const s=(arr||[]).map(num).filter(Number.isFinite).sort((a,b)=>a-b);
+      if(!s.length) return 0;
+      const pos=(s.length-1)*p,lo=Math.floor(pos),hi=Math.ceil(pos);
+      return lo===hi?s[lo]:s[lo]+(s[hi]-s[lo])*(pos-lo);
+    }
+    function esc(s){ return String(s||'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+    function fnName(fn){ return String((fn&&(fn.name||fn.nome||fn.title))||'Função sem nome').trim(); }
+
+    // ── pctSmart: REGRA DEFINITIVA ─────────────────────────────────────────
+    // v===0       → "0,0%"
+    // 0 < |v| < 0.001 → "<0,1%"
+    // caso contrário   → valor×100 com d casas decimais + "%"
+    function pctSmart(v, d){
+      d = d==null ? 1 : d;
+      v = num(v);
+      if(v === 0) return '0,0%';
+      if(Math.abs(v) > 0 && Math.abs(v) < 0.001) return '<0,1%';
+      return (v*100).toFixed(d).replace('.',',') + '%';
+    }
+    function pctBR(v,d){
+      d = d==null ? 1 : d;
+      return (num(v)*100).toFixed(d).replace('.',',') + '%';
+    }
+
+    M.pctSmart = pctSmart;
+    M.pct = function(v,d){ return pctSmart(v,d); };
+
+    // ── classificação de criticidade ───────────────────────────────────────
+    function crit(v){
+      v=num(v);
+      if(v>=.70) return {cls:'cb-c',label:'🔴 Crítica',plain:'Crítica',color:'#7c0000',rgb:[124,0,0]};
+      if(v>=.50) return {cls:'cb-a',label:'🟠 Alta',   plain:'Alta',   color:'#c0392b',rgb:[192,57,43]};
+      if(v>=.30) return {cls:'cb-m',label:'🟡 Moderada',plain:'Moderada',color:'#854f0b',rgb:[133,79,11]};
+      return {cls:'cb-b',label:'🟢 Baixa',plain:'Baixa',color:'#0f6e56',rgb:[15,110,86]};
+    }
+    function opCrit(p){
+      p=num(p);
+      if(p>.30) return {plain:'Crítica',color:'#7c0000',rgb:[124,0,0]};
+      if(p>=.15) return {plain:'Alta',  color:'#c0392b',rgb:[192,57,43]};
+      if(p>=.05) return {plain:'Moderada',color:'#854f0b',rgb:[133,79,11]};
+      return {plain:'Baixa',color:'#0f6e56',rgb:[15,110,86]};
+    }
+    M.critInfo = crit;
+    M.vColor = v => crit(v).color;
+
+    // ── LC operacional ─────────────────────────────────────────────────────
+    function opLC(){
+      if(!Number.isFinite(Number(S.operationalLC))) S.operationalLC = 0.30;
+      return clamp(S.operationalLC,0,2);
+    }
+
+    // ── linhas de resultado ────────────────────────────────────────────────
+    function rows(){
+      return (S.fns||[])
+        .filter(fn=>S.mcRes&&S.mcRes[fn.id])
+        .map(fn=>({fn,r:S.mcRes[fn.id]||{}}))
+        .sort((a,b)=>num(b.r.p95)-num(a.r.p95)||fnName(a.fn).localeCompare(fnName(b.fn),'pt-BR'));
+    }
+
+    // ── intensidade ponderada conforme requisito (0.33/0.66/1.00) ─────────
+    // Mínima = 0.33, Média = 0.66, Máxima = 1.00
+    function levelWeight(v){
+      if(!v||!v.sel) return 0;
+      const lvl = String(v.level||'').toLowerCase();
+      if(lvl.includes('max')) return 1.00;
+      if(lvl.includes('min')) return 0.33;
+      return 0.66; // Média (padrão)
+    }
+
+    // ── mapeamento DGR-OPS ─────────────────────────────────────────────────
+    const DGR_MAP = [
+      {g:'VAE-A',label:'Barreiras Operacionais Internas Efetivas',   IM:0,IR:3,IA:1,IAn:1},
+      {g:'VAE-B',label:'Capacidades Resilientes Internas',           IM:3,IR:2,IA:2,IAn:3},
+      {g:'VAE-C',label:'Aprendizagem e Melhoria Interna',            IM:1,IR:1,IA:3,IAn:2},
+      {g:'VAE-D',label:'Adaptação Operacional Interna',              IM:1,IR:3,IA:2,IAn:1},
+      {g:'VAE-E',label:'Coordenação Interna',                        IM:2,IR:3,IA:1,IAn:1},
+      {g:'VAX-A',label:'Barreiras Operacionais Efetivas entre Funções',IM:1,IR:3,IA:1,IAn:1},
+      {g:'VAX-B',label:'Governança de Dados como Mecanismo Sociotécnico Exógeno',IM:3,IR:2,IA:3,IAn:3},
+      {g:'VAX-C',label:'Aprendizagem Interfuncional',                IM:2,IR:1,IA:3,IAn:2},
+      {g:'VAX-D',label:'Coordenação Interfuncional',                 IM:2,IR:3,IA:1,IAn:1},
+      {g:'VAX-E',label:'Redundância e Apoio Externo',                IM:1,IR:3,IA:1,IAn:2},
+      {g:'MR-A', label:'Barreiras Estruturadas',                     IM:2,IR:3,IA:1,IAn:1},
+      {g:'MR-B', label:'Governança de Dados como Barreira de Resiliência',IM:3,IR:2,IA:3,IAn:3},
+      {g:'MR-C', label:'Capacidades Resilientes',                    IM:2,IR:3,IA:3,IAn:3},
+      {g:'MR-D', label:'Continuidade Operacional',                   IM:1,IR:3,IA:1,IAn:1},
+      {g:'MR-E', label:'Adaptação Sociotécnica',                     IM:2,IR:3,IA:2,IAn:1},
+      {g:'MR-F', label:'Inteligência Informacional',                 IM:3,IR:2,IA:2,IAn:3}
+    ];
+    window.DGR_MAP = DGR_MAP;
+
+    // ── seleção de grupos com peso de intensidade ──────────────────────────
+    function selectedGroupValues(){
+      const vals = {};
+      (S.fns||[]).forEach(fn => {
+        const sb = (S.subs||{})[fn.id] || {};
+        Object.keys(sb).forEach(code => {
+          // código normalizado: VAE-A, MR-B, etc. (sem sufixo de subitem)
+          const base = String(code).split('.')[0];
+          if(!/^(VAE|VAX|MR)-[A-Z]/.test(base)) return;
+          const w = levelWeight(sb[code]);
+          if(w > 0) vals[base] = Math.max(vals[base]||0, w);
+        });
+      });
+      return vals;
+    }
+
+    // ── cálculo DGR-OPS ponderado por intensidade ──────────────────────────
+    // Grupos não selecionados entram como 0 no denominador (evita superestimação).
+    // DGR-OPS Global = (Monitorar + Responder + Aprender + Antecipar) / 4
+    function calcDgrOps(){
+      const vals = selectedGroupValues();
+      // acumulador: numerador e denominador separados por capacidade
+      const acc = {IM:{n:0,d:0},IR:{n:0,d:0},IA:{n:0,d:0},IAn:{n:0,d:0}};
+      DGR_MAP.forEach(row => {
+        const sel = vals[row.g] || 0; // 0 quando não selecionado
+        ['IM','IR','IA','IAn'].forEach(k => {
+          const w = num(row[k]);
+          if(w > 0){
+            acc[k].d += w;              // peso total (denominador cresce sempre)
+            acc[k].n += sel * w;        // contribuição: 0 se não selecionado
+          }
+        });
+      });
+      const out = {
+        IM:  acc.IM.d  ? parseFloat(((acc.IM.n /acc.IM.d )*100).toFixed(1)) : 0,
+        IR:  acc.IR.d  ? parseFloat(((acc.IR.n /acc.IR.d )*100).toFixed(1)) : 0,
+        IA:  acc.IA.d  ? parseFloat(((acc.IA.n /acc.IA.d )*100).toFixed(1)) : 0,
+        IAn: acc.IAn.d ? parseFloat(((acc.IAn.n/acc.IAn.d)*100).toFixed(1)) : 0,
+        selected: vals,
+        matrix: DGR_MAP
+      };
+      // DGR-OPS Global = média aritmética das quatro capacidades
+      out.global = parseFloat(mean([out.IM,out.IR,out.IA,out.IAn]).toFixed(1));
+      return out;
+    }
+    window.DGRCalcIndices = calcDgrOps;
+
+    // ── estatísticas globais ───────────────────────────────────────────────
+    function globalStats(){
+      const g = S.mcGlobal || {};
+      const samples = Array.isArray(g.samples) ? g.samples.map(num) : [];
+      const lc = samples.length ? percentile(samples,.95) : num(g.p95||g.lc);
+      const op = opLC();
+      const statEvents  = samples.length ? samples.filter(v=>v>lc).length : num(g.eventsCrit);
+      const opEvents    = samples.length ? samples.filter(v=>v>op).length : num(g.operationalEvents);
+      return {
+        samples,
+        mean: samples.length ? mean(samples) : num(g.mean),
+        p90:  samples.length ? percentile(samples,.90) : num(g.p90),
+        p95: lc,
+        p99:  samples.length ? percentile(samples,.99) : num(g.p99),
+        std:  samples.length ? std(samples) : num(g.std),
+        total: samples.length || num(g.total),
+        eventsCrit: statEvents,
+        probCrit: samples.length ? statEvents/samples.length : num(g.probCrit),
+        operationalLC: op,
+        operationalEvents: opEvents,
+        operationalProb: samples.length ? opEvents/samples.length : num(g.operationalProb),
+        maxIndividualP95: Math.max(0,...rows().map(x=>num(x.r.p95)))
+      };
+    }
+
+    // ── controle visual LC Operacional ────────────────────────────────────
+    function ensureOperationalControl(){
+      const card = document.querySelector('#s-mc .form-card');
+      if(!card) return;
+      if(document.getElementById('operational-lc')) return;
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;border-top:1px solid #eef0f6;padding-top:10px';
+      wrap.innerHTML =
+        '<span style="font-weight:600">LC Operacional:</span>'+
+        '<input id="operational-lc" class="fi" type="number" min="0" max="200" step="1" value="'+
+        Math.round(opLC()*100)+'" style="width:90px;margin:0;text-align:center">'+
+        '<span style="font-size:11px;color:#667085">Calcula a Probabilidade Operacional: P(VFRR > LC operacional). Padrão: 30%.</span>';
+      card.appendChild(wrap);
+      document.getElementById('operational-lc').addEventListener('change', function(){
+        S.operationalLC = clamp(num(this.value),0,200)/100;
+        try{ if(M.refreshUI) M.refreshUI(); }catch(e){}
+      });
+    }
+
+    // ── recalcula prob. operacional por função ────────────────────────────
+    function refreshOperationalProb(){
+      const op = opLC();
+      (S.fns||[]).forEach(fn => {
+        const r = S.mcRes && S.mcRes[fn.id]; if(!r) return;
+        const samples = Array.isArray(r.samples) ? r.samples.map(num) : [];
+        if(samples.length){
+          r.operationalEvents = samples.filter(v=>v>op).length;
+          r.operationalProb   = r.operationalEvents/samples.length;
+        } else if(!Number.isFinite(Number(r.operationalProb))){
+          r.operationalProb = num(r.p95) > op ? 1 : 0;
+        }
+      });
+    }
+
+    // ── simulação Monte Carlo ─────────────────────────────────────────────
+    M.runSimulation = function(){
+      if(!(S.fns||[]).length){ alert('Adicione funções.'); return; }
+      const N = S.mcN || 5000;
+      const fnArrays = {}, detMap = {};
+      (S.fns||[]).forEach(fn => {
+        try{ if(typeof M.recalcParams==='function') M.recalcParams(fn.id); }catch(e){}
+        const p = S.params[fn.id]||{};
+        const arr=[],det={vde:[],vdx:[],vae:[],vax:[],mr:[],vd:[],va:[],vfr:[]};
+        for(let i=0;i<N;i++){
+          const VDE=M.betaPertSample((p.vde&&p.vde.mn)||0,(p.vde&&p.vde.mp)||0,(p.vde&&p.vde.mx)||0);
+          const VDX=M.betaPertSample((p.vdx&&p.vdx.mn)||0,(p.vdx&&p.vdx.mp)||0,(p.vdx&&p.vdx.mx)||0);
+          const VAE=M.betaPertSample((p.vae&&p.vae.mn)||0,(p.vae&&p.vae.mp)||0,(p.vae&&p.vae.mx)||0);
+          const VAX=M.betaPertSample((p.vax&&p.vax.mn)||0,(p.vax&&p.vax.mp)||0,(p.vax&&p.vax.mx)||0);
+          const MR =M.betaPertSample((p.mr &&p.mr.mn )||0,(p.mr &&p.mr.mp )||0,(p.mr &&p.mr.mx )||0);
+          const VD=VDE+VDX, VA=VAE+VAX;
+          const VFR=Math.max(0,VD-VA);
+          const VFRR=Math.max(0,Math.min(2,VFR*(1-MR)));
+          arr.push(VFRR);
+          det.vde.push(VDE);det.vdx.push(VDX);det.vae.push(VAE);det.vax.push(VAX);det.mr.push(MR);det.vd.push(VD);det.va.push(VA);det.vfr.push(VFR);
+        }
+        fnArrays[fn.id]=arr; detMap[fn.id]=det;
+      });
+
+      const active=(S.fns||[]).filter(fn=>fnArrays[fn.id]);
+      let pooled=[];
+      active.forEach(fn=>{ pooled=pooled.concat(fnArrays[fn.id]); });
+
+      const p90g=percentile(pooled,.90),p95g=percentile(pooled,.95),p99g=percentile(pooled,.99),op=opLC();
+      const statEv=pooled.filter(v=>v>p95g).length, opEv=pooled.filter(v=>v>op).length;
+      S.mcGlobal={
+        samples:pooled, mean:mean(pooled), p90:p90g, p95:p95g, p99:p99g, lc:p95g,
+        std:std(pooled), total:pooled.length,
+        eventsCrit:statEv, probCrit:pooled.length?statEv/pooled.length:0,
+        operationalLC:op, operationalEvents:opEv, operationalProb:pooled.length?opEv/pooled.length:0,
+        maxIndividualP95:0
+      };
+
+      active.forEach(fn=>{
+        const arr=fnArrays[fn.id],sorted=arr.slice().sort((a,b)=>a-b),det=detMap[fn.id];
+        const hist=Array(20).fill(0);
+        arr.forEach(v=>hist[Math.min(19,Math.floor(Math.min(Math.max(v,0),1.9999)/2*20))]++);
+        const hmax=Math.max(1,...hist);
+        const p95i=percentile(sorted,.95), statC=arr.filter(v=>v>p95g).length, opC=arr.filter(v=>v>op).length;
+        S.mcRes[fn.id]={
+          samples:arr,
+          mean:mean(arr),p90:percentile(sorted,.90),p95:p95i,p99:percentile(sorted,.99),
+          probCrit:N?statC/N:0,eventsCrit:statC,total:N,
+          operationalProb:N?opC/N:0,operationalEvents:opC,
+          hist:hist.map(h=>h/hmax),
+          vde:mean(det.vde),vdx:mean(det.vdx),vae:mean(det.vae),vax:mean(det.vax),
+          vd:mean(det.vd),va:mean(det.va),mr:mean(det.mr),vfr:mean(det.vfr),
+          beforeMR:mean(det.vfr),vfrr:mean(arr),
+          centrality:0,incomingResonance:0,functionalResonance:0,iis:p95i
+        };
+      });
+      S.mcGlobal.maxIndividualP95=Math.max(0,...active.map(fn=>num(S.mcRes[fn.id]&&S.mcRes[fn.id].p95)));
+      if(M.refreshUI) M.refreshUI();
+    };
+
+    // ── KPIs (cards do dashboard) ─────────────────────────────────────────
+    M.renderKPIs = function(hasRes){
+      const el=document.getElementById('dash-stats'); if(!el) return;
+      ensureOperationalControl();
+      if(!hasRes){ el.innerHTML='<div class="dash-card"><div class="dash-card-val">—</div><div class="dash-card-lbl">Execute a simulação</div></div>'; return; }
+      refreshOperationalProb();
+      const g=globalStats(), d=calcDgrOps();
+      const cards=[
+        ['VFRR Média Global', pctSmart(g.mean),                              '#1a1a2e'],
+        ['P90 Global',         pctSmart(g.p90),                               '#1a1a2e'],
+        ['P95 Global',         pctSmart(g.p95),                               '#c0392b'],
+        ['P99 Global',         pctSmart(g.p99),                               '#7c0000'],
+        ['Prob. Estatística',  pctSmart(g.probCrit,2),                        '#854f0b'],
+        ['Prob. Operacional',  pctSmart(g.operationalProb,2),                 opCrit(g.operationalProb).color],
+        ['Maior P95 Individual',pctSmart(g.maxIndividualP95),                 crit(g.maxIndividualP95).color],
+        ['DGR-OPS Global',     d.global.toFixed(1).replace('.',',')+'%',     '#185fa5'],
+        ['LC Operacional',     pctBR(g.operationalLC,0),                     '#667085']
+      ];
+      el.innerHTML=cards.map(c=>'<div class="dash-card"><div class="dash-card-val" style="color:'+c[2]+'">'+c[1]+'</div><div class="dash-card-lbl">'+c[0]+'</div></div>').join('');
+    };
+
+    // ── gráfico de barras ─────────────────────────────────────────────────
+    M.renderCharts = function(hasRes){
+      const canvas=document.getElementById('ch-vfr'),empty=document.getElementById('ch-vfr-empty');
+      if(!canvas) return;
+      const rs=rows();
+      const w=Math.max(760,((canvas.closest('.dash-section')||{}).clientWidth||820)-40);
+      const h=Math.max(280,48+rs.length*32);
+      canvas.width=w; canvas.height=h; canvas.style.height=h+'px'; canvas.style.minHeight=h+'px';
+      const ctx=canvas.getContext('2d'); ctx.clearRect(0,0,w,h);
+      if(!hasRes||!rs.length){ if(empty) empty.style.display='block'; return; }
+      if(empty) empty.style.display='none';
+      const max=Math.max(.001,...rs.map(x=>num(x.r.p95)));
+      const left=205,right=90,barW=w-left-right;
+      ctx.font='bold 12px Segoe UI'; ctx.fillStyle='#1a1a2e'; ctx.textAlign='left'; ctx.fillText('P95 Individual por função',8,18);
+      rs.forEach((x,i)=>{
+        const v=num(x.r.p95),y=38+i*32,bw=barW*v/max,ci=crit(v);
+        ctx.fillStyle='#eef0f6'; ctx.fillRect(left,y,barW,18);
+        ctx.fillStyle=ci.color; ctx.fillRect(left,y,bw,18);
+        ctx.fillStyle='#4c5570'; ctx.font='11px Segoe UI'; ctx.textAlign='right'; ctx.fillText(fnName(x.fn).slice(0,34),left-8,y+13);
+        ctx.textAlign='left'; ctx.fillStyle='#1a1a2e'; ctx.font='bold 11px Segoe UI'; ctx.fillText(pctSmart(v),Math.min(left+bw+7,w-65),y+13);
+      });
+    };
+
+    // ── painel Monte Carlo ────────────────────────────────────────────────
+    M.renderMCPanel = function(hasRes){
+      ensureOperationalControl();
+      const target=document.getElementById('mc-inner'); if(!target) return;
+      const rs=rows();
+      if(!hasRes||!rs.length){ target.innerHTML=''; return; }
+      refreshOperationalProb();
+      const g=globalStats(), d=calcDgrOps();
+      const maxP=Math.max(.001,g.maxIndividualP95);
+      const opClass=opCrit(g.operationalProb);
+
+      let html='';
+
+      // Metodologia
+      html+='<div class="dash-section"><h3>Metodologia Monte Carlo</h3><div class="adv-text">';
+      html+='<b>Distribuição:</b> Beta-PERT &nbsp;|&nbsp; <b>Iterações:</b> '+num(S.mcN).toLocaleString('pt-BR')+' por função &nbsp;|&nbsp; <b>Total agregado:</b> '+num(g.total).toLocaleString('pt-BR')+' amostras<br>';
+      html+='<b>VD = VDE + VDX</b>; <b>VA = VAE + VAX</b>; <b>VFR = máx(0, VD − VA)</b>; <b>VFRR = VFR × (1 − MR)</b><br>';
+      html+='<b>Probabilidade Estatística</b> = Prob(VFRR > P95 Global). Como o limite é o próprio P95, a excedência tende a aproximadamente 5% por construção estatística.<br>';
+      html+='&nbsp;&nbsp;&rarr; '+num(g.eventsCrit).toLocaleString('pt-BR')+' ÷ '+num(g.total).toLocaleString('pt-BR')+' × 100 = <b>'+pctSmart(g.probCrit,2)+'</b><br>';
+      html+='<b>Probabilidade Operacional</b> = Prob(VFRR > LC Operacional), onde LC Operacional é um limiar definido pelo analista para representar criticidade operacional. LC atual = <b>'+pctBR(g.operationalLC,0)+'</b><br>';
+      html+='&nbsp;&nbsp;&rarr; '+num(g.operationalEvents).toLocaleString('pt-BR')+' ÷ '+num(g.total).toLocaleString('pt-BR')+' × 100 = <b style="color:'+opClass.color+'">'+pctSmart(g.operationalProb,2)+' ('+opClass.plain+')</b>';
+      html+='</div></div>';
+
+      // Critérios
+      html+='<div class="dash-section"><h3>Critérios de classificação</h3><div class="adv-text"><b>Funções por P95 Individual:</b> 🟢 Baixa &lt;30% | 🟡 Moderada 30–50% | 🟠 Alta 50–70% | 🔴 Crítica &gt;70%.<br><b>Probabilidade Operacional:</b> Baixa &lt;5% | Moderada 5–15% | Alta 15–30% | Crítica &gt;30%.</div></div>';
+
+      // DGR-OPS Global
+      html+='<div class="dash-section"><h3>Capacidades Resilientes Desenvolvidas (DGR-OPS)</h3><div class="sgrid">';
+      [['Monitorar',d.IM,'#185fa5'],['Responder',d.IR,'#0f6e56'],['Aprender',d.IA,'#6b21a8'],['Antecipar',d.IAn,'#c0392b'],['DGR-OPS Global',d.global,'#1a1a2e']].forEach(c=>{
+        const v=num(c[1]);
+        html+='<div class="sbox"><span class="sval" style="color:'+c[2]+'">'+v.toFixed(1).replace('.',',')+'%</span><span class="slbl">'+c[0]+'</span></div>';
+      });
+      html+='</div>';
+      html+='<div style="font-size:11px;color:#4c5570;margin-top:8px">Os índices DGR-OPS são calculados a partir dos grupos VAE, VAX e MR selecionados, ponderados pela intensidade Mínima (0,33), Média (0,66) ou Máxima (1,00). Grupos não selecionados entram como zero no denominador para evitar superestimação das capacidades resilientes.</div></div>';
+
+      // Ranking
+      html+='<div class="dash-section"><h3>Ranking de Criticidade — P95 Individual</h3>';
+      rs.forEach((x,i)=>{
+        const v=num(x.r.p95),ci=crit(v);
+        html+='<div class="rcard"><span class="rnum">#'+(i+1)+'</span><span class="rname" title="'+esc(fnName(x.fn))+'">'+esc(fnName(x.fn))+'</span><span class="cbadge '+ci.cls+'">'+ci.label+'</span><div class="rbar"><div class="rbarfill" style="width:'+Math.max(1,Math.round(v/maxP*100))+'%;background:'+ci.color+'"></div></div><span class="rval">'+pctSmart(v)+'</span></div>';
+      });
+      html+='<div style="font-size:11px;color:#666;margin-top:8px"><b>Maior P95 Individual = '+pctSmart(g.maxIndividualP95)+'</b>. Não confundir com o <b>P95 Global = '+pctSmart(g.p95)+'</b>.</div></div>';
+
+      // Histograma
+      const bins=Array(20).fill(0);
+      g.samples.forEach(v=>bins[Math.min(19,Math.floor(Math.min(Math.max(v,0),1.9999)/2*20))]++);
+      const mx=Math.max(1,...bins);
+      html+='<div class="dash-section"><h3>Histograma Monte Carlo Agregado</h3><div class="histbars" style="height:90px">'+bins.map((b,i)=>'<div class="hb" style="height:'+Math.max(2,Math.round(b/mx*90))+'px;background:'+crit(i/20).color+';opacity:.75"></div>').join('')+'</div>';
+      html+='<div class="histax"><span>0%</span><span>P95 Global '+pctSmart(g.p95)+' | LC Operacional '+pctBR(g.operationalLC,0)+'</span><span>200%</span></div></div>';
+
+      // Cards por função
+      html+='<div class="dgrid">';
+      rs.forEach(x=>{
+        const r=x.r,ci=crit(num(r.p95)),opi=opCrit(num(r.operationalProb));
+        html+='<div class="dc"><div class="dc-head"><span style="font-weight:700" title="'+esc(fnName(x.fn))+'">'+esc(fnName(x.fn))+'</span><span class="cbadge '+ci.cls+'">'+ci.label+'</span></div>';
+        html+='<div class="sgrid">';
+        [['Média',r.mean],['P90',r.p90],['P95',r.p95],['P99',r.p99]].forEach(([lbl,v])=>{
+          html+='<div class="sbox"><span class="sval">'+pctSmart(v)+'</span><span class="slbl">'+lbl+'</span></div>';
+        });
+        html+='<div class="sbox"><span class="sval">'+pctSmart(r.probCrit,2)+'</span><span class="slbl">Prob. Estatística</span></div>';
+        html+='<div class="sbox"><span class="sval">'+pctSmart(r.operationalProb,2)+'</span><span class="slbl">Prob. Operacional</span></div>';
+        html+='</div><div class="adv-text"><b>Criticidade '+ci.plain+'</b> pelo P95 Individual. Prob. Operacional: <b style="color:'+opi.color+'">'+pctSmart(r.operationalProb,2)+' ('+opi.plain+')</b>.</div></div>';
+      });
+      html+='</div>';
+      target.innerHTML=html;
+    };
+
+    // ── renderização DGR-OPS (página Capacidades) ─────────────────────────
+    function col(v){ return v>=75?'#0f6e56':v>=50?'#185fa5':v>=25?'#854f0b':'#c0392b'; }
+    function renderDgrOpsUI(){
+      const d=calcDgrOps();
+      const cards=document.getElementById('dgr-cards');
+      if(cards){
+        const arr=[
+          ['Monitorar',d.IM,'Detectar sinais, indicadores e mudanças relevantes.'],
+          ['Responder',d.IR,'Agir de modo coordenado diante da variabilidade.'],
+          ['Aprender',d.IA,'Converter experiência em melhoria e memória organizacional.'],
+          ['Antecipar',d.IAn,'Preparar-se para perturbações e cenários futuros.'],
+          ['DGR-OPS Global',d.global,'Média das quatro capacidades resilientes desenvolvidas.']
+        ];
+        cards.style.gridTemplateColumns='repeat(auto-fit,minmax(150px,1fr))';
+        cards.innerHTML=arr.map(c=>{
+          const v=num(c[1]),co=col(v);
+          return '<div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:16px 12px;text-align:center">'+
+            '<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:8px">'+esc(c[0])+'</div>'+
+            '<div style="font-size:30px;font-weight:800;color:'+co+'">'+v.toFixed(1).replace('.',',')+'%</div>'+
+            '<div style="height:5px;background:#eee;border-radius:3px;margin:8px 0"><div style="height:5px;width:'+Math.min(100,v)+'%;background:'+co+';border-radius:3px"></div></div>'+
+            '<div style="font-size:10px;color:#999">'+esc(c[2])+'</div></div>';
+        }).join('');
+      }
+      // Interpretação automática DGR-OPS
+      const interp=document.getElementById('dgr-interp');
+      if(interp){
+        const sorted=[['Monitorar',d.IM],['Responder',d.IR],['Aprender',d.IA],['Antecipar',d.IAn]].sort((a,b)=>b[1]-a[1]);
+        const hasAny=sorted[0][1]>0;
+        if(!hasAny){ interp.innerHTML='<em style="color:#aaa">Selecione critérios MR, VAE ou VAX para calcular os índices.</em>'; }
+        else{
+          interp.innerHTML=
+            '<strong>DGR-OPS — Cálculo ponderado por intensidade</strong><br>'+
+            'A capacidade mais desenvolvida foi <b>'+sorted[0][0]+'</b> ('+sorted[0][1].toFixed(1).replace('.',',')+'%), seguida de <b>'+sorted[1][0]+'</b> ('+sorted[1][1].toFixed(1).replace('.',',')+'%).<br>'+
+            '<b>DGR-OPS Global = '+d.global.toFixed(1).replace('.',',')+'%</b>.<br>'+
+            'Os índices consideram os grupos VAE, VAX e MR selecionados, ponderados pela intensidade atribuída (Mínima = 0,33; Média = 0,66; Máxima = 1,00). '+
+            'Grupos não selecionados entram como zero no denominador para evitar superestimação das capacidades resilientes.';
+        }
+      }
+    }
+
+    // ── exportação PDF ─────────────────────────────────────────────────────
+    M.exportPDF = function(){
+      const jsPDF=window.jspdf&&window.jspdf.jsPDF;
+      if(!jsPDF){ alert('Biblioteca jsPDF não carregada.'); return; }
+      if(!(S.fns||[]).length){ alert('Cadastre ao menos uma função antes de exportar.'); return; }
+      let rs=rows();
+      if(!rs.length){ try{ M.runSimulation(); }catch(e){} rs=rows(); }
+      if(!rs.length){ alert('Execute a simulação antes de exportar o PDF.'); return; }
+
+      refreshOperationalProb();
+      const g=globalStats(), d=calcDgrOps();
+
+      // ── helpers PDF ────────────────────────────────────────────────
+      const ALIAS='{total_pages}';
+      const doc=new jsPDF('l','mm','a4');
+      const W=297,H=210,marg=14;
+      let page=0,y=0;
+
+      function addPage(title){
+        if(page>0) doc.addPage();
+        page++;
+        doc.setFillColor(31,37,50); doc.rect(0,0,W,10,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255,255,255);
+        doc.text('DGR-FRAM Analyze — Relatório Monte Carlo',marg,7);
+        doc.text('Página '+page+' de '+ALIAS,W-marg,7,{align:'right'});
+        doc.setTextColor(24,30,50); doc.setFontSize(15); y=18; doc.text(title,marg,y); y+=8;
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,35,50);
+      }
+      function tx(t,x,yy,size,bold,color,opt){
+        doc.setFont('helvetica',bold?'bold':'normal'); doc.setFontSize(size||8);
+        const c=color||[30,35,50]; doc.setTextColor(c[0],c[1],c[2]);
+        doc.text(String(t==null?'':t),x,yy,opt||{});
+      }
+      function sp(t,w){ return doc.splitTextToSize(String(t||''),w); }
+      function need(space,title){ if(y+space>197) addPage(title||'Continuação'); }
+      function card(x,yy,w,h,label,value,rgb){
+        rgb=rgb||[24,95,165];
+        doc.setDrawColor(220,225,235); doc.setFillColor(255,255,255); doc.roundedRect(x,yy,w,h,2,2,'FD');
+        tx(label,x+w/2,yy+5,6.5,true,[100,105,120],{align:'center'});
+        tx(value, x+w/2,yy+14,13,true,rgb,{align:'center'});
+      }
+      function colorScale(t){ t=Math.max(0,Math.min(1,num(t))); if(t<.30)return[15,110,86]; if(t<.50)return[234,179,8]; if(t<.70)return[245,158,11]; return[192,57,43]; }
+
+      // ────────────────────────────────────────────────────────────────
+      // PÁGINA 1 — Síntese Executiva
+      // ────────────────────────────────────────────────────────────────
+      addPage('Síntese Executiva');
+      tx('Relatório DGR-FRAM — Monte Carlo',marg,y,14,true); y+=7;
+      sp('Monte Carlo: '+(S.mcN||0).toLocaleString('pt-BR')+' iterações por função. Total agregado: '+num(g.total).toLocaleString('pt-BR')+' amostras. P95 Global separado do Maior P95 Individual. LC Operacional = '+pctBR(g.operationalLC,0)+'.',260).forEach(l=>{tx(l,marg,y,8); y+=4.5;});
+      y+=4;
+
+      const topCards=[
+        ['VFRR Média Global', pctSmart(g.mean),                          [31,37,50]],
+        ['P90 Global',         pctSmart(g.p90),                           [31,37,50]],
+        ['P95 Global',         pctSmart(g.p95),                           [192,57,43]],
+        ['P99 Global',         pctSmart(g.p99),                           [124,0,0]],
+        ['Prob. Estatística',  pctSmart(g.probCrit,2),                    [133,79,11]],
+        ['Prob. Operacional',  pctSmart(g.operationalProb,2),             opCrit(g.operationalProb).rgb],
+        ['LC Operacional',     pctBR(g.operationalLC,0),                  [90,95,110]],
+        ['Maior P95 Individual',pctSmart(g.maxIndividualP95),             crit(g.maxIndividualP95).rgb],
+        ['DGR-OPS Global',     d.global.toFixed(1).replace('.',',')+'%', [24,95,165]]
+      ];
+      topCards.forEach((c,i)=>card(marg+(i%5)*55,y+Math.floor(i/5)*23,51,18,c[0],c[1],c[2]));
+      y+=50;
+
+      tx('Fórmulas de Probabilidade',marg,y,9,true); y+=6;
+      [
+        'Probabilidade Estatística = Prob(VFRR > P95 Global). Como o limite é o próprio P95, a excedência tende a aproximadamente 5% por construção estatística.',
+        'Probabilidade Operacional = Prob(VFRR > LC Operacional), onde LC Operacional é um limiar definido pelo analista para representar criticidade operacional.',
+        'Nesta rodada: VFRR > P95 Global = '+num(g.eventsCrit).toLocaleString('pt-BR')+' / '+num(g.total).toLocaleString('pt-BR')+' = '+pctSmart(g.probCrit,2)+'.',
+        'Nesta rodada: VFRR > LC Operacional = '+num(g.operationalEvents).toLocaleString('pt-BR')+' / '+num(g.total).toLocaleString('pt-BR')+' = '+pctSmart(g.operationalProb,2)+'.',
+        'Observação: o Maior P95 Individual ('+pctSmart(g.maxIndividualP95)+') não deve ser confundido com o P95 Global.'
+      ].forEach(line=>sp(line,260).forEach(l=>{tx(l,marg,y,8); y+=4.3;}));
+      y+=3;
+      tx('Critérios de Classificação (pelo P95 Individual): Baixa <30% | Moderada 30–50% | Alta 50–70% | Crítica >70%.',marg,y,7.5,false,[70,75,90]); y+=8;
+
+      // ────────────────────────────────────────────────────────────────
+      // PÁGINA 2 — Indicadores por função
+      // ────────────────────────────────────────────────────────────────
+      addPage('Indicadores por Função');
+      tx('Critérios de Classificação: Baixa <30% | Moderada 30–50% | Alta 50–70% | Crítica >70%.',marg,y,7.5); y+=6;
+      const cols74=[marg,marg+110,marg+122,marg+134,marg+146,marg+158,marg+170,marg+182,marg+194,marg+209,marg+225];
+      ['Função','VE','VX','MR','VFR','Média','P90','P95','P99','Prob.Op.','Classe'].forEach((h,i)=>tx(h,cols74[i],y,6.5,true));
+      y+=4; doc.setDrawColor(210,215,225); doc.line(marg,y,W-marg,y); y+=4;
+      rs.forEach((row,idx)=>{
+        const r=row.r, ci=crit(r.p95);
+        need(7,'Indicadores por Função');
+        tx((idx+1)+'. '+fnName(row.fn).slice(0,50),cols74[0],y,6.3);
+        [r.vde||r.ve,r.vdx||r.vx,r.mr,r.vfr||r.beforeMR,r.mean,r.p90,r.p95,r.p99,r.operationalProb].forEach((v,i)=>{
+          tx(pctSmart(v,i===8?2:1),cols74[i+1],y,6.3,i===6,i===6?ci.rgb:[30,35,50]);
+        });
+        tx(ci.plain,cols74[10],y,6.3,true,ci.rgb);
+        y+=5.2;
+      });
+
+      // ────────────────────────────────────────────────────────────────
+      // PÁGINA 3 — Ranking de Criticidade + Histograma
+      // ────────────────────────────────────────────────────────────────
+      addPage('Ranking de Criticidade');
+      tx('Maior P95 Individual = '+pctSmart(g.maxIndividualP95)+'.  LC (P95 Global) = '+pctSmart(g.p95)+'.  LC Operacional = '+pctBR(g.operationalLC,0)+'.',marg,y,8); y+=8;
+      const maxP=Math.max(.001,g.maxIndividualP95);
+      rs.forEach((row,i)=>{
+        const v=num(row.r.p95),ci=crit(v),oi=opCrit(num(row.r.operationalProb));
+        need(7,'Ranking de Criticidade');
+        tx((i+1)+'º '+fnName(row.fn),marg,y,8,true);
+        doc.setFillColor(238,240,246); doc.rect(115,y-3.5,80,4,'F');
+        doc.setFillColor(...ci.rgb); doc.rect(115,y-3.5,80*v/maxP,4,'F');
+        tx(pctSmart(v)+' '+ci.plain,200,y,7.5,true,ci.rgb);
+        tx('Prob.Op.: '+pctSmart(num(row.r.operationalProb),2)+' ('+oi.plain+')',230,y,7,true,oi.rgb);
+        y+=6;
+      });
+      y+=4;
+      tx('Histograma Monte Carlo Agregado',marg,y,11,true); y+=7;
+      tx('LC Estatístico (P95 Global) = '+pctSmart(g.p95)+' | LC Operacional = '+pctBR(g.operationalLC,0),marg,y,8,true); y+=6;
+      const hbins=Array(20).fill(0);
+      g.samples.forEach(v=>{hbins[Math.min(19,Math.floor(Math.min(Math.max(v,0),1.9999)/2*20))]++;});
+      const hmx=Math.max(1,...hbins), hx=marg, hy=y+52, hw=230/20;
+      hbins.forEach((b,i)=>{ const hh=46*b/hmx; doc.setFillColor(...colorScale(i/20)); doc.rect(hx+i*hw,hy-hh,hw-.8,hh,'F'); });
+      y=hy+10;
+      tx('Prob. Estatística: '+pctSmart(g.probCrit,2)+' | Prob. Operacional: '+pctSmart(g.operationalProb,2)+' | Média: '+pctSmart(g.mean)+' | P90: '+pctSmart(g.p90)+' | P99: '+pctSmart(g.p99),marg,y,7.5);
+
+      // ────────────────────────────────────────────────────────────────
+      // PÁGINA 4 — Efeito MR + Interpretações
+      // ────────────────────────────────────────────────────────────────
+      addPage('Efeito dos MR e Interpretações');
+      const before=mean(rs.map(x=>num(x.r.vfr||x.r.beforeMR)));
+      const after =mean(rs.map(x=>num(x.r.mean)));
+      const gain  =before>0?Math.max(0,(before-after)/before):0;
+      card(marg,y,60,21,'Antes dos MR',pctSmart(before),[192,57,43]);
+      card(marg+66,y,60,21,'Após MR',pctSmart(after),[15,110,86]);
+      card(marg+132,y,60,21,'Ganho de Resiliência',pctBR(gain,1),[24,95,165]);
+      y+=30;
+      tx('Interpretações automáticas por função',marg,y,10,true); y+=7;
+      rs.forEach(row=>{
+        const r=row.r,ci=crit(r.p95),oi=opCrit(r.operationalProb);
+        const line=fnName(row.fn)+': criticidade '+ci.plain+'. Em 95% das simulações, o VFRR final fica até '+pctSmart(r.p95)+'. Prob. Estatística = '+pctSmart(r.probCrit,2)+'. Prob. Operacional = '+pctSmart(r.operationalProb,2)+' ('+oi.plain+').';
+        sp(line,260).forEach(l=>{ need(5,'Interpretações'); tx(l,marg,y,7.2); y+=4.4; });
+        y+=1.5;
+      });
+
+      // ────────────────────────────────────────────────────────────────
+      // PÁGINA 5 — Capacidades Adaptativas, MR e DGR-OPS
+      // ────────────────────────────────────────────────────────────────
+      addPage('Capacidades Adaptativas, MR e DGR-OPS');
+      tx('Índices de Capacidades Resilientes Desenvolvidas',marg,y,11,true); y+=8;
+      const capCards=[
+        ['Monitorar',  d.IM,    [24,95,165]],
+        ['Responder',  d.IR,    [15,110,86]],
+        ['Aprender',   d.IA,    [107,33,168]],
+        ['Antecipar',  d.IAn,   [192,57,43]],
+        ['DGR-OPS Global',d.global,[31,37,50]]
+      ];
+      capCards.forEach((c,i)=>card(marg+(i%5)*56,y,52,20,c[0],num(c[1]).toFixed(1).replace('.',',')+'%',c[2]));
+      y+=27;
+      sp('Os índices DGR-OPS são calculados a partir dos grupos VAE, VAX e MR selecionados, ponderados pela intensidade atribuída a cada grupo. Mínima = 0,33 | Média = 0,66 | Máxima = 1,00. Grupos não selecionados entram como zero no denominador para evitar superestimação das capacidades resilientes. DGR-OPS Global = (Monitorar + Responder + Aprender + Antecipar) / 4.',265).forEach(l=>{tx(l,marg,y,7.5); y+=4.3;});
+      y+=4;
+      tx('Grupos selecionados e intensidade ponderada',marg,y,9,true); y+=6;
+      const selVals=d.selected||{};
+      Object.keys(selVals).sort().forEach(k=>{
+        need(6,'Capacidades DGR-OPS');
+        tx(k,marg,y,7.5,true);
+        tx((num(selVals[k])*100).toFixed(0).replace('.',',')+'%',marg+30,y,7.5);
+        const mapRow=DGR_MAP.find(x=>x.g===k);
+        tx(mapRow?mapRow.label:'',marg+55,y,7.2);
+        y+=5;
+      });
+      const tVAE=Object.keys(selVals).filter(k=>k.startsWith('VAE-')).length;
+      const tVAX=Object.keys(selVals).filter(k=>k.startsWith('VAX-')).length;
+      const tMR =Object.keys(selVals).filter(k=>k.startsWith('MR-')).length;
+      y+=2;
+      tx('Total selecionado — VAE: '+tVAE+' | VAX: '+tVAX+' | MR: '+tMR+' | Total geral: '+(tVAE+tVAX+tMR),marg,y,8,true);
+
+      if(doc.putTotalPages) doc.putTotalPages(ALIAS);
+      doc.save('dgr-fram-relatorio-definitivo-v2026.pdf');
+    };
+
+    // ── refreshUI ─────────────────────────────────────────────────────────
+    if(!M.__definitiveV2026Refresh){
+      M.__definitiveV2026Refresh = true;
+      const oldRefresh = M.refreshUI ? M.refreshUI.bind(M) : null;
+      M.refreshUI = function(){
+        if(oldRefresh){ try{ oldRefresh(); }catch(e){} }
+        ensureOperationalControl();
+        refreshOperationalProb();
+        const has=(S.fns||[]).some(fn=>S.mcRes&&S.mcRes[fn.id]);
+        if(S.curPage==='mc'){ M.renderKPIs(has); if(has){M.renderCharts(has); M.renderMCPanel(has);} }
+        if(S.curPage==='dgr') renderDgrOpsUI();
+      };
+    }
+
+    ensureOperationalControl();
+    refreshOperationalProb();
+    renderDgrOpsUI();
+    try{ if(M.refreshUI) M.refreshUI(); }catch(e){}
+
+    // Garante exibição DGR-OPS a cada 600ms quando na página
+    setInterval(()=>{ if(S.curPage==='dgr') renderDgrOpsUI(); }, 600);
+  }
+
+  installDefinitivePatch();
+  [100,300,700,1500,3000,5000].forEach(ms=>setTimeout(installDefinitivePatch,ms));
+
+  // Rebind botão exportar PDF para sempre usar a versão mais recente
+  function rebindExportBtn(){
+    document.querySelectorAll('button').forEach(b=>{
+      if((b.textContent||'').toLowerCase().includes('exportar pdf')){
+        b.onclick = ()=>{ if(window.DGRManager&&window.DGRManager.exportPDF) window.DGRManager.exportPDF(); };
+      }
+    });
+  }
+  document.addEventListener('DOMContentLoaded', rebindExportBtn);
+  [200,800,2000].forEach(ms=>setTimeout(rebindExportBtn,ms));
+})();
+</script>
+
 </body>
 </html>
