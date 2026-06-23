@@ -2955,7 +2955,7 @@ let openSubcatFn = {};
       item('MR-C.2','Resposta estruturada a perturbações'),
       item('MR-C.3','Antecipação baseada em dados e modelos')
     ]},
-    {key:'D',label:'MR-D — Continuidade Operacional em Infraestrutura Crítica',items:[
+    {key:'D',label:'MR-D — Recursos e Redundâncias em Infraestrutura Crítica',items:[
       item('MR-D.1','Redundância de infraestrutura crítica'),
       item('MR-D.2','Plano de recuperação de serviços essenciais'),
       item('MR-D.3','Procedimentos de disaster recovery')
@@ -6701,7 +6701,7 @@ let openSubcatFn = {};
           doc.setFont(PDF_FONT,'bold'); doc.setFontSize(6); doc.setTextColor(24,95,165);
           doc.text(r.mec, mx+2, my+1);
           doc.setFont(PDF_FONT,'normal'); doc.setTextColor(40,45,60);
-          function dotsP(n){return '●'.repeat(n)+'○'.repeat(3-n);}
+          function dotsP(n){ return String(n) + '/3'; }
           doc.text(dotsP(r.IM),  mx+28, my+1);
           doc.text(dotsP(r.IR),  mx+48, my+1);
           doc.text(dotsP(r.IA),  mx+65, my+1);
@@ -6825,7 +6825,7 @@ let openSubcatFn = {};
     {mec:'MR-A',label:'Barreiras Estruturadas',    IM:3,IR:3,IA:1,IAn:1},
     {mec:'MR-B',label:'Governança de Dados',        IM:3,IR:2,IA:3,IAn:3},
     {mec:'MR-C',label:'Capacidades Resilientes',    IM:2,IR:3,IA:3,IAn:3},
-    {mec:'MR-D',label:'Continuidade Operacional',   IM:1,IR:3,IA:1,IAn:1},
+    {mec:'MR-D',label:'Recursos e Redundâncias',   IM:1,IR:3,IA:1,IAn:1},
     {mec:'MR-E',label:'Adaptação Sociotécnica',     IM:2,IR:3,IA:2,IAn:1},
     {mec:'MR-F',label:'Inteligência Informacional', IM:3,IR:2,IA:2,IAn:3}
   ];
@@ -6940,5 +6940,126 @@ let openSubcatFn = {};
   }
 })();
 </script>
+
+
+<script id="dgr-ops-capacidades-final-fix">
+(function(){
+  function waitInstall(){
+    if(typeof DGRManager==='undefined' || typeof DGRState==='undefined') { setTimeout(waitInstall,120); return; }
+
+    function levelValue(level){
+      level=String(level||'media').toLowerCase();
+      if(level==='minima' || level==='baixa') return 25;
+      if(level==='maxima' || level==='máxima') return 100;
+      if(level==='alta') return 75;
+      return 50;
+    }
+    function selectedGroupValue(fnId, prefix, key){
+      var sb=(DGRState.subs||{})[fnId]||{};
+      var v=sb[prefix+'-'+key];
+      return (v && v.sel===true) ? levelValue(v.level||'media') : null;
+    }
+    function averagePositive(specs){
+      var vals=[];
+      (DGRState.fns||[]).forEach(function(fn){
+        specs.forEach(function(s){
+          var v=selectedGroupValue(fn.id, s[0], s[1]);
+          if(v!==null) vals.push(v);
+        });
+      });
+      return vals.length ? Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length) : 0;
+    }
+
+    // Calcula APENAS potencial/cobertura resiliente positiva: VAE + VAX + MR.
+    // VDE e VDX são variabilidades degradadoras e não aumentam as capacidades desenvolvidas.
+    function calcIndices(){
+      return {
+        IM:  averagePositive([['MR','A'],['MR','B'],['MR','F'],['VAE','B'],['VAE','C'],['VAX','B']]),
+        IR:  averagePositive([['MR','A'],['MR','D'],['MR','E'],['VAE','A'],['VAE','D'],['VAE','E'],['VAX','A'],['VAX','C'],['VAX','D'],['VAX','E']]),
+        IA:  averagePositive([['MR','B'],['MR','C'],['MR','F'],['VAE','B'],['VAE','C'],['VAE','E'],['VAX','B']]),
+        IAn: averagePositive([['MR','B'],['MR','C'],['MR','F'],['VAE','B'],['VAE','C'],['VAX','B']])
+      };
+    }
+
+    var MATRIX=[
+      {mec:'MR-A',label:'Barreiras Estruturadas',          IM:3,IR:3,IA:1,IAn:1},
+      {mec:'MR-B',label:'Governança de Dados',              IM:3,IR:2,IA:3,IAn:3},
+      {mec:'MR-C',label:'Capacidades Resilientes',          IM:2,IR:3,IA:3,IAn:3},
+      {mec:'MR-D',label:'Recursos e Redundâncias',          IM:1,IR:3,IA:1,IAn:1},
+      {mec:'MR-E',label:'Adaptação Sociotécnica',           IM:2,IR:3,IA:2,IAn:1},
+      {mec:'MR-F',label:'Inteligência Informacional',       IM:3,IR:2,IA:2,IAn:3}
+    ];
+    window.DGRCalcIndices=calcIndices;
+    window.DGR_MATRIX=MATRIX;
+
+    function color(v){ return v>=75?'#0f6e56':v>=50?'#185fa5':v>=25?'#d97706':'#c0392b'; }
+    function score(n){ return '<span style="font-weight:800;color:#185fa5">'+n+'/3</span>'; }
+    function renderCards(idx){
+      var el=document.getElementById('dgr-cards'); if(!el) return;
+      var cards=[
+        ['Monitorar','IM','Perceber e detectar sinais de degradação'],
+        ['Responder','IR','Absorver perturbações com agilidade'],
+        ['Aprender','IA','Aprender com experiências anteriores'],
+        ['Antecipar','IAn','Antecipar riscos e cenários futuros']
+      ];
+      el.innerHTML=cards.map(function(c){
+        var v=idx[c[1]]||0, co=color(v);
+        return '<div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:16px 12px;box-shadow:0 2px 6px rgba(0,0,0,.06);text-align:center">'
+          +'<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">'+c[0]+'</div>'
+          +'<div style="font-size:30px;font-weight:800;color:'+co+'">'+v+'%</div>'
+          +'<div style="height:6px;background:#eee;border-radius:3px;margin:7px 0"><div style="height:6px;width:'+v+'%;background:'+co+';border-radius:3px"></div></div>'
+          +'<div style="font-size:10px;color:#999;line-height:1.3">'+c[2]+'</div></div>';
+      }).join('');
+    }
+    var radarChart=null;
+    function renderRadar(idx){
+      var canvas=document.getElementById('dgr-radar'); if(!canvas||typeof Chart==='undefined') return;
+      if(radarChart){ try{radarChart.destroy();}catch(e){} }
+      radarChart=new Chart(canvas,{type:'radar',data:{labels:['Monitorar','Responder','Aprender','Antecipar'],datasets:[{data:[idx.IM,idx.IR,idx.IA,idx.IAn],backgroundColor:'rgba(24,95,165,.15)',borderColor:'#185fa5',borderWidth:2,pointBackgroundColor:'#185fa5',pointRadius:5}]},options:{scales:{r:{min:0,max:100,ticks:{stepSize:25}}},plugins:{legend:{display:false}},responsive:false}});
+    }
+    function renderMatrix(){
+      var el=document.getElementById('dgr-matrix'); if(!el) return;
+      var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'
+        +'<thead><tr style="background:#f0f2f8"><th style="padding:7px 8px;text-align:left;border:1px solid #dde">Mecanismo</th><th style="padding:7px;text-align:center;border:1px solid #dde">Monitorar</th><th style="padding:7px;text-align:center;border:1px solid #dde">Responder</th><th style="padding:7px;text-align:center;border:1px solid #dde">Aprender</th><th style="padding:7px;text-align:center;border:1px solid #dde">Antecipar</th></tr></thead><tbody>';
+      MATRIX.forEach(function(r,i){
+        html+='<tr style="background:'+(i%2?'#f8f9fc':'#fff')+'"><td style="padding:7px 8px;border:1px solid #dde"><b style="color:#185fa5">'+r.mec+'</b><br><span style="font-size:10px;color:#777">'+r.label+'</span></td>'
+          +'<td style="padding:7px;text-align:center;border:1px solid #dde">'+score(r.IM)+'</td>'
+          +'<td style="padding:7px;text-align:center;border:1px solid #dde">'+score(r.IR)+'</td>'
+          +'<td style="padding:7px;text-align:center;border:1px solid #dde">'+score(r.IA)+'</td>'
+          +'<td style="padding:7px;text-align:center;border:1px solid #dde">'+score(r.IAn)+'</td></tr>';
+      });
+      html+='</tbody></table><div style="margin-top:8px;font-size:11px;color:#666;line-height:1.45"><b>Leitura:</b> 3/3 = contribuição forte; 2/3 = contribuição moderada; 1/3 = contribuição indireta. Os percentuais acima representam o <b>potencial/cobertura resiliente</b> derivado de <b>VAE + VAX + MR</b>. VDE e VDX são variabilidades degradadoras e não entram como contribuição positiva nesta página.</div>';
+      el.innerHTML=html;
+    }
+    function renderInterp(idx){
+      var el=document.getElementById('dgr-interp'); if(!el) return;
+      var caps=[{l:'Monitorar',v:idx.IM},{l:'Responder',v:idx.IR},{l:'Aprender',v:idx.IA},{l:'Antecipar',v:idx.IAn}].sort(function(a,b){return b.v-a.v;});
+      if(!caps[0].v){ el.innerHTML='<em style="color:#aaa">Selecione critérios VAE, VAX ou MR para gerar a interpretação. VDE/VDX não aumentam capacidades resilientes.</em>'; return; }
+      el.innerHTML='<p><strong>Contribuição da Governança e Gestão de Dados para a Resiliência</strong></p>'
+        +'<p>Os percentuais representam o potencial resiliente desenvolvido a partir das capacidades adaptativas internas e externas (<strong>VAE/VAX</strong>) e dos mecanismos de resiliência (<strong>MR</strong>) selecionados.</p>'
+        +'<p>A capacidade mais desenvolvida foi <strong>'+caps[0].l+' ('+caps[0].v+'%)</strong>, seguida de <strong>'+caps[1].l+' ('+caps[1].v+'%)</strong>.</p>'
+        +'<p><strong>MR-B</strong> (Governança de Dados) e <strong>MR-F</strong> (Inteligência Informacional) sustentam principalmente Monitorar, Aprender e Antecipar, ao ampliar qualidade, disponibilidade, rastreabilidade e uso analítico das informações.</p>'
+        +'<p><strong>Observação metodológica:</strong> VDE e VDX representam degradações internas e externas; por isso não aumentam os índices desta página. Elas continuam sendo consideradas no Monte Carlo para calcular o risco residual.</p>';
+    }
+    function renderDGRFinal(){
+      if(DGRState.curPage!=='dgr') return;
+      var idx=calcIndices(); renderCards(idx); renderMatrix(); renderInterp(idx); setTimeout(function(){renderRadar(idx);},120);
+    }
+    var oldSwitch=DGRManager.switchPage.bind(DGRManager);
+    if(!DGRManager.__dgrFinalSwitchPatched){
+      DGRManager.switchPage=function(p){ oldSwitch(p); if(p==='dgr') setTimeout(renderDGRFinal,160); };
+      DGRManager.__dgrFinalSwitchPatched=true;
+    }
+    var oldRefresh=DGRManager.refreshUI.bind(DGRManager);
+    if(!DGRManager.__dgrFinalRefreshPatched){
+      DGRManager.refreshUI=function(){ oldRefresh(); if(DGRState.curPage==='dgr') setTimeout(renderDGRFinal,160); };
+      DGRManager.__dgrFinalRefreshPatched=true;
+    }
+    if(DGRState.curPage==='dgr') renderDGRFinal();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', waitInstall); else waitInstall();
+})();
+</script>
+
 </body>
 </html>
