@@ -4727,84 +4727,6 @@ let openSubcatFn = {};
    Roda imediatamente e re-aplica nos tempos abaixo para vencer qualquer
    corrida com scripts anteriores que ainda estejam em fila de timers.
 ───────────────────────────────────────────────────────────────────────── */
-/* ── Radar DGR-OPS — SVG puro, sem Canvas nem Chart.js.
-   Renderiza diretamente no div#dgr-radar. Funciona em qualquer ambiente,
-   incluindo GitHub Pages com CSP restritiva.                            */
-function _renderRadar(vals){
-  var wrap=document.getElementById('dgr-radar');
-  if(!wrap) return;
-
-  var W=320, H=320;
-  var cx=W/2, cy=H/2;
-  var R=118;          /* raio máximo da grade */
-  var PAD=54;         /* espaço extra para os labels externos */
-  var total=W+PAD*2;  /* viewBox total */
-  var ocx=total/2, ocy=total/2;  /* centro no viewBox expandido */
-
-  var labels=['Monitorar','Responder','Aprender','Antecipar'];
-  var colors=['#185fa5','#0f6e56','#6b21a8','#c0392b'];
-  var n=4;
-
-  function angle(i){ return (Math.PI*2*i/n)-Math.PI/2; }
-  function px(r,i){ return ocx+r*Math.cos(angle(i)); }
-  function py(r,i){ return ocy+r*Math.sin(angle(i)); }
-
-  var s='<svg viewBox="0 0 '+total+' '+total+'" width="'+W+'" height="'+H+'"'
-       +' xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible">';
-
-  /* ── grades concêntricas ── */
-  [25,50,75,100].forEach(function(pct){
-    var r=R*pct/100;
-    var pts=''; for(var i=0;i<n;i++) pts+=px(r,i)+','+py(r,i)+' ';
-    var isDashed=pct<100;
-    s+='<polygon points="'+pts.trim()+'" fill="none" stroke="#dde" stroke-width="1"'
-      +(isDashed?' stroke-dasharray="3,3"':'')+'"/>';
-    /* rótulo da grade no eixo superior */
-    s+='<text x="'+(ocx+3)+'" y="'+(ocy-r+3)+'" font-size="9" fill="#bbb" font-family="Segoe UI,sans-serif">'+pct+'</text>';
-  });
-
-  /* ── eixos ── */
-  for(var i=0;i<n;i++){
-    s+='<line x1="'+ocx+'" y1="'+ocy+'" x2="'+px(R,i)+'" y2="'+py(R,i)+'"'
-      +' stroke="#dde" stroke-width="1"/>';
-  }
-
-  /* ── polígono de dados ── */
-  var dpts='';
-  for(var i=0;i<n;i++){
-    var v=Math.min(100,Math.max(0,vals[i]||0));
-    dpts+=px(R*v/100,i)+','+py(R*v/100,i)+' ';
-  }
-  s+='<polygon points="'+dpts.trim()+'" fill="rgba(24,95,165,0.13)" stroke="#185fa5" stroke-width="2"/>';
-
-  /* ── pontos e valores ── */
-  for(var i=0;i<n;i++){
-    var v=Math.min(100,Math.max(0,vals[i]||0));
-    var dx=px(R*v/100,i), dy=py(R*v/100,i);
-    s+='<circle cx="'+dx+'" cy="'+dy+'" r="5" fill="'+colors[i]+'" stroke="#fff" stroke-width="2"/>';
-    /* valor percentual próximo ao ponto */
-    var vx=px((R*v/100)+14, i), vy=py((R*v/100)+14, i);
-    s+='<text x="'+vx+'" y="'+(vy+3)+'" font-size="9" font-weight="bold" fill="'+colors[i]+'"'
-      +' text-anchor="middle" font-family="Segoe UI,sans-serif">'+v.toFixed(0)+'%</text>';
-  }
-
-  /* ── labels externos ── */
-  for(var i=0;i<n;i++){
-    var lx=px(R+30,i), ly=py(R+30,i);
-    var anchor=lx<ocx-8?'end':lx>ocx+8?'start':'middle';
-    var baseline=ly<ocy-8?'auto':ly>ocy+8?'hanging':'middle';
-    s+='<text x="'+lx+'" y="'+ly+'" font-size="12" font-weight="700" fill="'+colors[i]+'"'
-      +' text-anchor="'+anchor+'" dominant-baseline="'+baseline+'"'
-      +' font-family="Segoe UI,sans-serif">'+labels[i]+'</text>';
-  }
-
-  /* ── ponto central ── */
-  s+='<circle cx="'+ocx+'" cy="'+ocy+'" r="3" fill="#aab"/>';
-
-  s+='</svg>';
-  wrap.innerHTML=s;
-}
-
 function install(){
   /* Detecta DGRManager/DGRState independentemente de como foram declarados
      (var global, const no topo ou window.X). */
@@ -4924,31 +4846,26 @@ function install(){
   window.DGR_MAP = DGR_MAP;
 
   /* ── coleta grupos selecionados com peso de intensidade ────────────────
-     Lê SOMENTE as chaves que são códigos de grupo exatos presentes no
-     DGR_MAP (ex: 'VAE-A', 'MR-F'), ignorando chaves de itens individuais
-     ('MR-A.1', 'VAE-B.2') e qualquer outra entrada em DGRState.subs.
-     Quando o mesmo grupo aparece em várias funções, usa a MÉDIA dos pesos
-     das funções onde está selecionado.
+     Lê SOMENTE chaves que são códigos de grupo exatos do DGR_MAP
+     (ex: 'VAE-A', 'MR-F'). Ignora itens individuais ('MR-A.1' etc.).
+     Múltiplas funções com o mesmo grupo: usa a média dos pesos.
   ────────────────────────────────────────────────────────────────────── */
   function selectedGroupWeights(){
-    /* acumulador: {groupCode: {sum, count}} */
     var acc={};
     (S.fns||[]).forEach(function(fn){
       var sb=(S.subs||{})[fn.id]||{};
       DGR_MAP.forEach(function(row){
-        var entry=sb[row.g];            /* lê a chave EXATA do grupo */
-        if(!entry||!entry.sel) return;  /* não selecionado nesta função */
-        var w=levelWeight(entry);       /* 0.33 / 0.66 / 1.00 */
+        var entry=sb[row.g];
+        if(!entry||!entry.sel) return;
+        var w=levelWeight(entry);
         if(w<=0) return;
         if(!acc[row.g]) acc[row.g]={sum:0,count:0};
-        acc[row.g].sum+=w;
-        acc[row.g].count++;
+        acc[row.g].sum+=w; acc[row.g].count++;
       });
     });
-    /* peso médio por grupo entre as funções que o selecionaram */
     var vals={};
     Object.keys(acc).forEach(function(code){
-      vals[code]=acc[code].count>0 ? acc[code].sum/acc[code].count : 0;
+      vals[code]=acc[code].sum/acc[code].count;
     });
     return vals;
   }
@@ -5201,18 +5118,88 @@ function install(){
   /* ── renderização DGR-OPS (tela Capacidades) ────────────────────────── */
   function colDGR(v){ return v>=75?'#0f6e56':v>=50?'#185fa5':v>=25?'#854f0b':'#c0392b'; }
 
+  /* Radar SVG puro — sem Canvas, sem Chart.js, funciona em GitHub Pages */
+  function renderRadarSVG(vals){
+    var wrap=document.getElementById('dgr-radar');
+    if(!wrap) return;
+    var S=440, cx=S/2, cy=S/2, R=130, PAD=70;
+    var VB=S, ocx=VB/2, ocy=VB/2;
+    var labels=['Monitorar','Responder','Aprender','Antecipar'];
+    var colors=['#185fa5','#0f6e56','#6b21a8','#c0392b'];
+    var n=4;
+    function ang(i){ return Math.PI*2*i/n - Math.PI/2; }
+    function px(r,i){ return ocx+r*Math.cos(ang(i)); }
+    function py(r,i){ return ocy+r*Math.sin(ang(i)); }
+    var s='<svg viewBox="0 0 '+VB+' '+VB+'" width="100%" height="100%"'
+         +' xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible">';
+    /* fundo */
+    s+='<rect width="'+VB+'" height="'+VB+'" fill="#f8f9fc" rx="10"/>';
+    /* grades */
+    [20,40,60,80,100].forEach(function(pct){
+      var r=R*pct/100, pts='';
+      for(var i=0;i<n;i++) pts+=px(r,i).toFixed(1)+','+py(r,i).toFixed(1)+' ';
+      var isMax=pct===100;
+      s+='<polygon points="'+pts.trim()+'" fill="'+(isMax?'none':'rgba(255,255,255,0.6)')+'"'
+        +' stroke="'+(isMax?'#b0b8cc':'#d8dde8')+'" stroke-width="'+(isMax?1.5:1)+'"'
+        +(pct<100?' stroke-dasharray="4,3"':'')+'/>';
+      if(pct%40===0 && pct>0){
+        s+='<text x="'+(ocx+4).toFixed(1)+'" y="'+(ocy-r+4).toFixed(1)+'"'
+          +' font-size="10" fill="#bbb" font-family="Segoe UI,sans-serif">'+pct+'</text>';
+      }
+    });
+    /* eixos */
+    for(var i=0;i<n;i++){
+      s+='<line x1="'+ocx.toFixed(1)+'" y1="'+ocy.toFixed(1)+'"'
+        +' x2="'+px(R,i).toFixed(1)+'" y2="'+py(R,i).toFixed(1)+'"'
+        +' stroke="#c8cfe0" stroke-width="1"/>';
+    }
+    /* área de dados */
+    var dpts='';
+    for(var i=0;i<n;i++){
+      var v=Math.min(100,Math.max(0,vals[i]||0));
+      dpts+=px(R*v/100,i).toFixed(1)+','+py(R*v/100,i).toFixed(1)+' ';
+    }
+    s+='<polygon points="'+dpts.trim()+'" fill="rgba(24,95,165,0.15)" stroke="#185fa5" stroke-width="2.5" stroke-linejoin="round"/>';
+    /* pontos + valores */
+    for(var i=0;i<n;i++){
+      var v=Math.min(100,Math.max(0,vals[i]||0));
+      var dx=px(R*v/100,i), dy=py(R*v/100,i);
+      s+='<circle cx="'+dx.toFixed(1)+'" cy="'+dy.toFixed(1)+'" r="6"'
+        +' fill="'+colors[i]+'" stroke="#fff" stroke-width="2"/>';
+      var vx=px(R*v/100+18,i), vy=py(R*v/100+18,i);
+      s+='<text x="'+vx.toFixed(1)+'" y="'+(vy+3).toFixed(1)+'"'
+        +' font-size="11" font-weight="bold" fill="'+colors[i]+'"'
+        +' text-anchor="middle" font-family="Segoe UI,sans-serif">'+v.toFixed(0)+'%</text>';
+    }
+    /* labels externos */
+    var lpad=38;
+    for(var i=0;i<n;i++){
+      var lx=px(R+lpad,i), ly=py(R+lpad,i);
+      var anchor=lx<ocx-8?'end':lx>ocx+8?'start':'middle';
+      var base=ly<ocy-8?'auto':ly>ocy+8?'hanging':'middle';
+      s+='<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'"'
+        +' font-size="13" font-weight="bold" fill="'+colors[i]+'"'
+        +' text-anchor="'+anchor+'" dominant-baseline="'+base+'"'
+        +' font-family="Segoe UI,sans-serif">'+labels[i]+'</text>';
+    }
+    /* centro */
+    s+='<circle cx="'+ocx+'" cy="'+ocy+'" r="3" fill="#99aabb"/>';
+    s+='</svg>';
+    wrap.innerHTML=s;
+  }
+
   function renderDgrUI(){
     var d=calcDgrOps();
     var vals=[d.IM,d.IR,d.IA,d.IAn];
 
-    /* ── Cards de capacidade ─────────────────────────────────────────── */
+    /* ── Cards ── */
     var cards=document.getElementById('dgr-cards');
     if(cards){
       var arr=[
-        ['Monitorar',  d.IM, 'Detectar sinais, indicadores e mudanças relevantes.'],
-        ['Responder',  d.IR, 'Agir de modo coordenado diante da variabilidade.'],
-        ['Aprender',   d.IA, 'Converter experiência em melhoria organizacional.'],
-        ['Antecipar',  d.IAn,'Preparar-se para perturbações e cenários futuros.'],
+        ['Monitorar',d.IM,'Detectar sinais, indicadores e mudanças relevantes.'],
+        ['Responder',d.IR,'Agir de modo coordenado diante da variabilidade.'],
+        ['Aprender',d.IA,'Converter experiência em melhoria organizacional.'],
+        ['Antecipar',d.IAn,'Preparar-se para perturbações e cenários futuros.'],
         ['DGR-OPS Global',d.global,'Média das quatro capacidades resilientes.']
       ];
       cards.style.gridTemplateColumns='repeat(auto-fit,minmax(150px,1fr))';
@@ -5226,108 +5213,62 @@ function install(){
       }).join('');
     }
 
-    /* ── Radar de Capacidades ────────────────────────────────────────── */
-    _renderRadar(vals);
+    /* ── Radar SVG ── */
+    renderRadarSVG(vals);
 
-    /* ── Matriz Mecanismos × Capacidades ────────────────────────────── */
+    /* ── Matriz Mecanismos × Capacidades ── */
     var matEl=document.getElementById('dgr-matrix');
     if(matEl){
       var sel=d.selected||{};
-
-      /* label curta para cada grupo (remove o prefixo "VAE-A — ") */
-      function shortLabel(row){
-        return row.label.replace(/^[A-Z]+-[A-Z]+ ?[—–-] */,'').substring(0,38);
-      }
-      /* dot visual: círculos cheios/vazios conforme peso estrutural */
-      function dots(n){
-        var full='<span style="color:#185fa5;font-size:13px">&#9679;</span>';
-        var empty='<span style="color:#ddd;font-size:13px">&#9675;</span>';
-        var r=''; for(var i=0;i<3;i++) r+=(i<n?full:empty); return r;
-      }
-      /* valor de intensidade exibido na célula */
-      function cellVal(groupCode, capKey, structWeight){
-        if(!structWeight) return '<span style="color:#ccc">—</span>';
-        var w=sel[groupCode]||0;
-        if(!w) return '<span style="color:#bbb;font-size:11px">0%</span>';
-        var contrib=parseFloat((w*100).toFixed(0));
-        return '<span style="font-weight:700;color:'+colDGR(w)+'">'+contrib+'%</span>';
-      }
-
-      var h='<table style="width:100%;border-collapse:collapse;font-size:11.5px">';
-      h+='<thead><tr style="background:#f0f2f8">';
-      h+='<th style="padding:7px 8px;text-align:left;border:1px solid #dde;min-width:140px">Grupo</th>';
-      h+='<th style="padding:7px;text-align:center;border:1px solid #dde;color:#185fa5">Monitorar</th>';
-      h+='<th style="padding:7px;text-align:center;border:1px solid #dde;color:#0f6e56">Responder</th>';
-      h+='<th style="padding:7px;text-align:center;border:1px solid #dde;color:#6b21a8">Aprender</th>';
-      h+='<th style="padding:7px;text-align:center;border:1px solid #dde;color:#c0392b">Antecipar</th>';
-      h+='<th style="padding:7px;text-align:center;border:1px solid #dde;color:#444">Intensidade</th>';
-      h+='</tr></thead><tbody>';
-
+      function shortLbl(row){ return row.label.replace(/^[A-Z]+-[A-Z]+ ?[—–-] */,'').substring(0,36); }
+      function dots(n){ var f='<span style="color:#185fa5;font-size:13px">&#9679;</span>', e='<span style="color:#e0e0ea;font-size:13px">&#9675;</span>', r=''; for(var i=0;i<3;i++) r+=(i<n?f:e); return r; }
+      var h='<table style="width:100%;border-collapse:collapse;font-size:11.5px">'
+           +'<thead><tr style="background:#f0f2f8">'
+           +'<th style="padding:7px 8px;text-align:left;border:1px solid #dde">Grupo</th>'
+           +'<th style="padding:7px;text-align:center;border:1px solid #dde;color:#185fa5">Monitorar</th>'
+           +'<th style="padding:7px;text-align:center;border:1px solid #dde;color:#0f6e56">Responder</th>'
+           +'<th style="padding:7px;text-align:center;border:1px solid #dde;color:#6b21a8">Aprender</th>'
+           +'<th style="padding:7px;text-align:center;border:1px solid #dde;color:#c0392b">Antecipar</th>'
+           +'<th style="padding:7px;text-align:center;border:1px solid #dde">Intensidade</th>'
+           +'</tr></thead><tbody>';
       DGR_MAP.forEach(function(row,i){
-        var isSel=!!sel[row.g];
-        var bg=i%2?'#f8f9fc':'#fff';
-        if(isSel) bg='#eef6ff';
+        var isSel=!!sel[row.g], bg=isSel?'#eef6ff':(i%2?'#f8f9fc':'#fff');
         h+='<tr style="background:'+bg+'">';
-        h+='<td style="padding:6px 8px;border:1px solid #dde">';
-        h+='<b style="color:#185fa5;font-size:11px">'+esc(row.g)+'</b>';
-        h+='<br><span style="font-size:10px;color:#777">'+esc(shortLabel(row))+'</span>';
-        h+='</td>';
+        h+='<td style="padding:6px 8px;border:1px solid #dde"><b style="color:#185fa5;font-size:11px">'+esc(row.g)+'</b>'
+          +'<br><span style="font-size:10px;color:#777">'+esc(shortLbl(row))+'</span></td>';
         ['IM','IR','IA','IAn'].forEach(function(k){
-          h+='<td style="padding:6px;text-align:center;border:1px solid #dde">';
-          h+=dots(row[k]);
-          if(isSel) h+='<br>'+cellVal(row.g,k,row[k]);
+          var wk=row[k]||0, w=isSel?(sel[row.g]||0):0;
+          h+='<td style="padding:5px;text-align:center;border:1px solid #dde">'+dots(wk);
+          if(isSel && wk) h+='<br><span style="font-size:10px;font-weight:700;color:'+colDGR(w)+'">'+Math.round(w*100)+'%</span>';
           h+='</td>';
         });
-        /* coluna intensidade */
-        h+='<td style="padding:6px;text-align:center;border:1px solid #dde">';
+        h+='<td style="padding:5px;text-align:center;border:1px solid #dde">';
         if(isSel){
-          var w=sel[row.g]||0;
-          var lbl=w>=0.95?'Máxima':w>=0.50?'Média':'Mínima';
-          var co=w>=0.95?'#c0392b':w>=0.50?'#854f0b':'#0f6e56';
-          var bw=Math.round(w*100);
-          h+='<div style="background:#eee;border-radius:3px;height:5px;margin:2px 0">';
-          h+='<div style="height:5px;width:'+bw+'%;background:'+co+';border-radius:3px"></div></div>';
+          var w=sel[row.g]||0, lbl=w>=0.95?'Máxima':w>=0.50?'Média':'Mínima', co=w>=0.95?'#c0392b':w>=0.50?'#854f0b':'#0f6e56';
+          h+='<div style="background:#eee;border-radius:3px;height:5px;margin:2px 4px"><div style="height:5px;width:'+Math.round(w*100)+'%;background:'+co+';border-radius:3px"></div></div>';
           h+='<span style="font-size:10px;font-weight:700;color:'+co+'">'+lbl+'</span>';
-        } else {
-          h+='<span style="color:#ccc;font-size:11px">—</span>';
-        }
+        } else { h+='<span style="color:#ccc;font-size:11px">—</span>'; }
         h+='</td></tr>';
       });
       h+='</tbody></table>';
-      h+='<div style="font-size:10px;color:#999;margin-top:6px">&#9679;&#9679;&#9679; = alta relevância estrutural &nbsp;|&nbsp; células em azul = grupo selecionado com intensidade cadastrada</div>';
       matEl.innerHTML=h;
     }
 
-    /* ── Interpretação automática ────────────────────────────────────── */
+    /* ── Interpretação ── */
     var interp=document.getElementById('dgr-interp');
     if(interp){
       var sorted=[['Monitorar',d.IM],['Responder',d.IR],['Aprender',d.IA],['Antecipar',d.IAn]].sort(function(a,b){return b[1]-a[1];});
       var nSel=Object.keys(d.selected||{}).length;
       if(!nSel){
-        interp.innerHTML='<em style="color:#aaa">Selecione grupos VAE, VAX ou MR nas abas de Variabilidade e Mecanismos para calcular os índices.</em>';
+        interp.innerHTML='<em style="color:#aaa">Selecione grupos VAE, VAX ou MR para calcular os índices.</em>';
       } else {
-        var selList=Object.keys(d.selected||{}).sort().map(function(k){
-          var w=d.selected[k], lbl=w>=0.95?'Máx':w>=0.50?'Méd':'Mín';
-          return '<b>'+k+'</b> ('+lbl+')';
-        }).join(', ');
-        interp.innerHTML=
-          '<strong>DGR-OPS — Cálculo ponderado por intensidade</strong><br>'+
-          'Capacidade mais desenvolvida: <b>'+sorted[0][0]+'</b> ('+sorted[0][1].toFixed(1).replace('.',',')+'%), '+
-          'seguida de <b>'+sorted[1][0]+'</b> ('+sorted[1][1].toFixed(1).replace('.',',')+'%).<br>'+
-          '<b>DGR-OPS Global = '+d.global.toFixed(1).replace('.',',')+'%</b> (média das quatro capacidades).<br>'+
-          'Grupos selecionados ('+nSel+'): '+selList+'.<br>'+
-          '<span style="font-size:11px;color:#667">Pesos: Mínima = 0,33 | Média = 0,66 | Máxima = 1,00. '+
-          'Grupos não selecionados entram como zero no denominador.</span>';
+        interp.innerHTML='<strong>DGR-OPS — Cálculo ponderado por intensidade</strong><br>'
+          +'Capacidade mais desenvolvida: <b>'+sorted[0][0]+'</b> ('+sorted[0][1].toFixed(1).replace('.',',')+'%), '
+          +'seguida de <b>'+sorted[1][0]+'</b> ('+sorted[1][1].toFixed(1).replace('.',',')+'%).<br>'
+          +'<b>DGR-OPS Global = '+d.global.toFixed(1).replace('.',',')+'%</b> (média das quatro capacidades).<br>'
+          +'<span style="font-size:11px;color:#667">Pesos: Mínima=0,33 | Média=0,66 | Máxima=1,00. '
+          +'Grupos não selecionados entram como zero no denominador.</span>';
       }
-    }
-
-    /* ── Debug (oculto por padrão, útil para diagnóstico) ───────────── */
-    var dbg=document.getElementById('dgr-debug');
-    if(dbg && dbg.style.display!=='none'){
-      var lines=['=== DGR-OPS debug ==='];
-      lines.push('Grupos selec.: '+JSON.stringify(d.selected));
-      lines.push('Monitorar='+d.IM+'% Responder='+d.IR+'% Aprender='+d.IA+'% Antecipar='+d.IAn+'% Global='+d.global+'%');
-      dbg.textContent=lines.join('\n');
     }
   }
 
