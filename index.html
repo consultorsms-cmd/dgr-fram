@@ -4871,22 +4871,25 @@ function install(){
   }
 
   /* ── cálculo DGR-OPS ponderado ─────────────────────────────────────
-     Grupos não selecionados → peso 0 NO NUMERADOR mas o denominador
-     (soma dos pesos estruturais) permanece fixo → evita superestimação.
+     Grupos não selecionados → peso 0 NO NUMERADOR; o denominador
+     é a soma estrutural de toda a matriz VAE/VAX/MR → evita superestimação.
      DGR-OPS Global = (Monitorar + Responder + Aprender + Antecipar) / 4
   ────────────────────────────────────────────────────────────────────── */
   function calcDgrOps(){
     var sel=selectedGroupWeights();
     var acc={IM:{n:0,d:0},IR:{n:0,d:0},IA:{n:0,d:0},IAn:{n:0,d:0}};
     DGR_MAP.forEach(function(row){
-      var w=sel[row.g]||0;
+      var w=sel[row.g]||0; // não selecionado = 0 no numerador
       ['IM','IR','IA','IAn'].forEach(function(k){
         var wk=num(row[k]);
-        if(wk>0){ acc[k].d+=wk; acc[k].n+=w*wk; }
+        if(wk>0){
+          acc[k].d+=wk;        // denominador fixo: capacidade potencial total da matriz VAE/VAX/MR
+          acc[k].n+=w*wk;      // numerador: somente intensidade efetivamente cadastrada
+        }
       });
     });
     function cap(k){ return acc[k].d ? parseFloat(((acc[k].n/acc[k].d)*100).toFixed(1)):0; }
-    var out={IM:cap('IM'),IR:cap('IR'),IA:cap('IA'),IAn:cap('IAn'),selected:sel};
+    var out={IM:cap('IM'),IR:cap('IR'),IA:cap('IA'),IAn:cap('IAn'),selected:sel,denominators:acc};
     out.global=parseFloat(avg([out.IM,out.IR,out.IA,out.IAn]).toFixed(1));
     return out;
   }
@@ -5018,7 +5021,8 @@ function install(){
       ['Prob. Operacional',   pctSmart(g.operationalProb,2), opCrit(g.operationalProb).color],
       ['LC Operacional',      pctBR(g.operationalLC,0),                        '#667085'],
       ['Maior P95 Individual',pctSmart(g.maxIndividualP95),  crit(g.maxIndividualP95).color],
-      ['DGR-OPS Global',      d.global.toFixed(1).replace('.',',')+'%',       '#185fa5']
+      ['DGR-OPS Global',      d.global.toFixed(1).replace('.',',')+'%',       '#185fa5'],
+      ['Classificação Global', crit(g.p95).label, crit(g.p95).color]
     ];
     el.innerHTML=cards.map(function(c){
       return '<div class="dash-card"><div class="dash-card-val" style="color:'+c[2]+'">'+c[1]+'</div><div class="dash-card-lbl">'+c[0]+'</div></div>';
@@ -5064,9 +5068,9 @@ function install(){
     html+='<div class="dash-section"><h3>Metodologia Monte Carlo</h3><div class="adv-text">';
     html+='<b>Distribuição:</b> Beta-PERT | <b>Iterações:</b> '+num(S.mcN).toLocaleString('pt-BR')+' por função | <b>Total agregado:</b> '+num(g.total).toLocaleString('pt-BR')+' amostras<br>';
     html+='<b>VD = VDE + VDX; VA = VAE + VAX; VFR = máx(0, VD − VA); VFRR = VFR × (1 − MR)</b><br>';
-    html+='<b>Probabilidade Estatística</b> = Prob(VFRR > P95 Global). Como o limite é o próprio P95, a excedência tende a aproximadamente 5% por construção estatística.<br>';
+    html+='<b>Probabilidade Estatística</b> = Prob(VFRR > P95 Global). Por função: <b>Probabilidade Estatística(i) = Prob(VFRRᵢ > P95 Global)</b>. Como o limite global é o próprio P95, a excedência agregada tende a aproximadamente 5% por construção estatística.<br>';
     html+='&nbsp;&nbsp;→ '+num(g.eventsCrit).toLocaleString('pt-BR')+' ÷ '+num(g.total).toLocaleString('pt-BR')+' = <b>'+pctSmart(g.probCrit,2)+'</b><br>';
-    html+='<b>Probabilidade Operacional</b> = Prob(VFRR > LC Operacional), onde LC Operacional é um limiar definido pelo analista. LC atual = <b>'+pctBR(g.operationalLC,0)+'</b><br>';
+    html+='<b>Probabilidade Operacional</b> = Prob(VFRR > LC Operacional). Por função: <b>Probabilidade Operacional(i) = Prob(VFRRᵢ > LC Operacional)</b>. LC atual = <b>'+pctBR(g.operationalLC,0)+'</b><br>';
     html+='&nbsp;&nbsp;→ '+num(g.operationalEvents).toLocaleString('pt-BR')+' ÷ '+num(g.total).toLocaleString('pt-BR')+' = <b style="color:'+opCl.color+'">'+pctSmart(g.operationalProb,2)+' ('+opCl.plain+')</b>';
     html+='</div></div>';
 
@@ -5081,7 +5085,7 @@ function install(){
      ['Antecipar',d.IAn,'#c0392b'],['DGR-OPS Global',d.global,'#1a1a2e']].forEach(function(c){
       html+='<div class="sbox"><span class="sval" style="color:'+c[2]+'">'+num(c[1]).toFixed(1).replace('.',',')+'%</span><span class="slbl">'+c[0]+'</span></div>';
     });
-    html+='</div><div style="font-size:11px;color:#4c5570;margin-top:8px">Índices calculados a partir dos grupos VAE, VAX e MR selecionados, ponderados pela intensidade (Mínima=0,33 | Média=0,66 | Máxima=1,00). Grupos não selecionados entram como zero no denominador.</div></div>';
+    html+='</div><div style="font-size:11px;color:#4c5570;margin-top:8px">DGR-OPS = Σ Intensidades Selecionadas / Σ Intensidades Máximas Possíveis × 100. Pesos: Mínima=0,33 | Média=0,66 | Máxima=1,00 | Não selecionado=0. O denominador considera a capacidade potencial total da matriz VAE/VAX/MR; grupos não selecionados entram como zero no numerador.</div></div>';
 
     /* Ranking */
     html+='<div class="dash-section"><h3>Ranking de Criticidade — P95 Individual</h3>';
@@ -5117,6 +5121,22 @@ function install(){
 
   /* ── renderização DGR-OPS (tela Capacidades) ────────────────────────── */
   function colDGR(v){ return v>=75?'#0f6e56':v>=50?'#185fa5':v>=25?'#854f0b':'#c0392b'; }
+  function dgrClass(v){
+    v=num(v);
+    if(v>70) return {label:'🔴 Elevada',plain:'Elevada',color:'#c0392b'};
+    if(v>=50) return {label:'🟠 Alta',plain:'Alta',color:'#f59e0b'};
+    if(v>=30) return {label:'🟡 Moderada',plain:'Moderada',color:'#854f0b'};
+    return {label:'🟢 Baixa',plain:'Baixa',color:'#0f6e56'};
+  }
+  function validateMath(g,d,rs){
+    var problems=[];
+    if(!(num(g.p90)<=num(g.p95)&&num(g.p95)<=num(g.p99))) problems.push('P90 ≤ P95 ≤ P99');
+    if(num(g.maxIndividualP95)+1e-9<num(g.p95)) problems.push('Maior P95 Individual ≥ P95 Global');
+    ['probCrit','operationalProb'].forEach(function(k){ if(num(g[k])<0||num(g[k])>1) problems.push(k+' entre 0 e 100%'); });
+    ['IM','IR','IA','IAn','global'].forEach(function(k){ if(num(d[k])<0||num(d[k])>100) problems.push(k+' entre 0 e 100%'); });
+    (rs||[]).forEach(function(x){ var r=x.r||{}; if(!(num(r.p90)<=num(r.p95)&&num(r.p95)<=num(r.p99))) problems.push('Percentis inválidos em '+fnName(x.fn)); });
+    return problems;
+  }
 
   /* Radar SVG puro — sem Canvas, sem Chart.js, funciona em GitHub Pages */
   function renderRadarSVG(vals){
@@ -5208,6 +5228,7 @@ function install(){
         return '<div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:16px 12px;text-align:center">'+
           '<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:8px">'+esc(c[0])+'</div>'+
           '<div style="font-size:30px;font-weight:800;color:'+co+'">'+v.toFixed(1).replace('.',',')+'%</div>'+
+          '<div style="font-size:11px;font-weight:700;color:'+dgrClass(v).color+';margin-top:2px">'+dgrClass(v).label+'</div>'+
           '<div style="height:5px;background:#eee;border-radius:3px;margin:8px 0"><div style="height:5px;width:'+Math.min(100,v)+'%;background:'+co+';border-radius:3px"></div></div>'+
           '<div style="font-size:10px;color:#999">'+esc(c[2])+'</div></div>';
       }).join('');
@@ -5267,7 +5288,7 @@ function install(){
           +'seguida de <b>'+sorted[1][0]+'</b> ('+sorted[1][1].toFixed(1).replace('.',',')+'%).<br>'
           +'<b>DGR-OPS Global = '+d.global.toFixed(1).replace('.',',')+'%</b> (média das quatro capacidades).<br>'
           +'<span style="font-size:11px;color:#667">Pesos: Mínima=0,33 | Média=0,66 | Máxima=1,00. '
-          +'Grupos não selecionados entram como zero no denominador.</span>';
+          +'O denominador considera todos os grupos potenciais da matriz; não selecionado = 0 no numerador.</span>';
       }
     }
   }
@@ -5287,6 +5308,8 @@ function install(){
 
     refreshOpProb();
     var g=globalStats(), d=calcDgrOps();
+    var mathProblems=validateMath(g,d,rs);
+    if(mathProblems.length){ alert('Inconsistência matemática detectada. Revisar cálculos antes da exportação.\n- '+mathProblems.join('\n- ')); return; }
 
     /* helpers PDF */
     var ALIAS='{total_pages}';
@@ -5347,7 +5370,8 @@ function install(){
       ['Prob. Operacional',    pctSmart(g.operationalProb,2), opCrit(g.operationalProb).rgb],
       ['LC Operacional',       pctBR(g.operationalLC,0),                       [90,95,110]],
       ['Maior P95 Individual', pctSmart(g.maxIndividualP95),  crit(g.maxIndividualP95).rgb],
-      ['DGR-OPS Global',       d.global.toFixed(1).replace('.',',')+'%',      [24,95,165]]
+      ['DGR-OPS Global',       d.global.toFixed(1).replace('.',',')+'%',      [24,95,165]],
+      ['Classificação Global', crit(g.p95).plain, crit(g.p95).rgb]
     ];
     /* linha 1: 5 cards | linha 2: 4 cards */
     topCards.forEach(function(c,i){
@@ -5371,7 +5395,7 @@ function install(){
     newPage('Indicadores por Função');
     tx('Classificação pelo P95 Individual. Valores <0,1% indicam risco muito baixo.',mg,y,7.5,false,[70,75,90]); y+=6;
     var xs=[mg,mg+108,mg+121,mg+134,mg+147,mg+160,mg+173,mg+186,mg+199,mg+213,mg+229];
-    ['Função','VDE','VDX','MR','VFR','Média','P90','P95','P99','Prob.Estat.','Classe'].forEach(function(h,i){
+    ['Função','VDE','VDX','MR','VFR','Média','P90','P95','P99','Prob.Est.(>P95G)','Classe'].forEach(function(h,i){
       tx(h,xs[i],y,6.3,true);
     });
     y+=4; doc.setDrawColor(210,215,225); doc.line(mg,y,W-mg,y); y+=4;
@@ -5426,8 +5450,8 @@ function install(){
     rs.forEach(function(row){
       var r=row.r, ci=crit(r.p95), oi=opCrit(r.operationalProb);
       var ln=fnName(row.fn)+': criticidade '+ci.plain+' (P95 = '+pctSmart(r.p95)+'). '+
-        'Probabilidade Estatística = '+pctSmart(r.probCrit,2)+'. '+
-        'Probabilidade Operacional = '+pctSmart(r.operationalProb,2)+' ('+oi.plain+').';
+        'Probabilidade Estatística = Prob(VFRRᵢ > P95 Global) = '+pctSmart(r.probCrit,2)+'. '+
+        'Probabilidade Operacional = Prob(VFRRᵢ > LC Operacional) = '+pctSmart(r.operationalProb,2)+' ('+oi.plain+').';
       lines(ln,260).forEach(function(l){ need(5,'Interpretações'); tx(l,mg,y,7.2); y+=4.4; });
       y+=1.5;
     });
@@ -5442,7 +5466,7 @@ function install(){
       card(mg+i*55,y,51,20,c[0],num(c[1]).toFixed(1).replace('.',',')+'%',c[2]);
     });
     y+=27;
-    lines('Os índices DGR-OPS são calculados a partir dos grupos VAE, VAX e MR selecionados, ponderados pela intensidade atribuída. Mínima = 0,33 | Média = 0,66 | Máxima = 1,00. Grupos não selecionados entram como zero no denominador para evitar superestimação das capacidades resilientes. DGR-OPS Global = (Monitorar + Responder + Aprender + Antecipar) / 4.',265
+    lines('DGR-OPS = Σ Intensidades Selecionadas / Σ Intensidades Máximas Possíveis × 100. Os índices são calculados a partir da matriz completa VAE, VAX e MR; os grupos selecionados entram no numerador ponderados pela intensidade atribuída: Mínima = 0,33 | Média = 0,66 | Máxima = 1,00 | Não selecionado = 0. DGR-OPS Global = (Monitorar + Responder + Aprender + Antecipar) / 4.',265
     ).forEach(function(l){tx(l,mg,y,7.5); y+=4.3;});
     y+=4;
     tx('Grupos selecionados e intensidade ponderada',mg,y,9,true); y+=6;
