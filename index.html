@@ -2881,12 +2881,44 @@ let openSubcatFn = {};
   const allTaxos = () => [...TAXO.VDE.items,...TAXO.VDX.items,...TAXO.VAE.items,...TAXO.VAX.items,...TAXO.MR.items];
   const byPrefix = p => allTaxos().filter(i=>i.code.startsWith(p+'-'));
   const avgSel = (fnId,prefix,manualCats=[]) => {
-    const vals=[];
-    // seleção por GRUPO (ex: VAX-A, MR-B)
-    (TAXO[prefix]&&TAXO[prefix].groups||[]).forEach(g=>{const s=DGRState.subs[fnId]?.[prefix+'-'+g.key]; if(s&&s.sel) vals.push(s);});
-    DGRState.vars.forEach(v=>{ if(idsOfVar(v).includes(fnId)&&manualCats.includes(String(v.category||'').toLowerCase())) vals.push({mn:.25,mp:.50,mx:.70}); });
-    if(!vals.length) return {mn:0,mp:0,mx:0};
-    return {mn:vals.reduce((a,b)=>a+(+b.mn||0),0)/vals.length, mp:vals.reduce((a,b)=>a+(+b.mp||0),0)/vals.length, mx:vals.reduce((a,b)=>a+(+b.mx||0),0)/vals.length};
+    const T = TAXO[prefix];
+    const groups = (T && T.groups) || [];
+    const sb = DGRState.subs[fnId] || {};
+    let den = 0, nMn = 0, nMp = 0, nMx = 0;
+
+    // Correção metodológica: cada grupo (A, B, C...) vale conforme a quantidade
+    // de critérios filhos que representa. O denominador é o total de critérios
+    // possíveis da taxonomia da dimensão, não apenas o total de grupos marcados.
+    groups.forEach(g => {
+      const itemCount = Math.max(1, (g.items || []).length);
+      den += itemCount;
+      const direct = sb[prefix + '-' + g.key];
+      const childKeys = Object.keys(sb).filter(k => k.indexOf(prefix + '-' + g.key + '.') === 0 && sb[k] && sb[k].sel);
+
+      if (direct && direct.sel) {
+        nMn += (+direct.mn || 0) * itemCount;
+        nMp += (+direct.mp || 0) * itemCount;
+        nMx += (+direct.mx || 0) * itemCount;
+      } else if (childKeys.length) {
+        childKeys.forEach(k => {
+          const v = sb[k] || {};
+          nMn += (+v.mn || 0);
+          nMp += (+v.mp || 0);
+          nMx += (+v.mx || 0);
+        });
+      }
+    });
+
+    // Registros manuais contam como critérios adicionais explícitos.
+    DGRState.vars.forEach(v => {
+      if (idsOfVar(v).includes(fnId) && manualCats.includes(String(v.category || '').toLowerCase())) {
+        den += 1;
+        nMn += .25; nMp += .50; nMx += .70;
+      }
+    });
+
+    if (!den) return {mn:0,mp:0,mx:0};
+    return {mn:nMn/den, mp:nMp/den, mx:nMx/den};
   };
 
   function addStyle(){
@@ -4266,7 +4298,7 @@ let openSubcatFn = {};
 
   DGRManager.exportPDF=function(){ const jsPDF=window.jspdf&&window.jspdf.jsPDF; if(!jsPDF){alert('Biblioteca jsPDF não carregada.');return;} let rs=rows(); if((DGRState.fns||[]).length&&!rs.length){try{if(DGRManager.runSimulation) DGRManager.runSimulation();}catch(e){} rs=rows();}
       if((DGRState.fns||[]).length&&!rs.length){alert('Não foi possível gerar resultados. Verifique se há funções e parâmetros cadastrados.');return;} const doc=new jsPDF('l','mm','a4'), total=6; const av={vde:avg(rs.map(x=>x.r.vde)),vdx:avg(rs.map(x=>x.r.vdx)),mr:avg(rs.map(x=>x.r.mr)),vfr:avg(rs.map(x=>x.r.vfr)),mean:avg(rs.map(x=>x.r.mean)),p90:avg(rs.map(x=>x.r.p90)),p95:avg(rs.map(x=>x.r.p95)),p99:avg(rs.map(x=>x.r.p99)),probCrit:avg(rs.map(x=>x.r.probCrit))}; const data=rs.map((x,i)=>[i+1+'. '+clean(x.fn.name,27),pct(x.r.vde),pct(x.r.vdx),pct(x.r.mr),pct(x.r.vfr),pct(x.r.mean),pct(x.r.p90),pct(x.r.p95),pct(x.r.p99),pct(x.r.probCrit)]);
-    pdfHeader(doc,'Síntese Executiva'); doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.text('Síntese Executiva Monte Carlo',14,32); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text(doc.splitTextToSize('Relatório com propagação multicamadas integrada ao cálculo probabilístico final. Indicadores: VE, VX, MR, VFR, Média, P90, P95, P99 e Probabilidade de Criticidade.',260),14,42); [['VE',av.vde],['VX',av.vdx],['MR',av.mr],['VFR',av.vfr],['Média',av.mean],['P90',av.p90],['P95',av.p95],['P99',av.p99],['Prob. Crit.',av.probCrit]].forEach((c,i)=>{ const x=14+i*30; doc.setDrawColor(220); doc.roundedRect(x,68,26,22,2,2,'D'); doc.setTextColor(...rgb(c[1])); doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text(pct(c[1]),x+13,78,{align:'center'}); doc.setTextColor(55); doc.setFontSize(7); doc.text(c[0],x+13,86,{align:'center'}); }); pdfTable(doc,'Ranking por P95 Individual',['Função','VE','VX','MR','VFR','Média','P90','P95','P99','Prob.'],data,14,114,[55,22,22,22,22,24,21,21,21,25],12); pdfFooter(doc,1,total);
+    pdfHeader(doc,'Síntese Executiva'); doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.text('Síntese Executiva Monte Carlo',14,32); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text(doc.splitTextToSize('Relatório com propagação multicamadas integrada ao cálculo probabilístico final. Indicadores: VE, VX, MR, VFR, Média, P90, P95, P99 e Probabilidade de Criticidade. VDE, VDX, VAE, VAX e MR são ponderados pelo total de critérios possíveis de cada dimensão; cada grupo A, B, C... contribui conforme a quantidade de subcritérios que representa.',260),14,42); [['VE',av.vde],['VX',av.vdx],['MR',av.mr],['VFR',av.vfr],['Média',av.mean],['P90',av.p90],['P95',av.p95],['P99',av.p99],['Prob. Crit.',av.probCrit]].forEach((c,i)=>{ const x=14+i*30; doc.setDrawColor(220); doc.roundedRect(x,68,26,22,2,2,'D'); doc.setTextColor(...rgb(c[1])); doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text(pct(c[1]),x+13,78,{align:'center'}); doc.setTextColor(55); doc.setFontSize(7); doc.text(c[0],x+13,86,{align:'center'}); }); pdfTable(doc,'Ranking por P95 Individual',['Função','VE','VX','MR','VFR','Média','P90','P95','P99','Prob.'],data,14,114,[55,22,22,22,22,24,21,21,21,25],12); pdfFooter(doc,1,total);
     doc.addPage(); pdfHeader(doc,'Indicadores por função'); pdfTable(doc,'Resumo por função — indicadores finais com propagação',['Função','VE','VX','MR','VFR','Média','P90','P95','P99','Prob. Crit.'],data,14,32,[60,23,23,23,23,25,22,22,22,28],24); pdfFooter(doc,2,total);
     doc.addPage(); drawHistPDF(doc,rs); pdfFooter(doc,3,total);
     doc.addPage(); drawMatrixPDF(doc,true); pdfFooter(doc,4,total);
@@ -4846,82 +4878,82 @@ function install(){
   window.DGR_MAP = DGR_MAP;
 
   /* ── coleta grupos selecionados com peso de intensidade ────────────────
-     Lê SOMENTE chaves que são códigos de grupo exatos do DGR_MAP
-     (ex: 'VAE-A', 'MR-F'). Ignora itens individuais ('MR-A.1' etc.).
-     Múltiplas funções com o mesmo grupo: usa a média dos pesos.
+     Agora a leitura é feita por função. O mesmo grupo marcado em apenas uma
+     função não vale como se estivesse presente em todo o modelo.
   ────────────────────────────────────────────────────────────────────── */
+  function groupItemCount(code){
+    var parts=String(code||'').split('-');
+    var T=TAXO[parts[0]], key=parts[1];
+    var g=T && (T.groups||[]).find(function(x){return x.key===key;});
+    return Math.max(1, g && g.items ? g.items.length : 1);
+  }
+  function groupScoreFromSubs(sb, code){
+    sb=sb||{};
+    var e=sb[code];
+    if(e && e.sel) return levelWeight(e); // seleção do grupo aplica-se a todos os filhos
+    var total=groupItemCount(code), sum=0;
+    Object.keys(sb).forEach(function(k){
+      if(k.indexOf(code+'.')!==0) return;
+      var it=sb[k];
+      if(it && it.sel) sum+=levelWeight(it); // seleção individual: soma item a item
+    });
+    return total ? sum/total : 0;
+  }
   function selectedGroupWeights(){
     var acc={};
-    function add(code,w){
-      w=num(w);
-      if(w<=0) return;
-      if(!acc[code]) acc[code]={sum:0,count:0};
-      acc[code].sum+=w;
-      acc[code].count++;
-    }
+    DGR_MAP.forEach(function(row){ acc[row.g]={sum:0,count:0,items:groupItemCount(row.g)}; });
     (S.fns||[]).forEach(function(fn){
       var sb=(S.subs||{})[fn.id]||{};
       DGR_MAP.forEach(function(row){
-        var groupEntry=sb[row.g];
-        var groupWeight=0;
-
-        /* 1) Seleção direta do grupo, ex.: VAE-A, VAX-B, MR-C */
-        if(groupEntry && groupEntry.sel){
-          groupWeight=levelWeight(groupEntry);
-        }
-
-        /* 2) Compatibilidade com projetos/telas que gravaram itens filhos,
-              ex.: VAE-A.1, VAE-A.2, MR-B.3. Nesse caso, o peso do grupo
-              é a média dos itens selecionados. */
-        var childWeights=[];
-        Object.keys(sb||{}).forEach(function(k){
-          if(k.indexOf(row.g+'.')!==0) return;
-          var e=sb[k];
-          if(e && e.sel){
-            var w=levelWeight(e);
-            if(w>0) childWeights.push(w);
-          }
-        });
-        if(!groupWeight && childWeights.length){
-          groupWeight=avg(childWeights);
-        }
-
-        /* 3) Se grupo e itens filhos estiverem marcados, prevalece a seleção
-              do grupo para evitar dupla contagem. */
-        add(row.g,groupWeight);
+        var w=groupScoreFromSubs(sb,row.g);
+        if(w>0){ acc[row.g].sum+=w; acc[row.g].count++; }
       });
     });
     var vals={};
     Object.keys(acc).forEach(function(code){
-      vals[code]=acc[code].sum/acc[code].count;
+      if(acc[code].count) vals[code]=acc[code].sum/acc[code].count;
     });
     return vals;
   }
 
   /* ── cálculo DGR-OPS ponderado ─────────────────────────────────────
-     Grupos não selecionados → peso 0 NO NUMERADOR; o denominador
-     é a soma estrutural de toda a matriz VAE/VAX/MR → evita superestimação.
-     DGR-OPS Global = (Monitorar + Responder + Aprender + Antecipar) / 4
+     Numerador: soma, por função, da intensidade efetivamente selecionada
+     × peso da capacidade × quantidade de critérios do grupo.
+     Denominador: todas as funções × todos os grupos possíveis da matriz
+     VAE/VAX/MR × peso da capacidade × quantidade de critérios do grupo.
+     Assim, poucas seleções não geram percentuais artificialmente altos.
   ────────────────────────────────────────────────────────────────────── */
   function calcDgrOps(){
-    var sel=selectedGroupWeights();
     var acc={IM:{n:0,d:0},IR:{n:0,d:0},IA:{n:0,d:0},IAn:{n:0,d:0}};
-    DGR_MAP.forEach(function(row){
-      var w=sel[row.g]||0; // não selecionado = 0 no numerador
-      ['IM','IR','IA','IAn'].forEach(function(k){
-        var wk=num(row[k]);
-        if(wk>0){
-          acc[k].d+=wk;        // denominador fixo: capacidade potencial total da matriz VAE/VAX/MR
-          acc[k].n+=w*wk;      // numerador: somente intensidade efetivamente cadastrada
-        }
+    var selected={};
+    var fns=(S.fns||[]);
+    DGR_MAP.forEach(function(row){ selected[row.g]=0; });
+    fns.forEach(function(fn){
+      var sb=(S.subs||{})[fn.id]||{};
+      DGR_MAP.forEach(function(row){
+        var itemCount=groupItemCount(row.g);
+        var w=groupScoreFromSubs(sb,row.g);
+        if(w>0) selected[row.g]+=w;
+        ['IM','IR','IA','IAn'].forEach(function(k){
+          var wk=num(row[k]);
+          if(wk>0){
+            acc[k].d += wk * itemCount;
+            acc[k].n += w * wk * itemCount;
+          }
+        });
       });
     });
+    Object.keys(selected).forEach(function(k){
+      selected[k]=fns.length ? selected[k]/fns.length : 0;
+      if(selected[k]<=0) delete selected[k];
+    });
     function cap(k){ return acc[k].d ? parseFloat(((acc[k].n/acc[k].d)*100).toFixed(1)):0; }
-    var out={IM:cap('IM'),IR:cap('IR'),IA:cap('IA'),IAn:cap('IAn'),selected:sel,denominators:acc};
+    var out={IM:cap('IM'),IR:cap('IR'),IA:cap('IA'),IAn:cap('IAn'),selected:selected,denominators:acc};
     out.global=parseFloat(avg([out.IM,out.IR,out.IA,out.IAn]).toFixed(1));
     return out;
   }
   window.DGRCalcIndices=calcDgrOps;
+  M.calculateDGROPS = calcDgrOps;
   M.calculateDGROPS = calcDgrOps;
 
   /* ── estatísticas globais agregadas ─────────────────────────────────── */
@@ -5114,7 +5146,7 @@ function install(){
      ['Antecipar',d.IAn,'#c0392b'],['DGR-OPS Global',d.global,'#1a1a2e']].forEach(function(c){
       html+='<div class="sbox"><span class="sval" style="color:'+c[2]+'">'+num(c[1]).toFixed(1).replace('.',',')+'%</span><span class="slbl">'+c[0]+'</span></div>';
     });
-    html+='</div><div style="font-size:11px;color:#4c5570;margin-top:8px">DGR-OPS = Σ Intensidades Selecionadas / Σ Intensidades Máximas Possíveis × 100. Pesos: Mínima=0,33 | Média=0,66 | Máxima=1,00 | Não selecionado=0. O denominador considera a capacidade potencial total da matriz VAE/VAX/MR; grupos não selecionados entram como zero no numerador.</div></div>';
+    html+='</div><div style="font-size:11px;color:#4c5570;margin-top:8px">DGR-OPS = Σ(função × grupo × intensidade × peso da capacidade × nº de critérios do grupo) / Σ(função × grupo × peso da capacidade × nº de critérios do grupo) × 100. Pesos: Mínima=0,33 | Média=0,66 | Máxima=1,00 | Não selecionado=0. O denominador considera todas as funções e todos os critérios possíveis da matriz VAE/VAX/MR.</div></div>';
 
     /* Ranking */
     html+='<div class="dash-section"><h3>Ranking de Criticidade — P95 Individual</h3>';
@@ -5495,10 +5527,10 @@ function install(){
       card(mg+i*55,y,51,20,c[0],num(c[1]).toFixed(1).replace('.',',')+'%',c[2]);
     });
     y+=27;
-    lines('DGR-OPS = Σ Intensidades Selecionadas / Σ Intensidades Máximas Possíveis × 100. Os índices são calculados a partir da matriz completa VAE, VAX e MR; os grupos selecionados entram no numerador ponderados pela intensidade atribuída: Mínima = 0,33 | Média = 0,66 | Máxima = 1,00 | Não selecionado = 0. DGR-OPS Global = (Monitorar + Responder + Aprender + Antecipar) / 4.',265
+    lines('DGR-OPS = Σ(função × grupo × intensidade × peso da capacidade × nº de critérios do grupo) / Σ(função × grupo × peso da capacidade × nº de critérios do grupo) × 100. Os índices são calculados a partir da matriz completa VAE, VAX e MR, considerando todas as funções cadastradas; grupos não selecionados entram como zero. Pesos: Mínima = 0,33 | Média = 0,66 | Máxima = 1,00. DGR-OPS Global = (Monitorar + Responder + Aprender + Antecipar) / 4.',265
     ).forEach(function(l){tx(l,mg,y,7.5); y+=4.3;});
     y+=4;
-    tx('Grupos selecionados e intensidade ponderada',mg,y,9,true); y+=6;
+    tx('Grupos selecionados: intensidade média ponderada por função',mg,y,9,true); y+=6;
     var selVals=d.selected||{};
     Object.keys(selVals).sort().forEach(function(k){
       need(6,'Capacidades DGR-OPS');
