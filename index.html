@@ -45,8 +45,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#f0f0f5;color:#1a1a2
 .scroll-screen{overflow-y:auto;padding:24px 32px}
 
 /* DASHBOARD & GRID ELEMENTS */
-.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:20px}
-.dash-card{background:#fff;border-radius:8px;padding:14px 16px;border:1px solid #e0e0ea;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;margin-bottom:20px;align-items:start}
+.dash-grid>*:first-child{grid-column:1/-1}
+.dash-card{background:#fff;border-radius:10px;padding:14px 16px 12px;border:1px solid #e0e0ea;box-shadow:0 1px 4px rgba(0,0,0,.05);transition:box-shadow .15s}
+.dash-card:hover{box-shadow:0 3px 10px rgba(0,0,0,.09)}
 .dash-card-val{font-size:26px;font-weight:700;margin-bottom:2px}
 .dash-card-lbl{font-size:11px;color:#8888a8;font-weight:500}
 .dash-section{background:#fff;border-radius:8px;padding:16px 20px;border:1px solid #e0e0ea;margin-bottom:14px}
@@ -5355,10 +5357,56 @@ function boot(){
     }, extra||{});
   }
   function hasDual(){ return fns().some(fn=>S.mcResMR&&S.mcResMR[fn.id]&&S.mcResVA&&S.mcResVA[fn.id]); }
-  function cardHTML(t,v,c){return '<div class="dash-card"><div class="dash-card-val" style="color:'+c+'">'+v+'</div><div class="dash-card-lbl">'+t+'</div></div>';}
-  function metricGrid(g,c){return '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:8px 0 10px">'+[['Média',g.mean],['P90',g.p90],['P95',g.p95],['P99',g.p99],['Prob.Crit.',g.probCrit]].map(k=>'<div class="sbox"><span class="sval" style="color:'+c+'">'+pct(k[1])+'</span><span class="slbl">'+k[0]+'</span></div>').join('')+'</div>';}
-  function hist(map,c){const h=Array(20).fill(0); fns().forEach(fn=>{const r=map&&map[fn.id]; if(r&&r.hist)r.hist.forEach((v,i)=>h[i]+=v);}); const mx=Math.max(1,...h); return '<div class="histbars" style="height:58px;margin:8px 0">'+h.map(v=>{const z=v/mx; return '<div class="hb" style="height:'+Math.max(1,Math.round(z*56))+'px;background:'+c+';opacity:'+(0.35+z*0.65).toFixed(2)+'"></div>';}).join('')+'</div>';}
-  function globalCard(t,sub,g,map,c){return '<div class="dc" style="min-width:320px;flex:1"><div class="dc-head"><span style="color:'+c+'">'+esc(t)+'</span></div><div class="adv-text">'+sub+'</div>'+metricGrid(g,c)+hist(map,c)+'</div>';}
+  // ── IMPROVED CARD HTML (dashboard KPI cards with mini bar) ──
+  function cardHTML(t,v,c){
+    // Parse numeric value for bar width
+    const raw = typeof v === 'string' ? parseFloat(v.replace(',','.')) : (n(v)*100);
+    const barW = Number.isFinite(raw) ? Math.max(0,Math.min(100,raw)).toFixed(1) : 0;
+    const isNum = Number.isFinite(raw);
+    return '<div class="dash-card" style="border-top:3px solid '+c+';padding:14px 16px 10px">'
+      +'<div class="dash-card-val" style="color:'+c+';font-size:22px;font-weight:800;letter-spacing:-.02em">'+v+'</div>'
+      +'<div class="dash-card-lbl" style="margin-bottom:8px">'+t+'</div>'
+      +(isNum?'<div style="height:4px;background:#eef0f6;border-radius:99px;overflow:hidden"><div style="height:100%;width:'+barW+'%;background:'+c+';border-radius:99px;transition:width .4s"></div></div>':'')
+      +'</div>';
+  }
+  // ── IMPROVED PERCENTILE GRID (Média, P90, P95, P99 with visual bars) ──
+  function metricGrid(g,c){
+    const metrics=[['Média',g.mean],['P90',g.p90],['P95',g.p95],['P99',g.p99],['Prob. Crit.',g.probCrit]];
+    const maxVal=Math.max(0.0001,...metrics.map(k=>n(k[1])));
+    // Percentile chips with stacked bar visualization
+    const barSection='<div style="padding:12px 14px;background:#f8fafc;border-radius:10px;margin:10px 0">'
+      +'<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Distribuição de Percentis</div>'
+      +metrics.map(k=>{
+        const val=n(k[1]);
+        const pctW=(val/Math.max(0.0001,maxVal)*100).toFixed(1);
+        const isP95=k[0]==='P95';
+        const isCrit=k[0]==='Prob. Crit.';
+        return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+          +'<div style="width:60px;font-size:10px;font-weight:'+(isP95?'800':'600')+';color:'+(isP95?c:'#374151')+';flex-shrink:0">'+k[0]+'</div>'
+          +'<div style="flex:1;height:'+(isP95?'10':'7')+'px;background:#e5e7eb;border-radius:99px;overflow:hidden">'
+          +'<div style="height:100%;width:'+pctW+'%;background:'+c+';border-radius:99px;opacity:'+(isP95?'1':'0.7')+'"></div>'
+          +'</div>'
+          +'<div style="width:48px;text-align:right;font-size:11px;font-weight:'+(isP95?'800':'600')+';color:'+(isP95?c:isCrit?'#c0392b':'#1f2937')+'">'+pct(val)+'</div>'
+          +'</div>';
+      }).join('')
+      +'</div>';
+    // Also keep small stat boxes for quick reading
+    const boxes='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px">'
+      +metrics.map(k=>'<div class="sbox" style="border-top:2px solid '+c+';padding:6px 4px">'
+        +'<span class="sval" style="color:'+c+';font-size:13px">'+pct(k[1])+'</span>'
+        +'<span class="slbl" style="font-size:9px">'+k[0]+'</span>'
+        +'</div>').join('')+'</div>';
+    return boxes+barSection;
+  }
+  function hist(map,c){const h=Array(20).fill(0); fns().forEach(fn=>{const r=map&&map[fn.id]; if(r&&r.hist)r.hist.forEach((v,i)=>h[i]+=v);}); const mx=Math.max(1,...h); return '<div style="margin-top:6px"><div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Histograma de Frequência</div><div class="histbars" style="height:58px;margin:0 0 4px">'+h.map(v=>{const z=v/mx; return '<div class="hb" style="height:'+Math.max(1,Math.round(z*56))+'px;background:'+c+';opacity:'+(0.35+z*0.65).toFixed(2)+';border-radius:2px 2px 0 0"></div>';}).join('')+'</div><div class="histax"><span>0%</span><span>50%</span><span>100%</span></div></div>';}
+  function globalCard(t,sub,g,map,c){
+    return '<div class="dc" style="min-width:320px;flex:1;border-top:4px solid '+c+';border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.06)">'
+      +'<div class="dc-head" style="padding-bottom:4px"><span style="color:'+c+';font-size:14px;font-weight:800">'+esc(t)+'</span></div>'
+      +'<div class="adv-text" style="margin-bottom:6px">'+sub+'</div>'
+      +metricGrid(g,c)
+      +hist(map,c)
+      +'</div>';
+  }
 
   function runSimulationConsolidated(){
     if(!fns().length){ alert('Adicione funções antes de rodar a simulação.'); return; }
@@ -5401,16 +5449,40 @@ function boot(){
     const ok=hasDual(), gMR=S.mcGlobalMR||{}, gVA=S.mcGlobalVA||{};
     const stats=document.getElementById('dash-stats');
     if(stats){
-      stats.innerHTML=[
-        cardHTML('Funções',fns().length,'#4778e8'),
-        cardHTML('Acoplamentos',(S.coups||[]).length,'#185fa5'),
-        cardHTML('MR médio',ok?pct(gMR.mr):'—','#0f6e56'),
-        cardHTML('VAE consolidado DGR-OPS',ok?pct(gVA.vae):'—','#6b21a8'),
-        cardHTML('VAX consolidado DGR-OPS',ok?pct(gVA.vax):'—','#7c3aed'),
-        cardHTML('Redutor adaptativo limitado',ok?pct(gVA.redutorAdaptativo):'—','#6b21a8'),
-        cardHTML('P95 cenário MR',ok?pct(gMR.p95):'—','#0f6e56'),
-        cardHTML('P95 cenário VAE+VAX',ok?pct(gVA.p95):'—','#6b21a8')
-      ].join('');
+      // Enhanced KPI cards with contextual grouping
+      const vaeVal=ok?pct(gVA.vae):'—';
+      const vaxVal=ok?pct(gVA.vax):'—';
+      const redVal=ok?pct(gVA.redutorAdaptativo):'—';
+      const redRaw=ok?n(gVA.redutorAdaptativo)*100:0;
+      const isCapped=ok&&(n(gVA.vae)+n(gVA.vax))>=1;
+
+      stats.innerHTML=`
+        <div style="grid-column:1/-1;background:linear-gradient(135deg,#1f2532,#2b3550);border-radius:10px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:2px">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#9aa4b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Redutor Adaptativo — Fórmula Definitiva</div>
+            <div style="font-size:15px;font-weight:800;color:#fff;letter-spacing:-.01em">
+              <span style="color:#a78bfa">RedutorAdaptativo</span> = <span style="color:#60a5fa">min(1,</span> <span style="color:#34d399">VAE</span> + <span style="color:#a78bfa">VAX</span><span style="color:#60a5fa">)</span>
+              ${ok?` = <span style="color:#60a5fa">min(1,</span> <span style="color:#34d399">${vaeVal}</span> + <span style="color:#a78bfa">${vaxVal}</span><span style="color:#60a5fa">)</span> = <span style="color:#fbbf24;font-size:18px">${redVal}</span>`:''}
+              ${ok&&isCapped?'<span style="font-size:11px;background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;border-radius:6px;padding:2px 8px;margin-left:8px">⚠ Limitado em 100%</span>':''}
+            </div>
+          </div>
+          ${ok?`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+            <div style="font-size:10px;color:#9aa4b8">Capacidade de redução aplicada</div>
+            <div style="width:180px;height:8px;background:#374151;border-radius:99px;overflow:hidden">
+              <div style="height:100%;width:${Math.min(100,redRaw).toFixed(1)}%;background:linear-gradient(90deg,#34d399,#a78bfa);border-radius:99px"></div>
+            </div>
+            <div style="font-size:11px;color:#fbbf24;font-weight:700">${redVal} de redução máxima</div>
+          </div>`:''}
+        </div>
+        ${cardHTML('Funções cadastradas',fns().length,'#4778e8')}
+        ${cardHTML('Acoplamentos',(S.coups||[]).length,'#185fa5')}
+        ${cardHTML('MR médio',ok?pct(gMR.mr):'—','#0f6e56')}
+        ${cardHTML('VAE (DGR-OPS)',ok?vaeVal:'—','#6b21a8')}
+        ${cardHTML('VAX (DGR-OPS)',ok?vaxVal:'—','#7c3aed')}
+        ${cardHTML('Redutor Adaptativo min(1,VAE+VAX)',ok?redVal:'—','#2563eb')}
+        ${cardHTML('P95 Cenário MR',ok?pct(gMR.p95):'—','#0f6e56')}
+        ${cardHTML('P95 Cenário VAE+VAX',ok?pct(gVA.p95):'—','#7c3aed')}
+      `;
     }
     const ttl=document.querySelector('#s-mc .dash-section h3'); if(ttl) ttl.textContent='Monte Carlo - resultados globais';
     const canvas=document.getElementById('ch-vfr'); if(canvas) canvas.style.display='none';
