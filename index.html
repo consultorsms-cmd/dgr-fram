@@ -4960,7 +4960,7 @@ ready(function(){
       for (var i=0;i<N;i++) {
         var VDE = sample(p.vde), VDX = sample(p.vdx), VAE = sample(p.vae), VAX = sample(p.vax), MR = sample(p.mr);
         var VD = Math.max(0, VDE + VDX);
-        var redVA = clamp01(VAE + VAX);
+        var redVA = Math.min(1, Math.max(0, VAE + VAX));
         var redMR = clamp01(MR);
         var vMR = Math.max(0, Math.min(2, VD * (1 - redMR)));
         var vVA = Math.max(0, Math.min(2, VD * (1 - redVA)));
@@ -5024,7 +5024,7 @@ ready(function(){
     if (!ok) { inner.innerHTML = ''; return; }
     var melhor = n(gMR.p95) <= n(gVA.p95) ? 'MR' : 'VAE + VAX';
     var dif = Math.abs(n(gMR.p95) - n(gVA.p95)) * 100;
-    inner.innerHTML = '<div class="dash-section" style="border-left:4px solid #185fa5"><h3>Comparação global</h3><div class="adv-text">Duas simulações independentes: <b>VFRR_MR = VD x (1 - MR)</b> e <b>VFRR_(VAE+VAX) = VD x (1 - (VAE + VAX))</b>. VAE e VAX não são apresentados como média; aparecem separadamente. Menor P95 residual: <b>'+melhor+'</b>. Diferença: '+dif.toFixed(1).replace('.',',')+' pp.</div></div>'
+    inner.innerHTML = '<div class="dash-section" style="border-left:4px solid #185fa5"><h3>Comparação global</h3><div class="adv-text">Duas simulações independentes: <b>VFRR_MR = VD x (1 - MR)</b> e <b>VFRR_(VAE+VAX) = VD x [1 - min(1, VAE + VAX)]</b>. VAE e VAX não são apresentados como média; aparecem separadamente. Menor P95 residual: <b>'+melhor+'</b>. Diferença: '+dif.toFixed(1).replace('.',',')+' pp.</div></div>'
       + '<div style="display:flex;gap:14px;flex-wrap:wrap">'
       + globalCard('Cenário MR','Redutor aplicado: somente Mecanismos de Resiliência (MR). Redutor médio MR: <b>'+pct(gMR.mr)+'</b>.',gMR,S.mcResMR,'#0f6e56')
       + globalCard('Cenário VAE + VAX','Redutor aplicado: soma VAE + VAX. VAE médio: <b>'+pct(gVA.vae)+'</b>; VAX médio: <b>'+pct(gVA.vax)+'</b>; soma limitada a 100%.',gVA,S.mcResVA,'#6b21a8')
@@ -5042,7 +5042,7 @@ ready(function(){
     var el = document.getElementById('funcres-inner'); if (!el) return;
     if (!hasDual()) { el.innerHTML = '<div class="empty">Execute a simulação no botão Monte Carlo para visualizar os resultados por função.</div>'; return; }
     el.innerHTML = '<div class="dash-section"><h3>Cenário MR - por função</h3><div class="adv-text">Resultado de VFRR_MR = VD x (1 - MR).</div>'+rows(S.mcResMR)+'</div>'
-      + '<div class="dash-section"><h3>Cenário VAE + VAX - por função</h3><div class="adv-text">Resultado de VFRR_(VAE+VAX) = VD x (1 - (VAE + VAX)). VAE e VAX aparecem em colunas separadas.</div>'+rows(S.mcResVA)+'</div>';
+      + '<div class="dash-section"><h3>Cenário VAE + VAX - por função</h3><div class="adv-text">Resultado de VFRR_(VAE+VAX) = VD x [1 - min(1, VAE + VAX)]. VAE e VAX aparecem em colunas separadas.</div>'+rows(S.mcResVA)+'</div>';
   }
 
   function exportPDF(){
@@ -5074,10 +5074,10 @@ ready(function(){
     y+=55; text('Não há matriz, radar, Monitorar/Responder/Aprender/Antecipar nem DGR-OPS sintético. VAE e VAX são exibidos separadamente.',MG,y,8,false,[45,50,65]);
     y = add('Monte Carlo - resultados globais');
     text('Monte Carlo - duas simulações globais',MG,y,16,true); y+=9;
-    text('Simulação 1: cenário MR estima a variabilidade residual usando somente MR como redutor: VFRR_MR = VD x (1 - MR).',MG,y,8); y+=5; text('Simulação 2: cenário VAE+VAX estima a variabilidade residual usando a soma VAE + VAX como redutor adaptativo: VFRR = VD x (1 - (VAE + VAX)).',MG,y,8); y+=8;
+    text('Simulação 1: cenário MR estima a variabilidade residual usando somente MR como redutor: VFRR_MR = VD x (1 - MR).',MG,y,8); y+=5; text('Simulação 2: cenário VAE+VAX estima a variabilidade residual usando a soma VAE + VAX limitada a 100%: VFRR = VD x [1 - min(1, VAE + VAX)].',MG,y,8); y+=8;
     text('Redutor MR médio: '+pct(gMR.mr)+' | Redutor VAE médio: '+pct(gVA.vae)+' | Redutor VAX médio: '+pct(gVA.vax),MG,y,9,true); y+=10;
     y = metric(gMR,y,[15,110,86],'Cenário MR - VFRR_MR = VD x (1 - MR)');
-    y = metric(gVA,y+4,[107,33,168],'Cenário VAE+VAX - VFRR = VD x (1 - (VAE + VAX))');
+    y = metric(gVA,y+4,[107,33,168],'Cenário VAE+VAX - VFRR = VD x [1 - min(1, VAE + VAX)]');
     function table(title,map){
       var y=add(title); text(title,MG,y,14,true); y+=8;
       var headers=['Função','VDE','VDX','VAE','VAX','MR','Média','P90','P95','P99','Prob.'], widths=[62,20,20,20,20,20,22,20,20,20,22], x=MG;
@@ -5214,12 +5214,13 @@ ready(function(){
         return y+38;
       }
       function fracFormula(x,y,w,title,numLine,denLine,resultLine,c){
-        doc.setFillColor(255,255,255); doc.setDrawColor(c[0],c[1],c[2]); doc.roundedRect(x,y,w,39,2.5,2.5,'FD');
+        doc.setFillColor(255,255,255); doc.setDrawColor(c[0],c[1],c[2]); doc.roundedRect(x,y,w,43,2.5,2.5,'FD');
         txt(title,x+4,y+7.2,8.5,true,c);
-        txt(numLine,x+w/2,y+16,7.2,false,C.text,{align:'center'});
+        txt(numLine,x+w/2,y+16,7.0,false,C.text,{align:'center'});
         doc.setDrawColor(80,86,105); doc.line(x+8,y+19,x+w-8,y+19);
-        txt(denLine,x+w/2,y+25,7.2,false,C.text,{align:'center'});
-        txt(resultLine,x+w/2,y+34,8,true,c,{align:'center'});
+        txt(denLine,x+w/2,y+25,7.0,false,C.text,{align:'center'});
+        txt('x 100',x+w/2,y+31,7.2,true,c,{align:'center'});
+        txt(resultLine,x+w/2,y+39,7.6,true,c,{align:'center'});
       }
       function bar(x,y,w,label,value,c,maxVal=1){
         const bw = Math.max(0, Math.min(w, w*(num(value)/Math.max(0.0001,maxVal))));
@@ -5264,9 +5265,7 @@ ready(function(){
       fracFormula(MG+94,y,86,'Fórmula VAE','Σ(Critérios VAE selecionados x Intensidade x Peso)','Σ(Critérios VAE possíveis x Peso)','Totalização: '+vae.num.toFixed(2).replace('.',',')+' / '+vae.den,C.vae);
       fracFormula(MG+188,y,86,'Fórmula VAX','Σ(Critérios VAX selecionados x Intensidade x Peso)','Σ(Critérios VAX possíveis x Peso)','Totalização: '+vax.num.toFixed(2).replace('.',',')+' / '+vax.den,C.vax);
       y+=50;
-      txt('Leitura visual dos indicadores',MG,y,10,true,C.text); y+=6;
-      bar(MG,y,170,'MR',mr.pct,C.mr); y+=9; bar(MG,y,170,'VAE',vae.pct,C.vae); y+=9; bar(MG,y,170,'VAX',vax.pct,C.vax); y+=14;
-      formulaBox(MG+190,132,83,'Critério de intensidade',['Máxima = 1,00','Média = 0,50','Mínima = 0,25'],C.blue);
+      wrap('Não há matriz, radar, Monitorar/Responder/Aprender/Antecipar nem DGR-OPS sintético nesta página. MR, VAE e VAX são exibidos separadamente, com suas respectivas fórmulas e totalizações.',MG,y,270,5,8,C.muted);
 
       y=header('Monte Carlo - resultados globais','Monte Carlo - duas simulações globais');
       formulaBox(MG,y,86,'Modelo-base',['VD = VDE + VDX','VA = VAE + VAX','VFR = max(0, VD - VA)'],C.blue);
@@ -5288,6 +5287,183 @@ ready(function(){
     console.log('DGR-FRAM PDF gráfico v11 ativo');
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyGraphicPdfPatch); else applyGraphicPdfPatch();
+})();
+</script>
+
+
+
+<script>
+/* PATCH DEFINITIVO v12 — Monte Carlo usa VAE/VAX consolidados do DGR-OPS
+   - Remove o uso de médias simuladas de VAE e VAX como redutores.
+   - Aplica RedutorAdaptativo = min(1, VAE + VAX).
+   - Melhora a tela DGR-OPS com cards, barras e fórmulas separadas.
+*/
+(function(){
+'use strict';
+function boot(){
+  if(!window.DGRManager || !window.DGRState || !window.TAXO){ setTimeout(boot,60); return; }
+  const M=window.DGRManager, S=window.DGRState, T=window.TAXO;
+  const n=v=>Number.isFinite(+v)?+v:0;
+  const fns=()=>Array.isArray(S.fns)?S.fns:[];
+  const clamp01=v=>Math.max(0,Math.min(1,n(v)));
+  const pct=(v,d=1)=>(n(v)*100).toFixed(d).replace('.',',')+'%';
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const avg=a=>a&&a.length?a.reduce((x,y)=>x+n(y),0)/a.length:0;
+  const q=(a,p)=>{ if(!a||!a.length)return 0; const i=Math.min(a.length-1,Math.max(0,Math.floor(a.length*p))); return a[i]||0; };
+  const levelWeight=(level,sv)=>{
+    const l=String(level || (sv&&sv.level) || '').toLowerCase();
+    if(l.includes('max') || l.includes('máx')) return 1.00;
+    if(l.includes('min') || l.includes('mín')) return 0.25;
+    if(l.includes('med') || l.includes('méd')) return 0.50;
+    const mp=n(sv && (sv.mp!=null?sv.mp:sv.mean));
+    if(mp>=0.70) return 1.00;
+    if(mp<=0.30) return 0.25;
+    return 0.50;
+  };
+  const sample=p=>{ p=p||{}; return typeof M.betaPertSample==='function' ? M.betaPertSample(n(p.mn),n(p.mp),n(p.mx)) : n(p.mp); };
+  function scoreGlobal(key){
+    const items=(T[key]&&T[key].items)?T[key].items:[];
+    const den=Math.max(1,fns().length*items.length);
+    let num=0, selected=0;
+    fns().forEach(fn=>{
+      const subs=(S.subs&&S.subs[fn.id])||{};
+      items.forEach(item=>{ const sv=subs[item.code]; if(sv&&sv.sel===true){ selected++; num+=levelWeight(sv.level,sv); } });
+    });
+    return {key,num,den,selected,pct:den?num/den:0};
+  }
+  function simStats(arr,details){
+    arr.sort((a,b)=>a-b);
+    const hist=Array(20).fill(0);
+    arr.forEach(v=>hist[Math.min(19,Math.floor(Math.min(Math.max(v,0),0.9999)*20))]++);
+    const hmax=Math.max(1,...hist);
+    return {
+      mean:avg(arr), p90:q(arr,0.90), p95:q(arr,0.95), p99:q(arr,0.99),
+      probCrit:arr.filter(v=>v>=0.70).length/(arr.length||1),
+      hist:hist.map(h=>h/hmax),
+      vde:avg(details.vde), vdx:avg(details.vdx), vae:avg(details.vae), vax:avg(details.vax), mr:avg(details.mr), vd:avg(details.vd),
+      redutorAdaptativo:avg(details.redutorAdaptativo||[])
+    };
+  }
+  function globalStats(pooled,map,extra){
+    pooled.sort((a,b)=>a-b);
+    const vals=Object.keys(map||{}).map(k=>map[k]);
+    return Object.assign({
+      mean:avg(pooled), p90:q(pooled,0.90), p95:q(pooled,0.95), p99:q(pooled,0.99),
+      probCrit:pooled.filter(v=>v>=0.70).length/(pooled.length||1),
+      mr:avg(vals.map(r=>r.mr)), vae:avg(vals.map(r=>r.vae)), vax:avg(vals.map(r=>r.vax)), vd:avg(vals.map(r=>r.vd)),
+      redutorAdaptativo:avg(vals.map(r=>r.redutorAdaptativo))
+    }, extra||{});
+  }
+  function hasDual(){ return fns().some(fn=>S.mcResMR&&S.mcResMR[fn.id]&&S.mcResVA&&S.mcResVA[fn.id]); }
+  function cardHTML(t,v,c){return '<div class="dash-card"><div class="dash-card-val" style="color:'+c+'">'+v+'</div><div class="dash-card-lbl">'+t+'</div></div>';}
+  function metricGrid(g,c){return '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:8px 0 10px">'+[['Média',g.mean],['P90',g.p90],['P95',g.p95],['P99',g.p99],['Prob.Crit.',g.probCrit]].map(k=>'<div class="sbox"><span class="sval" style="color:'+c+'">'+pct(k[1])+'</span><span class="slbl">'+k[0]+'</span></div>').join('')+'</div>';}
+  function hist(map,c){const h=Array(20).fill(0); fns().forEach(fn=>{const r=map&&map[fn.id]; if(r&&r.hist)r.hist.forEach((v,i)=>h[i]+=v);}); const mx=Math.max(1,...h); return '<div class="histbars" style="height:58px;margin:8px 0">'+h.map(v=>{const z=v/mx; return '<div class="hb" style="height:'+Math.max(1,Math.round(z*56))+'px;background:'+c+';opacity:'+(0.35+z*0.65).toFixed(2)+'"></div>';}).join('')+'</div>';}
+  function globalCard(t,sub,g,map,c){return '<div class="dc" style="min-width:320px;flex:1"><div class="dc-head"><span style="color:'+c+'">'+esc(t)+'</span></div><div class="adv-text">'+sub+'</div>'+metricGrid(g,c)+hist(map,c)+'</div>';}
+
+  function runSimulationConsolidated(){
+    if(!fns().length){ alert('Adicione funções antes de rodar a simulação.'); return; }
+    const N=S.mcN||5000;
+    const vaeGlobal=scoreGlobal('VAE').pct;
+    const vaxGlobal=scoreGlobal('VAX').pct;
+    const redutorAdaptativo=Math.min(1, Math.max(0, vaeGlobal + vaxGlobal));
+    S.mcResMR={}; S.mcResVA={}; S.mcRes={};
+    const pooledMR=[], pooledVA=[];
+    fns().forEach(fn=>{
+      if(typeof M.recalcParams==='function') M.recalcParams(fn.id);
+      const p=(S.params&&S.params[fn.id])||{};
+      const arrMR=[], arrVA=[];
+      const detMR={vde:[],vdx:[],vae:[],vax:[],mr:[],vd:[],redutorAdaptativo:[]};
+      const detVA={vde:[],vdx:[],vae:[],vax:[],mr:[],vd:[],redutorAdaptativo:[]};
+      for(let i=0;i<N;i++){
+        const VDE=sample(p.vde), VDX=sample(p.vdx), MR=sample(p.mr);
+        const VD=Math.max(0,VDE+VDX);
+        const redMR=clamp01(MR);
+        const vfrrMR=Math.max(0,Math.min(2,VD*(1-redMR)));
+        const vfrrVA=Math.max(0,Math.min(2,VD*(1-redutorAdaptativo)));
+        arrMR.push(vfrrMR); arrVA.push(vfrrVA); pooledMR.push(vfrrMR); pooledVA.push(vfrrVA);
+        detMR.vde.push(VDE); detMR.vdx.push(VDX); detMR.vae.push(vaeGlobal); detMR.vax.push(vaxGlobal); detMR.mr.push(MR); detMR.vd.push(VD); detMR.redutorAdaptativo.push(redMR);
+        detVA.vde.push(VDE); detVA.vdx.push(VDX); detVA.vae.push(vaeGlobal); detVA.vax.push(vaxGlobal); detVA.mr.push(MR); detVA.vd.push(VD); detVA.redutorAdaptativo.push(redutorAdaptativo);
+      }
+      S.mcResMR[fn.id]=simStats(arrMR,detMR);
+      S.mcResVA[fn.id]=simStats(arrVA,detVA);
+      S.mcRes[fn.id]=S.mcResMR[fn.id];
+    });
+    S.mcGlobalMR=globalStats(pooledMR,S.mcResMR,{});
+    S.mcGlobalVA=globalStats(pooledVA,S.mcResVA,{vae:vaeGlobal,vax:vaxGlobal,redutorAdaptativo:redutorAdaptativo});
+    S.mcGlobal=S.mcGlobalMR;
+    S.mcLastMode='DUAL_MR_VAE_VAX_CONSOLIDATED_DGR_OPS';
+    renderMC(); renderDGR();
+    if(typeof M.renderFunctionResults==='function') try{M.renderFunctionResults();}catch(e){}
+    if(typeof M.saveToLocalStorage==='function') try{M.saveToLocalStorage();}catch(e){}
+  }
+
+  function renderMC(){
+    const ok=hasDual(), gMR=S.mcGlobalMR||{}, gVA=S.mcGlobalVA||{};
+    const stats=document.getElementById('dash-stats');
+    if(stats){
+      stats.innerHTML=[
+        cardHTML('Funções',fns().length,'#4778e8'),
+        cardHTML('Acoplamentos',(S.coups||[]).length,'#185fa5'),
+        cardHTML('MR médio',ok?pct(gMR.mr):'—','#0f6e56'),
+        cardHTML('VAE consolidado DGR-OPS',ok?pct(gVA.vae):'—','#6b21a8'),
+        cardHTML('VAX consolidado DGR-OPS',ok?pct(gVA.vax):'—','#7c3aed'),
+        cardHTML('Redutor adaptativo limitado',ok?pct(gVA.redutorAdaptativo):'—','#6b21a8'),
+        cardHTML('P95 cenário MR',ok?pct(gMR.p95):'—','#0f6e56'),
+        cardHTML('P95 cenário VAE+VAX',ok?pct(gVA.p95):'—','#6b21a8')
+      ].join('');
+    }
+    const ttl=document.querySelector('#s-mc .dash-section h3'); if(ttl) ttl.textContent='Monte Carlo - resultados globais';
+    const canvas=document.getElementById('ch-vfr'); if(canvas) canvas.style.display='none';
+    const empty=document.getElementById('ch-vfr-empty'); if(empty){ empty.style.display='block'; empty.textContent=ok?'Resultados globais exibidos abaixo. O detalhamento por função está no botão Resultados por Função.':'Execute a simulação para calcular.'; }
+    const inner=document.getElementById('mc-inner'); if(!inner) return;
+    if(!ok){ inner.innerHTML=''; return; }
+    const melhor=n(gMR.p95)<=n(gVA.p95)?'MR':'VAE + VAX';
+    inner.innerHTML='<div class="dash-section" style="border-left:4px solid #185fa5"><h3>Comparação global</h3><div class="adv-text">Duas simulações independentes: <b>VFRR_MR = VD × (1 − MR)</b> e <b>RedutorAdaptativo = min(1, VAE + VAX); VFRR = VD × (1 − RedutorAdaptativo)</b>. O cenário adaptativo usa <b>VAE e VAX consolidados da página DGR-OPS</b>, não médias simuladas. Menor P95 residual: <b>'+melhor+'</b>.</div></div>'
+      +'<div style="display:flex;gap:14px;flex-wrap:wrap">'
+      +globalCard('Cenário MR','Redutor aplicado: MR sorteado/estimado pela parametrização do mecanismo. MR médio observado: <b>'+pct(gMR.mr)+'</b>.',gMR,S.mcResMR,'#0f6e56')
+      +globalCard('Cenário VAE + VAX','Redutor aplicado: <b>min(1, '+pct(gVA.vae)+' + '+pct(gVA.vax)+') = '+pct(gVA.redutorAdaptativo)+'</b>. VAE e VAX vêm do cálculo consolidado DGR-OPS.',gVA,S.mcResVA,'#6b21a8')
+      +'</div>';
+  }
+
+  function formulaCard(title,v,formula,detail,c){
+    const w=Math.max(0,Math.min(100,v.pct*100)).toFixed(1);
+    return '<div class="dash-section" style="border-left:5px solid '+c+';box-shadow:0 4px 14px rgba(0,0,0,.06);border-radius:12px">'
+      +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px"><div><h3 style="margin:0 0 4px;color:'+c+';font-size:15px">'+esc(title)+'</h3><div style="font-size:11px;color:#6b7280">Critérios selecionados: '+v.selected+'</div></div><div style="font-size:32px;font-weight:900;color:'+c+';letter-spacing:-.03em">'+pct(v.pct)+'</div></div>'
+      +'<div style="height:12px;background:#eef0f6;border-radius:999px;overflow:hidden;margin:12px 0"><div style="height:100%;width:'+w+'%;background:'+c+';border-radius:999px"></div></div>'
+      +'<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.55"><b>Fórmula</b><br>'+formula+'<br><b>Totalização:</b> '+v.num.toFixed(2).replace('.',',')+' / '+v.den+'</div>'
+      +'<div class="adv-text" style="margin-top:9px">'+detail+'</div></div>';
+  }
+  function renderDGR(){
+    const el=document.getElementById('dgr-indicadores'), interp=document.getElementById('dgr-interp');
+    const sub=document.querySelector('#s-dgr .page-sub');
+    if(sub) sub.textContent='Indicadores consolidados usados diretamente na simulação adaptativa de Monte Carlo.';
+    if(!el) return;
+    const mr=scoreGlobal('MR'), vae=scoreGlobal('VAE'), vax=scoreGlobal('VAX');
+    const red=Math.min(1,Math.max(0,vae.pct+vax.pct));
+    el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">'
+      +formulaCard('MR',mr,'MR = [Σ(Critérios MR selecionados × Intensidade × Peso) / Σ(Critérios MR possíveis × Peso)] × 100','Mecanismos formais de resiliência. Na simulação MR, atua como redutor específico do cenário MR.','#0f6e56')
+      +formulaCard('VAE',vae,'VAE = [Σ(Critérios VAE selecionados × Intensidade × Peso) / Σ(Critérios VAE possíveis × Peso)] × 100','Variabilidade Adaptativa Endógena. Este valor consolidado alimenta a simulação VAE+VAX.','#6b21a8')
+      +formulaCard('VAX',vax,'VAX = [Σ(Critérios VAX selecionados × Intensidade × Peso) / Σ(Critérios VAX possíveis × Peso)] × 100','Variabilidade Adaptativa Exógena. Este valor consolidado alimenta a simulação VAE+VAX.','#7c3aed')
+      +'</div><div class="dash-section" style="margin-top:16px;border-left:5px solid #185fa5"><h3>Redutor adaptativo aplicado no Monte Carlo</h3><div class="adv-text"><b>RedutorAdaptativo = min(1, VAE + VAX)</b><br>RedutorAdaptativo = min(1, '+pct(vae.pct)+' + '+pct(vax.pct)+') = <b>'+pct(red)+'</b>.<br>Esse limite impede VFRR negativo e redução superior a 100%.</div></div>';
+    if(interp) interp.innerHTML='<b>Indicadores consolidados:</b> MR = '+pct(mr.pct)+'; VAE = '+pct(vae.pct)+'; VAX = '+pct(vax.pct)+'.<br><b>Monte Carlo adaptativo:</b> usa diretamente VAE e VAX calculados nesta página, sem médias simuladas.';
+  }
+
+  M.runSimulation=runSimulationConsolidated;
+  M.renderKPIs=function(){renderMC();};
+  M.renderMCPanel=function(){renderMC();};
+  M.renderCharts=function(){const c=document.getElementById('ch-vfr'); if(c)c.style.display='none'; const e=document.getElementById('ch-vfr-empty'); if(e){e.style.display='block'; e.textContent=hasDual()?'Resultados globais exibidos abaixo.':'Execute a simulação para calcular.';}};
+  M.renderDGROPS=renderDGR;
+  const oldSwitch=M.switchPage&&M.switchPage.bind(M);
+  M.switchPage=function(page){ if(oldSwitch) oldSwitch(page); if(page==='mc') renderMC(); if(page==='dgr') renderDGR(); };
+  const oldRefresh=M.refreshUI&&M.refreshUI.bind(M);
+  M.refreshUI=function(){ if(oldRefresh) oldRefresh(); if(S.curPage==='mc') renderMC(); if(S.curPage==='dgr') renderDGR(); };
+  document.addEventListener('click',()=>setTimeout(()=>{ if(S.curPage==='mc')renderMC(); if(S.curPage==='dgr')renderDGR(); },80),true);
+  document.addEventListener('change',()=>setTimeout(()=>{ if(S.curPage==='mc')renderMC(); if(S.curPage==='dgr')renderDGR(); },80),true);
+  if(S.curPage==='mc') renderMC();
+  if(S.curPage==='dgr') renderDGR();
+  console.log('Patch v12 ativo: Monte Carlo usa VAE/VAX consolidados e redutor adaptativo limitado.');
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
 })();
 </script>
 
