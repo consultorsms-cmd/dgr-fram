@@ -221,11 +221,11 @@ textarea.fi{resize:vertical;min-height:55px}
         </div>
         <div class="nav-item" id="ni-mr" onclick="DGRManager.switchPage('mr')">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Mecanismos MR
+          Mecanismos de Resiliência (MR) DGR-OPS
         </div>
         <div class="nav-item" id="ni-dgr" onclick="DGRManager.switchPage('dgr')">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-          Capacidades Resilientes Desenvolvidas
+          Capacidades Resilientes Desenvolvidas (DGR-OPS)
         </div>
       </div>
     </div>
@@ -235,7 +235,7 @@ textarea.fi{resize:vertical;min-height:55px}
       <div class="screen act scroll-screen" id="s-mc">
         <div class="form-wrap">
           <div class="page-title">Simulação Monte Carlo & Dashboard</div>
-          <div class="page-sub">Cálculos iterativos com <b>avaliação Beta-PERT</b>: <b>VE</b>, <b>VX</b>, <b>MR</b>, <b>VFR</b>, <b>Média</b>, <b>P90</b>, <b>P95</b>, <b>P99</b> e <b>Probabilidade de Criticidade</b>. P95 Global.</div>
+          <div class="page-sub">Cálculos iterativos com <b>avaliação Beta-PERT</b>: duas simulações independentes, <b>Cenário MR</b> e <b>Cenário VA (VAE+VAX)</b>, com <b>Média</b>, <b>P90</b>, <b>P95</b>, <b>P99</b> e <b>Probabilidade de Criticidade</b>.</div>
           
           <div class="dash-grid" id="dash-stats"></div>
 
@@ -432,7 +432,7 @@ textarea.fi{resize:vertical;min-height:55px}
 
       <div class="screen scroll-screen" id="s-mr">
         <div class="form-wrap">
-          <div class="page-title">Mecanismos de Resiliência (MR)</div>
+          <div class="page-title">Mecanismos de Resiliência (MR) DGR-OPS</div>
           <div class="page-sub">Barreiras estruturadas que amortecem a variabilidade funcional residual.</div>
           
           <div class="form-card">
@@ -468,21 +468,10 @@ textarea.fi{resize:vertical;min-height:55px}
       <div class="screen scroll-screen" id="s-dgr" style="overflow-y:auto">
         <div class="form-wrap">
     <div class="page-title">Capacidades Resilientes Desenvolvidas (DGR-OPS)</div>
-    <div class="page-sub">Monitorar · Responder · Aprender · Antecipar</div>
-    <div id="dgr-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0 10px"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:10px 0 18px;align-items:start">
-      <div>
-        <div style="font-weight:600;font-size:13px;margin-bottom:8px">Radar de Capacidades</div>
-        <div id="dgr-radar" style="width:320px;height:320px;max-width:100%"></div>
-      </div>
-      <div>
-        <div style="font-weight:600;font-size:13px;margin-bottom:8px">Matriz Mecanismos × Capacidades</div>
-        <div id="dgr-matrix"></div>
-      </div>
-    </div>
+    <div class="page-sub">Mecanismos de Resiliência (MR) DGR-OPS · Variabilidade Adaptativa (VA) · DGR-OPS</div>
+    <div id="dgr-indicadores" style="margin:18px 0"></div>
     <div style="font-weight:600;font-size:13px;margin-bottom:8px">Interpretação Automática DGR-OPS</div>
     <div id="dgr-interp" style="background:#f8f9fc;border-left:4px solid #185fa5;padding:14px 16px;border-radius:4px;font-size:13px;line-height:1.7;color:#2a2e45"></div>
-    <div id="dgr-debug" style="margin-top:14px;padding:10px 14px;background:#1a1a2e;color:#7ee8a2;font-family:monospace;font-size:11px;border-radius:8px;line-height:1.8;white-space:pre-wrap"></div>
   </div>
 </div>
 
@@ -645,6 +634,12 @@ const DGRManager = {
     if (screenItem) screenItem.classList.add('act');
     
     this.refreshUI();
+    // Garante render DGR-OPS ao navegar para a tela
+    if (page === 'dgr' && typeof this.renderDGROPS === 'function') {
+      this.renderDGROPS();
+      setTimeout(() => { if (typeof this.renderDGROPS === 'function') this.renderDGROPS(); }, 50);
+      setTimeout(() => { if (typeof this.renderDGROPS === 'function') this.renderDGROPS(); }, 300);
+    }
   },
 
   refreshUI() {
@@ -658,12 +653,14 @@ const DGRManager = {
     this.renderTaxonomyAccordion('RX', 'exo-subcat-sel');
     this.renderTaxonomyAccordion('MR', 'mr-subcat-sel');
     if (DGRState.curPage === 'fram') this.renderFramMap();
-    
     if (DGRState.curPage === 'mc') {
       const hasRes = DGRState.fns.some(f => DGRState.mcRes[f.id]);
       this.renderKPIs(hasRes);
       this.renderCharts(hasRes);
       this.renderMCPanel(hasRes);
+    }
+    if (DGRState.curPage === 'dgr' && typeof this.renderDGROPS === 'function') {
+      this.renderDGROPS();
     }
   },
 
@@ -717,7 +714,7 @@ const DGRManager = {
   normalizeEvaluationLevels() {
     DGRState.fns.forEach(fn => {
       if (!DGRState.subs[fn.id]) DGRState.subs[fn.id] = {};
-      [...TAXO.RE.items, ...TAXO.RX.items, ...TAXO.MR.items].forEach(item => {
+      [...(TAXO.VDE?.items||[]), ...(TAXO.VDX?.items||[]), ...(TAXO.VAE?.items||[]), ...(TAXO.VAX?.items||[]), ...(TAXO.MR?.items||[])].forEach(item => {
         const cur = DGRState.subs[fn.id][item.code] || { sel:false };
         const level = cur.level || this.inferEvalLevel(cur);
         const preset = this.evalPreset(level);
@@ -1119,7 +1116,7 @@ const DGRManager = {
       DGRState.fns.push({ id: nid, name, description: desc, x: 40 + (DGRState.fns.length % 5) * 185, y: 45 + Math.floor(DGRState.fns.length / 5) * 145 });
       DGRState.params[nid] = { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.2,mp:0.4,mx:0.7} };
       DGRState.subs[nid] = {};
-      [...TAXO.RE.items, ...TAXO.RX.items, ...TAXO.MR.items].forEach(i => {
+      [...(TAXO.VDE?.items||[]), ...(TAXO.VDX?.items||[]), ...(TAXO.VAE?.items||[]), ...(TAXO.VAX?.items||[]), ...(TAXO.MR?.items||[])].forEach(i => {
         DGRState.subs[nid][i.code] = { sel: false, level: 'media', mn: 0.25, mp: 0.50, mx: 0.70 };
       });
     }
@@ -1545,7 +1542,13 @@ const DGRManager = {
   } ,
 
   recalcParams(fnId) {
-    const process = (items, key) => {
+    // Garante defaults para que a simulação MC sempre tenha p.ve, p.vx, p.ar válidos
+    if (!DGRState.params[fnId]) DGRState.params[fnId] = {};
+    const defaults = { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.0,mp:0.0,mx:0.0} };
+    ['ve','vx','ar'].forEach(k => { if (!DGRState.params[fnId][k]) DGRState.params[fnId][k] = {...defaults[k]}; });
+
+    const processItems = (taxoKeys, key) => {
+      const items = taxoKeys.flatMap(k => (TAXO[k] ? TAXO[k].items : []));
       const sel = items.filter(i => DGRState.subs[fnId]?.[i.code]?.sel);
       if (sel.length) {
         let sn = 0, sp = 0, sx = 0;
@@ -1553,7 +1556,9 @@ const DGRManager = {
         DGRState.params[fnId][key] = { mn: +(sn/sel.length).toFixed(3), mp: +(sp/sel.length).toFixed(3), mx: +(sx/sel.length).toFixed(3) };
       }
     };
-    process(TAXO.RE.items, 've'); process(TAXO.RX.items, 'vx'); process(TAXO.MR.items, 'ar');
+    processItems(['VDE'], 've');
+    processItems(['VDX'], 'vx');
+    processItems(['MR', 'VAE', 'VAX'], 'ar');
   },
 
   // ── SIMULAÇÃO MONTE CARLO ──
@@ -2240,7 +2245,7 @@ const DGRManager = {
     DGRState.fns.forEach(f => {
       DGRState.params[f.id] = { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.2,mp:0.4,mx:0.7} };
       DGRState.subs[f.id] = {};
-      [...TAXO.RE.items, ...TAXO.RX.items, ...TAXO.MR.items].forEach(i => { DGRState.subs[f.id][i.code] = { sel: false, level: 'media', mn: 0.25, mp: 0.50, mx: 0.70 }; });
+      [...(TAXO.VDE?.items||[]),...(TAXO.VDX?.items||[]),...(TAXO.VAE?.items||[]),...(TAXO.VAX?.items||[]),...(TAXO.MR?.items||[])].forEach(i => { DGRState.subs[f.id][i.code] = { sel: false, level: 'media', mn: 0.25, mp: 0.50, mx: 0.70 }; });
     });
     this.refreshUI();
   },
@@ -2788,68 +2793,33 @@ let openSubcatFn = {};
     ]}
   ],get items(){return this.groups.flatMap(g=>g.items);}};
 
-  TAXO.VAE={label:'VAE — Variabilidade Adaptativa Endógena',color:'#0f6e56',bg:'#e8f8f0',groups:[
+  TAXO.VAE={label:'VAE - Variabilidade Adaptativa Endógena',color:'#0f6e56',bg:'#e8f8f0',groups:[
     {key:'A',label:'VAE-A — Barreiras Operacionais Internas Efetivas',items:[
       item('VAE-A.1','Dupla checagem aplicada em etapa de alto risco'),
       item('VAE-A.2','Procedimentos operacionais padronizados seguidos'),
-      item('VAE-A.3','Plano de contingência atualizado e testado')
-    ]},
-    {key:'B',label:'VAE-B — Capacidades Resilientes Internas (Hollnagel)',items:[
-      item('VAE-B.1','Capacidade de monitorar sinais e indicadores internos'),
-      item('VAE-B.2','Capacidade de responder estruturadamente a eventos adversos'),
-      item('VAE-B.3','Capacidade de antecipar mudanças e perturbações')
-    ]},
-    {key:'C',label:'VAE-C — Maturidade em Governança de Dados Interna',items:[
-      item('VAE-C.1','Alta qualidade e confiabilidade dos dados internos'),
-      item('VAE-C.2','Políticas e responsabilidades de dados bem definidas'),
-      item('VAE-C.3','Tomada de decisão baseada em evidências sólidas')
-    ]},
-    {key:'D',label:'VAE-D — Recursos Internos Robustos',items:[
-      item('VAE-D.1','Redundância'),
-      item('VAE-D.2','Backup'),
-      item('VAE-D.3','Disaster recovery')
-    ]},
-    {key:'E',label:'VAE-E — Adaptação Sociotécnica Interna',items:[
-      item('VAE-E.1','Cooperação efetiva entre equipes internas'),
-      item('VAE-E.2','Compartilhamento de conhecimento operacional interno'),
-      item('VAE-E.3','Flexibilidade na execução de atividades críticas')
+      item('VAE-A.3','Plano de contingência atualizado e testado'),
+      item('VAE-A.4','Permissão formal de trabalho emitida corretamente'),
+      item('VAE-A.5','Revisão por pares realizada em decisão de alto risco'),
+      item('VAE-A.6','Auditoria interna realizada e com achados incorporados'),
+      item('VAE-A.7','Monitoramento de processo crítico ativo e eficaz'),
+      item('VAE-A.8','Checklist crítico utilizado sistematicamente')
     ]}
   ],get items(){return this.groups.flatMap(g=>g.items);}};
 
-  TAXO.VAX={label:'VAX — Variabilidade Adaptativa Exógena',color:'#138a2e',bg:'#ecfdf5',groups:[
+  TAXO.VAX={label:'VAX - Variabilidade Adaptativa Exógena',color:'#138a2e',bg:'#ecfdf5',groups:[
     {key:'A',label:'VAX-A — Barreiras Operacionais Efetivas entre Funções',items:[
       item('VAX-A.1','Apoio de outra equipe reforçando barreira crítica'),
       item('VAX-A.2','Supervisão colaborativa entre funções acopladas'),
-      item('VAX-A.3','Coordenação interfuncional para acionamento de contingência')
-    ]},
-    {key:'B',label:'VAX-B — Governança de Dados como Mecanismo Sociotécnico Exógeno',items:[
-      item('VAX-B.1','Compartilhamento de informações de alta qualidade entre funções'),
-      item('VAX-B.2','Evidências transferidas adequadamente para suporte à decisão'),
-      item('VAX-B.3','Rastreabilidade e custódia dos dados entre funções')
-    ]},
-    {key:'C',label:'VAX-C — Adaptação Sociotécnica Interfuncional',items:[
-      item('VAX-C.1','Reorganização de recursos entre funções em crise'),
-      item('VAX-C.2','Cooperação entre atores de funções distintas'),
-      item('VAX-C.3','Comunicação eficaz entre funções acopladas')
-    ]},
-    {key:'D',label:'VAX-D — Recursos Compartilhados',items:[
-      item('VAX-D.1','Site alternativo'),
-      item('VAX-D.2','Operação distribuída'),
-      item('VAX-D.3','Contingência entre unidades')
-    ]},
-    {key:'E',label:'VAX-E — Continuidade Operacional Compartilhada',items:[
-      item('VAX-E.1','Plano de continuidade compartilhado entre funções críticas'),
-      item('VAX-E.2','Redundância de infraestrutura crítica entre funções'),
-      item('VAX-E.3','Exercícios periódicos de continuidade interfuncionais')
+      item('VAX-A.3','Coordenação interfuncional para acionamento de contingência'),
+      item('VAX-A.4','Recurso adicional fornecido por outra função para reforço de barreira'),
+      item('VAX-A.5','Redundância organizacional entre funções ativada'),
+      item('VAX-A.6','Auditoria cruzada entre funções identificando não conformidade'),
+      item('VAX-A.7','Monitoramento compartilhado de processo crítico entre funções'),
+      item('VAX-A.8','Checklists e permissões coordenados entre funções acopladas')
     ]}
   ],get items(){return this.groups.flatMap(g=>g.items);}};
 
   TAXO.MR={label:'MR — Mecanismos de Resiliência',color:'#185fa5',bg:'#eef2ff',groups:[
-    {key:'A',label:'MR-A — Barreiras Estruturadas',items:[
-      item('MR-A.1','Dupla checagem'),
-      item('MR-A.2','Procedimentos operacionais padronizados'),
-      item('MR-A.3','Checklists críticos e permissão formal de trabalho')
-    ]},
     {key:'B',label:'MR-B — Governança de Dados como Barreira de Resiliência',items:[
       item('MR-B.1','Políticas de qualidade de dados'),
       item('MR-B.2','Processo decisório baseado em evidências'),
@@ -2937,8 +2907,8 @@ let openSubcatFn = {};
     const endoSub=document.querySelector('#s-endo .page-sub'); if(endoSub) endoSub.innerHTML='Variabilidade gerada dentro da própria função, dividida em <b>VDE</b> (degradadora) e <b>VAE</b> (adaptativa).';
     const exoTitle=document.querySelector('#s-exo .page-title'); if(exoTitle) exoTitle.textContent='Variabilidade Exógena';
     const exoSub=document.querySelector('#s-exo .page-sub'); if(exoSub) exoSub.innerHTML='Variabilidade recebida de outras funções acopladas da rede FRAM, dividida em <b>VDX</b> (degradadora) e <b>VAX</b> (adaptativa).';
-    const mrTitle=document.querySelector('#s-mr .page-title'); if(mrTitle) mrTitle.textContent='Mecanismos de Resiliência (MR)';
-    const mcSub=document.querySelector('#s-mc .page-sub'); if(mcSub) mcSub.innerHTML='Cálculos iterativos com <b>avaliação Beta-PERT</b>: <b>VE</b>, <b>VX</b>, <b>MR</b>, <b>VFR</b>, <b>Média</b>, <b>P90</b>, <b>P95</b>, <b>P99</b> e <b>Probabilidade de Criticidade</b>. P95 Global.';
+    const mrTitle=document.querySelector('#s-mr .page-title'); if(mrTitle) mrTitle.textContent='Mecanismos de Resiliência (MR) DGR-OPS';
+    const mcSub=document.querySelector('#s-mc .page-sub'); if(mcSub) mcSub.innerHTML='Cálculos iterativos com <b>avaliação Beta-PERT</b>: duas simulações independentes, <b>Cenário MR</b> e <b>Cenário VA (VAE+VAX)</b>, com <b>Média</b>, <b>P90</b>, <b>P95</b>, <b>P99</b> e <b>Probabilidade de Criticidade</b>.';
     const hEndo=document.querySelector('#endo-subcat-sel')?.closest('.form-card')?.querySelector('h3'); if(hEndo) hEndo.textContent='Critérios de variabilidade endógena';
     const hExo=document.querySelector('#exo-subcat-sel')?.closest('.form-card')?.querySelector('h3'); if(hExo) hExo.textContent='Critérios de variabilidade exógena';
     const hMr=document.querySelector('#mr-subcat-sel')?.closest('.form-card')?.querySelector('h3'); if(hMr) hMr.textContent='Critérios dos mecanismos de resiliência';
@@ -2991,47 +2961,107 @@ let openSubcatFn = {};
   DGRManager.countRE=DGRManager.countVDE; DGRManager.countRX=DGRManager.countVDX;
 
   DGRManager.renderTaxonomyAccordion=function(taxoKey,containerId){
-    addStyle(); const container=document.getElementById(containerId); if(!container) return;
-    if(!DGRState.fns.length){container.innerHTML='<div class="empty">Cadastre funções para parametrizar esta taxonomia.</div>';return;}
-    const T=TAXO[taxoKey]; if(!T) return; const color=T.color;
+    addStyle();
+    const container=document.getElementById(containerId);
+    if(!container) return;
+    if(!DGRState.fns.length){
+      container.innerHTML='<div class="empty">Cadastre funções para parametrizar esta taxonomia.</div>';
+      return;
+    }
+    const T=TAXO[taxoKey]; if(!T) return;
+    const color=T.color;
     if(typeof openSubcatFn==='undefined') window.openSubcatFn={};
     container.innerHTML='';
+
     DGRState.fns.forEach(fn=>{
       if(!DGRState.subs[fn.id]) DGRState.subs[fn.id]={};
       const isOpen=openSubcatFn[containerId]===fn.id;
-      // contagem: quantos GRUPOS selecionados
-      const selCount=T.groups.filter(g=>DGRState.subs[fn.id]?.[taxoKey+'-'+g.key]?.sel).length;
-      const block=document.createElement('div'); block.className='subcat-fn-block'; block.style.setProperty('--sc-color',color);
-      const hdr=document.createElement('div'); hdr.className='subcat-fn-hdr';
-      hdr.onclick=()=>{openSubcatFn[containerId]=isOpen?null:fn.id; this.renderTaxonomyAccordion(taxoKey,containerId);};
-      hdr.innerHTML=`<span style="flex:1;font-weight:600">${esc(fn.name)}</span><span class="count-badge" style="background:${selCount>0?color+'22':'#f0f0f5'};color:${selCount>0?color:'#9898b0'}">${selCount} selecionadas</span><span style="font-size:10px;color:#9898b0;margin-left:6px">${isOpen?'▲':'▼'}</span>`;
+
+      // Contar itens selecionados (por item individual)
+      const allItems=T.items||[];
+      const selCount=allItems.filter(it=>DGRState.subs[fn.id]?.[it.code]?.sel).length;
+
+      const block=document.createElement('div');
+      block.className='subcat-fn-block';
+      block.style.setProperty('--sc-color',color);
+
+      // Cabeçalho da função
+      const hdr=document.createElement('div');
+      hdr.className='subcat-fn-hdr';
+      hdr.onclick=()=>{
+        openSubcatFn[containerId]=isOpen?null:fn.id;
+        this.renderTaxonomyAccordion(taxoKey,containerId);
+      };
+      hdr.innerHTML=`<span style="flex:1;font-weight:600">${esc(fn.name)}</span>`
+        +`<span class="count-badge" style="background:${selCount>0?color+'22':'#f0f0f5'};color:${selCount>0?color:'#9898b0'}">${selCount} selecionados</span>`
+        +`<span style="font-size:10px;color:#9898b0;margin-left:6px">${isOpen?'▲':'▼'}</span>`;
       block.appendChild(hdr);
-      const body=document.createElement('div'); body.className=`subcat-fn-body ${isOpen?'open':''}`;
+
+      const body=document.createElement('div');
+      body.className=`subcat-fn-body ${isOpen?'open':''}`;
+
+      // Renderizar grupos como cabeçalhos e itens como checkboxes individuais
       T.groups.forEach(grp=>{
-        const grpCode=taxoKey+'-'+grp.key;
-        let sv=DGRState.subs[fn.id][grpCode];
-        if(!sv){sv={sel:false,level:'media',mn:0.25,mp:0.50,mx:0.70};DGRState.subs[fn.id][grpCode]=sv;}
-        const grpDiv=document.createElement('div'); grpDiv.className=`subcat-item ${sv.sel?'sel':''}`;
-        // linha clicável do grupo
-        const row=document.createElement('div'); row.className='subcat-item-row';
-        row.onclick=()=>{DGRHistory.push();sv.sel=!sv.sel;this.applyEvalLevel(fn.id,grpCode,sv.level||'media');this.recalcParams(fn.id);DGRHistory.push();this.saveToLocalStorage(true);this.refreshUI();};
-        row.innerHTML=`<div class="subcat-check ${sv.sel?'on':''}">${sv.sel?'<span style="color:#fff;font-size:10px;">✔</span>':''}</div><span style="font-family:monospace;font-weight:700;color:${color}">${esc(grpCode)}</span><span style="font-size:12px;margin-left:6px;font-weight:600">${esc(grp.label)}</span>`;
-        grpDiv.appendChild(row);
-        // itens como bullets informativos (sempre visíveis)
-        const exDiv=document.createElement('div'); exDiv.className='subcat-examples';
-        exDiv.innerHTML=`<b>Exemplos de manifestação:</b><ul>${grp.items.map(it=>`<li><span style="font-family:monospace;font-size:11px;font-weight:700;color:${color}">${esc(it.code)}</span> ${esc(it.name)}</li>`).join('')}</ul>`;
-        grpDiv.appendChild(exDiv);
-        // seletor de intensidade (só se selecionado)
-        if(sv.sel){
-          const level=sv.level||'media';
-          const vals=document.createElement('div'); vals.className='subcat-vals';
-          vals.innerHTML=`<div class="subcat-val-cell"><label>Avaliação da intensidade</label><select class="pinp" style="text-align:left;padding:6px 8px"><option value="minima" ${level==='minima'?'selected':''}>Mínima</option><option value="media" ${level==='media'?'selected':''}>Média</option><option value="maxima" ${level==='maxima'?'selected':''}>Máxima</option></select><div class="mini-note">Convertido internamente para Beta-PERT.</div></div>`;
-          vals.querySelector('select').onchange=e=>{DGRHistory.push();this.applyEvalLevel(fn.id,grpCode,e.target.value);this.recalcParams(fn.id);DGRHistory.push();this.saveToLocalStorage(true);this.refreshUI();};
-          grpDiv.appendChild(vals);
-        }
-        body.appendChild(grpDiv);
+        // Cabeçalho do grupo (não selecionável)
+        const grpHdr=document.createElement('div');
+        grpHdr.className='subcat-group';
+        grpHdr.innerHTML=`<span class="subcat-group-lbl" style="background:${color}15;color:${color}">${esc(grp.label)}</span>`;
+        body.appendChild(grpHdr);
+
+        // Cada item do grupo como checkbox individual
+        grp.items.forEach(item=>{
+          if(!DGRState.subs[fn.id][item.code]){
+            DGRState.subs[fn.id][item.code]={sel:false,level:'media',mn:0.25,mp:0.50,mx:0.70};
+          }
+          const sv=DGRState.subs[fn.id][item.code];
+
+          const itemDiv=document.createElement('div');
+          itemDiv.className=`subcat-item ${sv.sel?'sel':''}`;
+
+          const row=document.createElement('div');
+          row.className='subcat-item-row';
+          row.onclick=()=>{
+            DGRHistory.push();
+            sv.sel=!sv.sel;
+            this.applyEvalLevel(fn.id,item.code,sv.level||'media');
+            this.recalcParams(fn.id);
+            DGRHistory.push();
+            this.saveToLocalStorage(true);
+            this.refreshUI();
+          };
+          row.innerHTML=`<div class="subcat-check ${sv.sel?'on':''}">${sv.sel?'<span style="color:#fff;font-size:10px;">✔</span>':''}</div>`
+            +`<span style="font-family:monospace;font-weight:700;color:${color};font-size:11px">${esc(item.code)}</span>`
+            +`<span style="font-size:12px;margin-left:6px">${esc(item.name)}</span>`;
+          itemDiv.appendChild(row);
+
+          // Seletor de intensidade (só se selecionado)
+          if(sv.sel){
+            const level=sv.level||'media';
+            const vals=document.createElement('div');
+            vals.className='subcat-vals';
+            vals.innerHTML=`<div class="subcat-val-cell"><label>Intensidade</label>`
+              +`<select class="pinp" style="text-align:left;padding:6px 8px">`
+              +`<option value="minima" ${level==='minima'?'selected':''}>Mínima</option>`
+              +`<option value="media"  ${level==='media' ?'selected':''}>Média</option>`
+              +`<option value="maxima" ${level==='maxima'?'selected':''}>Máxima</option>`
+              +`</select></div>`;
+            vals.querySelector('select').onchange=e=>{
+              DGRHistory.push();
+              this.applyEvalLevel(fn.id,item.code,e.target.value);
+              this.recalcParams(fn.id);
+              DGRHistory.push();
+              this.saveToLocalStorage(true);
+              this.refreshUI();
+            };
+            itemDiv.appendChild(vals);
+          }
+
+          body.appendChild(itemDiv);
+        });
       });
-      block.appendChild(body); container.appendChild(block);
+
+      block.appendChild(body);
+      container.appendChild(block);
     });
   }
   DGRManager.refreshUI=function(){ sanitizeUI(); this.syncSelectBoxes(); this.renderFunctions(); this.renderConnections(); this.renderEndogenous(); this.renderExogenous(); this.renderMechs(); this.renderTaxonomyAccordion('VDE','endo-subcat-sel'); this.renderTaxonomyAccordion('VAE','vae-subcat-sel-inline'); this.renderTaxonomyAccordion('VDX','exo-subcat-sel'); this.renderTaxonomyAccordion('VAX','vax-subcat-sel-inline'); this.renderTaxonomyAccordion('MR','mr-subcat-sel'); if(DGRState.curPage==='fram') this.renderFramMap(); if(DGRState.curPage==='mc'){ const hasRes=DGRState.fns.some(f=>DGRState.mcRes[f.id]); this.renderKPIs(hasRes); this.renderCharts(hasRes); this.renderMCPanel(hasRes); this.renderAdvancedAnalytics(hasRes);} };
@@ -3085,7 +3115,7 @@ let openSubcatFn = {};
     ['ch-heat','ch-heat-empty','ch-iis','ch-iis-empty'].forEach(id=>{ const el=document.getElementById(id); const sec=el?.closest('.dash-section'); if(sec) sec.remove(); });
     document.querySelectorAll('.dash-section h3').forEach(h=>{ const t=(h.textContent||'').toLowerCase(); if(t.includes('propagação da variabilidade') || t.includes('iis =')) h.closest('.dash-section')?.remove(); });
     const mcSub=document.querySelector('#s-mc .page-sub');
-    if(mcSub) mcSub.innerHTML='Cálculos iterativos com <b>avaliação Beta-PERT</b>: <b>VE</b>, <b>VX</b>, <b>MR</b>, <b>VFR</b>, <b>Média</b>, <b>P90</b>, <b>P95</b>, <b>P99</b> e <b>Probabilidade de Criticidade</b>. P95 Global.';
+    if(mcSub) mcSub.innerHTML='Cálculos iterativos com <b>avaliação Beta-PERT</b>: duas simulações independentes, <b>Cenário MR</b> e <b>Cenário VA (VAE+VAX)</b>, com <b>Média</b>, <b>P90</b>, <b>P95</b>, <b>P99</b> e <b>Probabilidade de Criticidade</b>.';
     const eh=document.getElementById('endoh3'); if(eh && /Novo|Editar/i.test(eh.textContent)) eh.textContent=eh.textContent.toLowerCase().includes('editar')?'Editar Fator de Variabilidade Endógena':'Novo Fator de Variabilidade Endógena';
     const xh=document.getElementById('exoh3'); if(xh && /Novo|Editar/i.test(xh.textContent)) xh.textContent=xh.textContent.toLowerCase().includes('editar')?'Editar Fator de Variabilidade Exógena':'Novo Fator de Variabilidade Exógena';
   }
@@ -4717,11 +4747,11 @@ let openSubcatFn = {};
       let y=add('síntese e ranking P95'); text('Síntese Executiva Monte Carlo',margin,y,15,true); y+=8; text('O ranking por P95 inclui todas as funções simuladas. P95 Global.',margin,y,8.5); y+=10;
       const stats=[['VE',avg(rs.map(x=>x.r.vde||x.r.ve)),[192,57,43]],['VX',avg(rs.map(x=>x.r.vdx||x.r.vx)),[217,119,6]],['MR',avg(rs.map(x=>x.r.mr)),[15,110,86]],['VFR',avg(rs.map(x=>x.r.vfr||x.r.beforeMR)),[71,85,105]],['Média',avg(rs.map(x=>x.r.mean)),[71,120,232]],['P90',avg(rs.map(x=>x.r.p90)),[71,120,232]],['P95 Global',avg(rs.map(x=>x.r.p95)),[192,57,43]],['P99',avg(rs.map(x=>x.r.p99)),[192,57,43]],['Prob.',avg(rs.map(x=>x.r.probCrit)),[192,57,43]]]; stats.forEach((m,i)=>card(margin+i*31,y,27,22,m[0],pct(m[1]),m[2])); y+=33;
       text('Ranking por P95 Individual — todas as funções',margin,y,11,true); y+=8; const max=Math.max(.001,...rs.map(x=>x.p95));
-      rs.forEach((x,i)=>{if(y>bottom)y=newp('ranking P95 — continuação');const c=crit(x.p95);text((i+1)+'. '+short(x.fn.name,52),margin,y,7.2);doc.setFillColor(238,240,246);doc.rect(98,y-4,118,5,'F');doc.setFillColor(...c.rgb);doc.rect(98,y-4,118*x.p95/max,5,'F');text(c.label+' — P95 Global '+pct(x.p95),222,y,7,true,c.rgb);y+=6.5;});
+      rs.forEach((x,i)=>{if(y>bottom)y=newp('ranking P95 - continuação');const c=crit(x.p95);text((i+1)+'. '+short(x.fn.name,52),margin,y,7.2);doc.setFillColor(238,240,246);doc.rect(98,y-4,118,5,'F');doc.setFillColor(...c.rgb);doc.rect(98,y-4,118*x.p95/max,5,'F');text(c.label+' — P95 Global '+pct(x.p95),222,y,7,true,c.rgb);y+=6.5;});
       y=newp('tabela completa de indicadores'); const xs=[12,60,81,101,121,141,162,183,204,225,248]; function th(){text('Função',xs[0],y,7,true);['Classe','VE','VX','MR','VFR','Média','P90','P95 Global','P99','Prob.'].forEach((h,i)=>text(h,xs[i+1],y,7,true));y+=5;doc.setDrawColor(210,215,225);doc.line(margin,y-2,W-margin,y-2);} th();
-      rs.forEach(x=>{if(y>bottom){y=newp('tabela completa — continuação');th();}const r=x.r,c=crit(x.p95),vals=[short(x.fn.name,28),c.label,pct(r.vde||r.ve||0,0),pct(r.vdx||r.vx||0,0),pct(r.mr||0,0),pct(r.vfr||r.beforeMR||0,0),pct(r.mean||0,0),pct(r.p90||0,0),pct(r.p95||0,0),pct(r.p99||0,0),pct(r.probCrit||0,0)];vals.forEach((v,i)=>text(v,xs[i],y,6.6,i===1||i===8,i===1?c.rgb:[30,35,50]));y+=5.8;});
-      y=newp('gráfico P95 completo'); text('VFRR por função — P95 Individual',margin,y,13,true); y+=11; const barLeft=94,barW=155; rs.forEach(x=>{if(y>bottom){y=newp('gráfico P95 — continuação');text('VFRR por função — P95 Individual',margin,y,13,true);y+=11;}const c=crit(x.p95),ww=barW*x.p95/max;text(short(x.fn.name,33),barLeft-5,y+3.5,7,false,[50,55,70],{align:'right'});doc.setFillColor(238,240,246);doc.rect(barLeft,y-1,barW,5.5,'F');doc.setFillColor(...c.rgb);doc.rect(barLeft,y-1,ww,5.5,'F');text(pct(x.p95),barLeft+Math.min(ww+4,barW+7),y+3.5,7,true,c.rgb);y+=8;});
-      y=newp('histograma e interpretações'); text('Interpretação automática por função',margin,y,12,true); y+=8; rs.forEach(x=>{if(y>bottom)y=newp('interpretação — continuação');const r=x.r,c=crit(x.p95);text(short(x.fn.name,35)+': '+c.label+'; Média '+pct(r.mean)+'; P90 '+pct(r.p90)+'; P95 Global '+pct(r.p95)+'; P99 '+pct(r.p99)+'; Prob. '+pct(r.probCrit)+'.',margin,y,7,false,[55,60,75]);y+=5.7;});
+      rs.forEach(x=>{if(y>bottom){y=newp('tabela completa - continuação');th();}const r=x.r,c=crit(x.p95),vals=[short(x.fn.name,28),c.label,pct(r.vde||r.ve||0,0),pct(r.vdx||r.vx||0,0),pct(r.mr||0,0),pct(r.vfr||r.beforeMR||0,0),pct(r.mean||0,0),pct(r.p90||0,0),pct(r.p95||0,0),pct(r.p99||0,0),pct(r.probCrit||0,0)];vals.forEach((v,i)=>text(v,xs[i],y,6.6,i===1||i===8,i===1?c.rgb:[30,35,50]));y+=5.8;});
+      y=newp('gráfico P95 completo'); text('VFRR por função — P95 Individual',margin,y,13,true); y+=11; const barLeft=94,barW=155; rs.forEach(x=>{if(y>bottom){y=newp('gráfico P95 - continuação');text('VFRR por função — P95 Individual',margin,y,13,true);y+=11;}const c=crit(x.p95),ww=barW*x.p95/max;text(short(x.fn.name,33),barLeft-5,y+3.5,7,false,[50,55,70],{align:'right'});doc.setFillColor(238,240,246);doc.rect(barLeft,y-1,barW,5.5,'F');doc.setFillColor(...c.rgb);doc.rect(barLeft,y-1,ww,5.5,'F');text(pct(x.p95),barLeft+Math.min(ww+4,barW+7),y+3.5,7,true,c.rgb);y+=8;});
+      y=newp('histograma e interpretações'); text('Interpretação automática por função',margin,y,12,true); y+=8; rs.forEach(x=>{if(y>bottom)y=newp('interpretação - continuação');const r=x.r,c=crit(x.p95);text(short(x.fn.name,35)+': '+c.label+'; Média '+pct(r.mean)+'; P90 '+pct(r.p90)+'; P95 Global '+pct(r.p95)+'; P99 '+pct(r.p99)+'; Prob. '+pct(r.probCrit)+'.',margin,y,7,false,[55,60,75]);y+=5.7;});
       if(y>165)y=newp('efeito dos mecanismos MR'); y+=5; const before=avg(rs.map(x=>x.r.beforeMR||x.r.vfr||0)), after=avg(rs.map(x=>x.r.mean||0)), red=before>0?Math.max(0,(before-after)/before):0; text('Efeito dos mecanismos de resiliência',margin,y,12,true); y+=8; card(20,y,70,28,'Risco antes dos MR',pct(before),[192,57,43]);card(105,y,70,28,'Risco após MR',pct(after),[15,110,86]);card(190,y,75,28,'Redução percentual',pct(red),[15,110,86]);
       total=page; for(let i=1;i<=total;i++){doc.setPage(i); page=i; footer();} doc.save('dgr-fram-relatorio-completo-ranking-p95.pdf');
     };
@@ -4742,1076 +4772,524 @@ let openSubcatFn = {};
 </style>
 
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-  PATCH ÚNICO DEFINITIVO v2026-B
-  Substitui TODOS os patches anteriores de exportPDF, renderKPIs, renderMCPanel,
-  renderCharts, DGR-OPS e simulação.
-  Garante: pctSmart, Prob.Estatística, Prob.Operacional, LC Operacional,
-           DGR-OPS Global com pesos 0.33/0.66/1.00, PDF completo.
-  Este é o ÚNICO script que define exportPDF e rebinda o botão.
-  ═══════════════════════════════════════════════════════════════════════════ -->
-<script id="dgr-definitivo-final-2026b">
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   PATCH FINAL v8 — DGR-OPS estável + Monte Carlo VAE/VAX/MR
+   - Sem setInterval: elimina piscar do botão.
+   - Capacidades Resilientes calcula MR, VAE e VAX separadamente.
+   - Monte Carlo mostra somente resultados globais das duas simulações.
+   - Resultados por função ficam em botão/tela própria.
+   - PDF inclui indicadores, globais e resultados por função.
+═══════════════════════════════════════════════════════════════════ */
 (function(){
 'use strict';
 
-/* ─────────────────────────────────────────────────────────────────────────
-   NÚCLEO DO PATCH — instalado assim que DGRManager e DGRState existirem.
-   Roda imediatamente e re-aplica nos tempos abaixo para vencer qualquer
-   corrida com scripts anteriores que ainda estejam em fila de timers.
-───────────────────────────────────────────────────────────────────────── */
-function install(){
-  /* Detecta DGRManager/DGRState independentemente de como foram declarados
-     (var global, const no topo ou window.X). */
-  var M = (typeof DGRManager !== 'undefined') ? DGRManager
-        : (window.DGRManager || null);
-  var S = (typeof DGRState   !== 'undefined') ? DGRState
-        : (window.DGRState   || null);
-  if(!M || !S) return false;
-
-  /* ── utilidades numéricas ─────────────────────────────────────────── */
-  function num(v){ v=Number(v); return isFinite(v)?v:0; }
-  function clamp(v,a,b){ return Math.max(a,Math.min(b,num(v))); }
-  function avg(a){ return a&&a.length?a.reduce(function(s,v){return s+num(v);},0)/a.length:0; }
-  function sd(a){
-    var m=avg(a);
-    return Math.sqrt(avg((a||[]).map(function(v){return Math.pow(num(v)-m,2);})));
-  }
-  function pct_arr(arr,p){
-    var s=(arr||[]).map(num).filter(isFinite).sort(function(a,b){return a-b;});
-    if(!s.length) return 0;
-    var pos=(s.length-1)*p, lo=Math.floor(pos), hi=Math.ceil(pos);
-    return lo===hi?s[lo]:s[lo]+(s[hi]-s[lo])*(pos-lo);
-  }
-  function esc(s){
-    return String(s||'').replace(/[&<>"']/g,function(c){
-      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-    });
-  }
-  function fnName(fn){
-    return String((fn&&(fn.name||fn.nome||fn.title))||'Função sem nome').trim();
-  }
-
-  /* ── pctSmart — REGRA DEFINITIVA ─────────────────────────────────── */
-  /* v === 0          →  "0,0%"
-     0 < |v| < 0.001 →  "<0,1%"
-     caso contrário   →  (v×100).toFixed(d) + "%"               */
-  function pctSmart(v,d){
-    d=(d==null)?1:d;
-    v=num(v);
-    if(v===0) return '0,0%';
-    if(Math.abs(v)>0 && Math.abs(v)<0.001) return '<0,1%';
-    return (v*100).toFixed(d).replace('.',',')+'%';
-  }
-  /* pctBR: formata sem a regra <0,1% (para LC operacional e similares) */
-  function pctBR(v,d){
-    d=(d==null)?1:d;
-    return (num(v)*100).toFixed(d).replace('.',',')+'%';
-  }
-
-  /* Expõe globalmente para retrocompatibilidade */
-  M.pctSmart = pctSmart;
-  M.pct = function(v,d){ return pctSmart(v,d); };
-
-  /* ── classificação de criticidade ─────────────────────────────────── */
-  function crit(v){
-    v=num(v);
-    if(v>=.70) return {cls:'cb-c',label:'🔴 Crítica', plain:'Crítica', color:'#7c0000',rgb:[124,0,0]};
-    if(v>=.50) return {cls:'cb-a',label:'🟠 Alta',    plain:'Alta',    color:'#c0392b',rgb:[192,57,43]};
-    if(v>=.30) return {cls:'cb-m',label:'🟡 Moderada',plain:'Moderada',color:'#854f0b',rgb:[133,79,11]};
-    return      {cls:'cb-b',label:'🟢 Baixa',   plain:'Baixa',   color:'#0f6e56',rgb:[15,110,86]};
-  }
-  function opCrit(p){
-    p=num(p);
-    if(p>.30) return {plain:'Crítica', color:'#7c0000',rgb:[124,0,0]};
-    if(p>=.15)return {plain:'Alta',    color:'#c0392b',rgb:[192,57,43]};
-    if(p>=.05)return {plain:'Moderada',color:'#854f0b',rgb:[133,79,11]};
-    return     {plain:'Baixa',   color:'#0f6e56',rgb:[15,110,86]};
-  }
-  M.critInfo = crit;
-  M.vColor   = function(v){ return crit(v).color; };
-
-  /* ── LC Operacional ────────────────────────────────────────────────── */
-  function opLC(){
-    if(!isFinite(Number(S.operationalLC))) S.operationalLC=0.30;
-    return clamp(S.operationalLC,0,2);
-  }
-
-  /* ── lista de linhas de resultado ─────────────────────────────────── */
-  function rows(){
-    return (S.fns||[])
-      .filter(function(fn){ return S.mcRes&&S.mcRes[fn.id]; })
-      .map(function(fn){ return {fn:fn,r:S.mcRes[fn.id]||{}}; })
-      .sort(function(a,b){
-        var d=num(b.r.p95)-num(a.r.p95);
-        return d!==0?d:fnName(a.fn).localeCompare(fnName(b.fn),'pt-BR');
-      });
-  }
-
-  /* ── pesos de intensidade DGR-OPS: 0.33 / 0.66 / 1.00 ────────────── */
-  function levelWeight(v){
-    if(!v||!v.sel) return 0;
-    var lv=String(v.level||'').toLowerCase();
-    if(lv.indexOf('max')!==-1) return 1.00;
-    if(lv.indexOf('min')!==-1) return 0.33;
-    return 0.66; // Média (padrão)
-  }
-
-  /* ── mapa DGR-OPS ──────────────────────────────────────────────────── */
-  var DGR_MAP=[
-    {g:'VAE-A',label:'Barreiras Operacionais Internas Efetivas',    IM:0,IR:3,IA:1,IAn:1},
-    {g:'VAE-B',label:'Capacidades Resilientes Internas',            IM:3,IR:2,IA:2,IAn:3},
-    {g:'VAE-C',label:'Aprendizagem e Melhoria Interna',             IM:1,IR:1,IA:3,IAn:2},
-    {g:'VAE-D',label:'Adaptação Operacional Interna',               IM:1,IR:3,IA:2,IAn:1},
-    {g:'VAE-E',label:'Coordenação Interna',                         IM:2,IR:3,IA:1,IAn:1},
-    {g:'VAX-A',label:'Barreiras Operacionais entre Funções',        IM:1,IR:3,IA:1,IAn:1},
-    {g:'VAX-B',label:'Governança de Dados Sociotécnica Exógena',    IM:3,IR:2,IA:3,IAn:3},
-    {g:'VAX-C',label:'Aprendizagem Interfuncional',                 IM:2,IR:1,IA:3,IAn:2},
-    {g:'VAX-D',label:'Coordenação Interfuncional',                  IM:2,IR:3,IA:1,IAn:1},
-    {g:'VAX-E',label:'Redundância e Apoio Externo',                 IM:1,IR:3,IA:1,IAn:2},
-    {g:'MR-A', label:'Barreiras Estruturadas',                      IM:2,IR:3,IA:1,IAn:1},
-    {g:'MR-B', label:'Governança de Dados — Barreira de Resiliência',IM:3,IR:2,IA:3,IAn:3},
-    {g:'MR-C', label:'Capacidades Resilientes',                     IM:2,IR:3,IA:3,IAn:3},
-    {g:'MR-D', label:'Continuidade Operacional',                    IM:1,IR:3,IA:1,IAn:1},
-    {g:'MR-E', label:'Adaptação Sociotécnica',                      IM:2,IR:3,IA:2,IAn:1},
-    {g:'MR-F', label:'Inteligência Informacional',                  IM:3,IR:2,IA:2,IAn:3}
-  ];
-  window.DGR_MAP = DGR_MAP;
-
-  /* ── coleta grupos selecionados com peso de intensidade ────────────────
-     Agora a leitura é feita por função. O mesmo grupo marcado em apenas uma
-     função não vale como se estivesse presente em todo o modelo.
-  ────────────────────────────────────────────────────────────────────── */
-  function groupItemCount(code){
-    var parts=String(code||'').split('-');
-    var T=TAXO[parts[0]], key=parts[1];
-    var g=T && (T.groups||[]).find(function(x){return x.key===key;});
-    return Math.max(1, g && g.items ? g.items.length : 1);
-  }
-  function groupScoreFromSubs(sb, code){
-    sb=sb||{};
-    var e=sb[code];
-    if(e && e.sel) return levelWeight(e); // seleção do grupo aplica-se a todos os filhos
-    var total=groupItemCount(code), sum=0;
-    Object.keys(sb).forEach(function(k){
-      if(k.indexOf(code+'.')!==0) return;
-      var it=sb[k];
-      if(it && it.sel) sum+=levelWeight(it); // seleção individual: soma item a item
-    });
-    return total ? sum/total : 0;
-  }
-  function selectedGroupWeights(){
-    var acc={};
-    DGR_MAP.forEach(function(row){ acc[row.g]={sum:0,count:0,items:groupItemCount(row.g)}; });
-    (S.fns||[]).forEach(function(fn){
-      var sb=(S.subs||{})[fn.id]||{};
-      DGR_MAP.forEach(function(row){
-        var w=groupScoreFromSubs(sb,row.g);
-        if(w>0){ acc[row.g].sum+=w; acc[row.g].count++; }
-      });
-    });
-    var vals={};
-    Object.keys(acc).forEach(function(code){
-      if(acc[code].count) vals[code]=acc[code].sum/acc[code].count;
-    });
-    return vals;
-  }
-
-  /* ── cálculo DGR-OPS ponderado ─────────────────────────────────────
-     Numerador: soma, por função, da intensidade efetivamente selecionada
-     × peso da capacidade × quantidade de critérios do grupo.
-     Denominador: todas as funções × todos os grupos possíveis da matriz
-     VAE/VAX/MR × peso da capacidade × quantidade de critérios do grupo.
-     Assim, poucas seleções não geram percentuais artificialmente altos.
-  ────────────────────────────────────────────────────────────────────── */
-  function calcDgrOps(){
-    var acc={IM:{n:0,d:0},IR:{n:0,d:0},IA:{n:0,d:0},IAn:{n:0,d:0}};
-    var selected={}, eligible={}, fns=(S.fns||[]);
-    DGR_MAP.forEach(function(row){ selected[row.g]=0; eligible[row.g]=0; });
-
-    function isEligible(sb,row){
-      // Elegível = grupo efetivamente cadastrado/avaliado para a função.
-      // Como o sistema inicializa critérios vazios para todas as funções, a elegibilidade
-      // é inferida por seleção real no próprio grupo. Assim, não há penalização por
-      // função × grupo possível que nunca foi cadastrado/avaliado.
-      return groupScoreFromSubs(sb,row.g)>0;
-    }
-
-    fns.forEach(function(fn){
-      var sb=(S.subs||{})[fn.id]||{};
-      DGR_MAP.forEach(function(row){
-        if(!isEligible(sb,row)) return;
-        var itemCount=groupItemCount(row.g);
-        var intensity=groupScoreFromSubs(sb,row.g); // 0,33 / 0,66 / 1,00 ponderado por critérios selecionados
-        selected[row.g]+=intensity;
-        eligible[row.g]+=1;
-        ['IM','IR','IA','IAn'].forEach(function(k){
-          var wk=num(row[k]);
-          if(wk>0){
-            acc[k].d += wk * itemCount;
-            acc[k].n += intensity * wk * itemCount;
-          }
-        });
-      });
-    });
-    Object.keys(selected).forEach(function(k){
-      selected[k]=eligible[k] ? selected[k]/eligible[k] : 0;
-      if(selected[k]<=0) delete selected[k];
-    });
-    function cap(k){ return acc[k].d ? parseFloat(((acc[k].n/acc[k].d)*100).toFixed(1)):0; }
-    var out={IM:cap('IM'),IR:cap('IR'),IA:cap('IA'),IAn:cap('IAn'),selected:selected,denominators:acc,eligible:eligible};
-    out.global=parseFloat(avg([out.IM,out.IR,out.IA,out.IAn]).toFixed(1));
-    return out;
-  }
-  window.DGRCalcIndices=calcDgrOps;
-  M.calculateDGROPS = calcDgrOps;
-  M.calculateDGROPS = calcDgrOps;
-
-  /* ── estatísticas globais agregadas ─────────────────────────────────── */
-  function globalStats(){
-    var g=S.mcGlobal||{};
-    var samples=Array.isArray(g.samples)?g.samples.map(num):[];
-    var lc=samples.length?pct_arr(samples,.95):num(g.p95||g.lc);
-    var op=opLC();
-    var statEv=samples.length?samples.filter(function(v){return v>lc;}).length:num(g.eventsCrit);
-    var opEv  =samples.length?samples.filter(function(v){return v>op;}).length:num(g.operationalEvents);
-    return {
-      samples:samples,
-      mean:  samples.length?avg(samples):num(g.mean),
-      p90:   samples.length?pct_arr(samples,.90):num(g.p90),
-      p95:   lc,
-      p99:   samples.length?pct_arr(samples,.99):num(g.p99),
-      std:   samples.length?sd(samples):num(g.std),
-      total: samples.length||num(g.total),
-      eventsCrit:      statEv,
-      probCrit:        samples.length?statEv/samples.length:num(g.probCrit),
-      operationalLC:   op,
-      operationalEvents:opEv,
-      operationalProb: samples.length?opEv/samples.length:num(g.operationalProb),
-      maxIndividualP95:Math.max.apply(null,[0].concat(rows().map(function(x){return num(x.r.p95);})))
-    };
-  }
-
-  /* ── controle visual LC Operacional ─────────────────────────────────── */
-  function ensureOpControl(){
-    var card=document.querySelector('#s-mc .form-card');
-    if(!card||document.getElementById('operational-lc')) return;
-    var wrap=document.createElement('div');
-    wrap.style.cssText='display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;border-top:1px solid #eef0f6;padding-top:10px';
-    wrap.innerHTML='<span style="font-weight:600">LC Operacional:</span>'+
-      '<input id="operational-lc" class="fi" type="number" min="0" max="200" step="1" value="'+
-      Math.round(opLC()*100)+'" style="width:90px;margin:0;text-align:center">'+
-      '<span style="font-size:11px;color:#667085">Limiar para Probabilidade Operacional: P(VFRR > LC operacional). Padrão: 30%.</span>';
-    card.appendChild(wrap);
-    document.getElementById('operational-lc').addEventListener('change',function(){
-      S.operationalLC=clamp(num(this.value),0,200)/100;
-      try{ if(M.refreshUI) M.refreshUI(); }catch(e){}
-    });
-  }
-
-  /* recalcula prob. operacional por função sem nova simulação */
-  function refreshOpProb(){
-    var op=opLC();
-    (S.fns||[]).forEach(function(fn){
-      var r=S.mcRes&&S.mcRes[fn.id]; if(!r) return;
-      var samp=Array.isArray(r.samples)?r.samples.map(num):[];
-      if(samp.length){ r.operationalEvents=samp.filter(function(v){return v>op;}).length; r.operationalProb=r.operationalEvents/samp.length; }
-      else if(!isFinite(Number(r.operationalProb))){ r.operationalProb=num(r.p95)>op?1:0; }
-    });
-  }
-
-  /* ── SIMULAÇÃO MONTE CARLO ─────────────────────────────────────────── */
-  M.runSimulation=function(){
-    if(!(S.fns||[]).length){ alert('Adicione funções.'); return; }
-    var N=S.mcN||5000;
-    var fnArr={},detMap={};
-    (S.fns||[]).forEach(function(fn){
-      try{ if(typeof M.recalcParams==='function') M.recalcParams(fn.id); }catch(e){}
-      var p=S.params[fn.id]||{};
-      function bp(mn,mp,mx){ return M.betaPertSample(num(mn),num(mp),num(mx)); }
-      var arr=[],det={vde:[],vdx:[],vae:[],vax:[],mr:[],vd:[],va:[],vfr:[]};
-      for(var i=0;i<N;i++){
-        var VDE=bp((p.vde&&p.vde.mn)||0,(p.vde&&p.vde.mp)||0,(p.vde&&p.vde.mx)||0);
-        var VDX=bp((p.vdx&&p.vdx.mn)||0,(p.vdx&&p.vdx.mp)||0,(p.vdx&&p.vdx.mx)||0);
-        var VAE=bp((p.vae&&p.vae.mn)||0,(p.vae&&p.vae.mp)||0,(p.vae&&p.vae.mx)||0);
-        var VAX=bp((p.vax&&p.vax.mn)||0,(p.vax&&p.vax.mp)||0,(p.vax&&p.vax.mx)||0);
-        var MR =bp((p.mr &&p.mr.mn )||0,(p.mr &&p.mr.mp )||0,(p.mr &&p.mr.mx )||0);
-        var VD=VDE+VDX, VA=VAE+VAX;
-        var VFR=Math.max(0,VD-VA);
-        var VFRR=Math.max(0,Math.min(2,VFR*(1-MR)));
-        arr.push(VFRR);
-        det.vde.push(VDE);det.vdx.push(VDX);det.vae.push(VAE);det.vax.push(VAX);det.mr.push(MR);det.vd.push(VD);det.va.push(VA);det.vfr.push(VFR);
-      }
-      fnArr[fn.id]=arr; detMap[fn.id]=det;
-    });
-    var active=(S.fns||[]).filter(function(fn){return fnArr[fn.id];});
-    var pooled=[]; active.forEach(function(fn){pooled=pooled.concat(fnArr[fn.id]);});
-    var p90g=pct_arr(pooled,.90),p95g=pct_arr(pooled,.95),p99g=pct_arr(pooled,.99),op=opLC();
-    var stEv=pooled.filter(function(v){return v>p95g;}).length;
-    var opEv=pooled.filter(function(v){return v>op;}).length;
-    S.mcGlobal={samples:pooled,mean:avg(pooled),p90:p90g,p95:p95g,p99:p99g,lc:p95g,
-      std:sd(pooled),total:pooled.length,
-      eventsCrit:stEv,probCrit:pooled.length?stEv/pooled.length:0,
-      operationalLC:op,operationalEvents:opEv,operationalProb:pooled.length?opEv/pooled.length:0,
-      maxIndividualP95:0};
-    active.forEach(function(fn){
-      var arr=fnArr[fn.id],srt=arr.slice().sort(function(a,b){return a-b;}),det=detMap[fn.id];
-      var hist=new Array(20).fill(0);
-      arr.forEach(function(v){hist[Math.min(19,Math.floor(Math.min(Math.max(v,0),1.9999)/2*20))]++;});
-      var hmax=Math.max.apply(null,hist.concat([1]));
-      var p95i=pct_arr(srt,.95);
-      var stC=arr.filter(function(v){return v>p95g;}).length;
-      var opC=arr.filter(function(v){return v>op;}).length;
-      S.mcRes[fn.id]={
-        samples:arr,mean:avg(arr),p90:pct_arr(srt,.90),p95:p95i,p99:pct_arr(srt,.99),
-        probCrit:N?stC/N:0,eventsCrit:stC,total:N,
-        operationalProb:N?opC/N:0,operationalEvents:opC,
-        hist:hist.map(function(h){return h/hmax;}),
-        vde:avg(det.vde),vdx:avg(det.vdx),vae:avg(det.vae),vax:avg(det.vax),
-        vd:avg(det.vd),va:avg(det.va),mr:avg(det.mr),vfr:avg(det.vfr),
-        beforeMR:avg(det.vfr),vfrr:avg(arr),
-        centrality:0,incomingResonance:0,functionalResonance:0,iis:p95i
-      };
-    });
-    S.mcGlobal.maxIndividualP95=Math.max.apply(null,[0].concat(active.map(function(fn){return num(S.mcRes[fn.id]&&S.mcRes[fn.id].p95);})));
-    if(M.refreshUI) M.refreshUI();
-  };
-
-  /* ── renderKPIs ─────────────────────────────────────────────────────── */
-  M.renderKPIs=function(hasRes){
-    var el=document.getElementById('dash-stats'); if(!el) return;
-    ensureOpControl();
-    if(!hasRes){ el.innerHTML='<div class="dash-card"><div class="dash-card-val">—</div><div class="dash-card-lbl">Execute a simulação</div></div>'; return; }
-    refreshOpProb();
-    var g=globalStats(), d=calcDgrOps();
-    var cards=[
-      ['VFRR Média Global',  pctSmart(g.mean),                                '#1a1a2e'],
-      ['P90 Global',          pctSmart(g.p90),                                 '#1a1a2e'],
-      ['P95 Global',          pctSmart(g.p95),                                 '#c0392b'],
-      ['P99 Global',          pctSmart(g.p99),                                 '#7c0000'],
-      ['Prob. Estatística',   pctSmart(g.probCrit,2),                          '#854f0b'],
-      ['Prob. Operacional',   pctSmart(g.operationalProb,2), opCrit(g.operationalProb).color],
-      ['LC Operacional',      pctBR(g.operationalLC,0),                        '#667085'],
-      ['Maior P95 Individual',pctSmart(g.maxIndividualP95),  crit(g.maxIndividualP95).color],
-      ['DGR-OPS Global',      d.global.toFixed(1).replace('.',',')+'%',       '#185fa5'],
-      ['Classificação Global', crit(g.p95).label, crit(g.p95).color]
-    ];
-    el.innerHTML=cards.map(function(c){
-      return '<div class="dash-card"><div class="dash-card-val" style="color:'+c[2]+'">'+c[1]+'</div><div class="dash-card-lbl">'+c[0]+'</div></div>';
-    }).join('');
-  };
-
-  /* ── renderCharts ───────────────────────────────────────────────────── */
-  M.renderCharts=function(hasRes){
-    var canvas=document.getElementById('ch-vfr'), empty=document.getElementById('ch-vfr-empty');
-    if(!canvas) return;
-    var rs=rows();
-    var w=Math.max(760,((canvas.closest('.dash-section')||{}).clientWidth||820)-40);
-    var h=Math.max(280,48+rs.length*32);
-    canvas.width=w; canvas.height=h; canvas.style.height=h+'px'; canvas.style.minHeight=h+'px';
-    var ctx=canvas.getContext('2d'); ctx.clearRect(0,0,w,h);
-    if(!hasRes||!rs.length){ if(empty) empty.style.display='block'; return; }
-    if(empty) empty.style.display='none';
-    var max=Math.max.apply(null,[.001].concat(rs.map(function(x){return num(x.r.p95);})));
-    var left=205,barW=w-left-90;
-    ctx.font='bold 12px Segoe UI'; ctx.fillStyle='#1a1a2e'; ctx.textAlign='left'; ctx.fillText('P95 Individual por função',8,18);
-    rs.forEach(function(x,i){
-      var v=num(x.r.p95),y=38+i*32,bw=barW*v/max,ci=crit(v);
-      ctx.fillStyle='#eef0f6'; ctx.fillRect(left,y,barW,18);
-      ctx.fillStyle=ci.color; ctx.fillRect(left,y,bw,18);
-      ctx.fillStyle='#4c5570'; ctx.font='11px Segoe UI'; ctx.textAlign='right'; ctx.fillText(fnName(x.fn).slice(0,34),left-8,y+13);
-      ctx.textAlign='left'; ctx.fillStyle='#1a1a2e'; ctx.font='bold 11px Segoe UI'; ctx.fillText(pctSmart(v),Math.min(left+bw+7,w-65),y+13);
-    });
-  };
-
-  /* ── renderMCPanel ──────────────────────────────────────────────────── */
-  M.renderMCPanel=function(hasRes){
-    ensureOpControl();
-    var target=document.getElementById('mc-inner'); if(!target) return;
-    var rs=rows();
-    if(!hasRes||!rs.length){ target.innerHTML=''; return; }
-    refreshOpProb();
-    var g=globalStats(), d=calcDgrOps();
-    var maxP=Math.max(.001,g.maxIndividualP95);
-    var opCl=opCrit(g.operationalProb);
-    var html='';
-
-    /* Metodologia */
-    html+='<div class="dash-section"><h3>Metodologia Monte Carlo</h3><div class="adv-text">';
-    html+='<b>Distribuição:</b> Beta-PERT | <b>Iterações:</b> '+num(S.mcN).toLocaleString('pt-BR')+' por função | <b>Total agregado:</b> '+num(g.total).toLocaleString('pt-BR')+' amostras<br>';
-    html+='<b>VD = VDE + VDX; VA = VAE + VAX; VFR = máx(0, VD − VA); VFRR = VFR × (1 − MR)</b><br>';
-    html+='<b>Probabilidade Estatística</b> = Prob(VFRR > P95 Global). Por função: <b>Probabilidade Estatística(i) = Prob(VFRR_i > P95 Global)</b>. Como o limite global é o próprio P95, a excedência agregada tende a aproximadamente 5% por construção estatística.<br>';
-    html+='&nbsp;&nbsp;→ '+num(g.eventsCrit).toLocaleString('pt-BR')+' ÷ '+num(g.total).toLocaleString('pt-BR')+' = <b>'+pctSmart(g.probCrit,2)+'</b><br>';
-    html+='<b>Probabilidade Operacional</b> = Prob(VFRR > LC Operacional). Por função: <b>Probabilidade Operacional(i) = Prob(VFRR_i > LC Operacional)</b>. LC atual = <b>'+pctBR(g.operationalLC,0)+'</b><br>';
-    html+='&nbsp;&nbsp;→ '+num(g.operationalEvents).toLocaleString('pt-BR')+' ÷ '+num(g.total).toLocaleString('pt-BR')+' = <b style="color:'+opCl.color+'">'+pctSmart(g.operationalProb,2)+' ('+opCl.plain+')</b>';
-    html+='</div></div>';
-
-    /* Critérios */
-    html+='<div class="dash-section"><h3>Critérios de classificação</h3><div class="adv-text">';
-    html+='<b>Funções por P95 Individual:</b> 🟢 Baixa &lt;30% | 🟡 Moderada 30–50% | 🟠 Alta 50–70% | 🔴 Crítica &gt;70%.<br>';
-    html+='<b>Probabilidade Operacional:</b> Baixa &lt;5% | Moderada 5–15% | Alta 15–30% | Crítica &gt;30%.</div></div>';
-
-    /* DGR-OPS */
-    html+='<div class="dash-section"><h3>Capacidades Resilientes Desenvolvidas (DGR-OPS)</h3><div class="sgrid">';
-    [['Monitorar',d.IM,'#185fa5'],['Responder',d.IR,'#0f6e56'],['Aprender',d.IA,'#6b21a8'],
-     ['Antecipar',d.IAn,'#c0392b'],['DGR-OPS Global',d.global,'#1a1a2e']].forEach(function(c){
-      html+='<div class="sbox"><span class="sval" style="color:'+c[2]+'">'+num(c[1]).toFixed(1).replace('.',',')+'%</span><span class="slbl">'+c[0]+'</span></div>';
-    });
-    html+='</div><div style="font-size:11px;color:#4c5570;margin-top:8px">DGR-OPS = Σ(função × grupo selecionado × intensidade × peso da capacidade × número de critérios do grupo) / Σ(função × grupo elegível × peso da capacidade × número de critérios do grupo) × 100. Pesos: Mínima=0,33 | Média=0,66 | Máxima=1,00 | Não selecionado=0. O denominador considera somente os grupos VAE/VAX/MR elegíveis para cada função; grupos não cadastrados para a função não entram no denominador.</div></div>';
-
-    /* Ranking */
-    html+='<div class="dash-section"><h3>Ranking de Criticidade — P95 Individual</h3>';
-    rs.forEach(function(x,i){
-      var v=num(x.r.p95),ci=crit(v);
-      html+='<div class="rcard"><span class="rnum">#'+(i+1)+'</span><span class="rname" title="'+esc(fnName(x.fn))+'">'+esc(fnName(x.fn))+'</span><span class="cbadge '+ci.cls+'">'+ci.label+'</span><div class="rbar"><div class="rbarfill" style="width:'+Math.max(1,Math.round(v/maxP*100))+'%;background:'+ci.color+'"></div></div><span class="rval">'+pctSmart(v)+'</span></div>';
-    });
-    html+='<div style="font-size:11px;color:#666;margin-top:8px"><b>Maior P95 Individual = '+pctSmart(g.maxIndividualP95)+'</b>. Não confundir com o <b>P95 Global = '+pctSmart(g.p95)+'</b>.</div></div>';
-
-    /* Histograma */
-    var bins=new Array(20).fill(0);
-    g.samples.forEach(function(v){bins[Math.min(19,Math.floor(Math.min(Math.max(v,0),1.9999)/2*20))]++;});
-    var mx=Math.max.apply(null,bins.concat([1]));
-    html+='<div class="dash-section"><h3>Histograma Monte Carlo Agregado</h3><div class="histbars" style="height:90px">';
-    bins.forEach(function(b,i){ html+='<div class="hb" style="height:'+Math.max(2,Math.round(b/mx*90))+'px;background:'+crit(i/20).color+';opacity:.75"></div>'; });
-    html+='</div><div class="histax"><span>0%</span><span>P95 Global '+pctSmart(g.p95)+' | LC Operacional '+pctBR(g.operationalLC,0)+'</span><span>200%</span></div></div>';
-
-    /* Cards por função */
-    html+='<div class="dgrid">';
-    rs.forEach(function(x){
-      var r=x.r,ci=crit(num(r.p95)),opi=opCrit(num(r.operationalProb));
-      html+='<div class="dc"><div class="dc-head"><span style="font-weight:700" title="'+esc(fnName(x.fn))+'">'+esc(fnName(x.fn))+'</span><span class="cbadge '+ci.cls+'">'+ci.label+'</span></div><div class="sgrid">';
-      [['Média',r.mean],['P90',r.p90],['P95',r.p95],['P99',r.p99]].forEach(function(kv){
-        html+='<div class="sbox"><span class="sval">'+pctSmart(kv[1])+'</span><span class="slbl">'+kv[0]+'</span></div>';
-      });
-      html+='<div class="sbox"><span class="sval">'+pctSmart(r.probCrit,2)+'</span><span class="slbl">Prob. Estatística</span></div>';
-      html+='<div class="sbox"><span class="sval">'+pctSmart(r.operationalProb,2)+'</span><span class="slbl">Prob. Operacional</span></div>';
-      html+='</div><div class="adv-text"><b>Criticidade '+ci.plain+'</b> pelo P95 Individual. Prob. Operacional: <b style="color:'+opi.color+'">'+pctSmart(r.operationalProb,2)+' ('+opi.plain+')</b>.</div></div>';
-    });
-    html+='</div>';
-    target.innerHTML=html;
-  };
-
-  /* ── renderização DGR-OPS (tela Capacidades) ────────────────────────── */
-  function colDGR(v){ return v>=75?'#0f6e56':v>=50?'#185fa5':v>=25?'#854f0b':'#c0392b'; }
-  function dgrClass(v){
-    v=num(v);
-    if(v>70) return {label:'🔴 Crítica',plain:'Crítica',color:'#c0392b',rgb:[192,57,43]};
-    if(v>=50) return {label:'🟠 Alta',plain:'Alta',color:'#f59e0b',rgb:[245,158,11]};
-    if(v>=30) return {label:'🟡 Moderada',plain:'Moderada',color:'#854f0b',rgb:[133,79,11]};
-    return {label:'🟢 Baixa',plain:'Baixa',color:'#0f6e56',rgb:[15,110,86]};
-  }
-  function validateMath(g,d,rs){
-    var problems=[];
-    if(!(num(g.p90)<=num(g.p95)&&num(g.p95)<=num(g.p99))) problems.push('P90 ≤ P95 ≤ P99');
-    if(num(g.maxIndividualP95)+1e-9<num(g.p95)) problems.push('Maior P95 Individual ≥ P95 Global');
-    ['probCrit','operationalProb'].forEach(function(k){ if(num(g[k])<0||num(g[k])>1) problems.push(k+' entre 0 e 100%'); });
-    ['IM','IR','IA','IAn','global'].forEach(function(k){ if(num(d[k])<0||num(d[k])>100) problems.push(k+' entre 0 e 100%'); });
-    (rs||[]).forEach(function(x){ var r=x.r||{}; if(!(num(r.p90)<=num(r.p95)&&num(r.p95)<=num(r.p99))) problems.push('Percentis inválidos em '+fnName(x.fn)); });
-    return problems;
-  }
-
-  /* Radar SVG puro — sem Canvas, sem Chart.js, funciona em GitHub Pages */
-  function renderRadarSVG(vals){
-    var wrap=document.getElementById('dgr-radar');
-    if(!wrap) return;
-    var S=440, cx=S/2, cy=S/2, R=130, PAD=70;
-    var VB=S, ocx=VB/2, ocy=VB/2;
-    var labels=['Monitorar','Responder','Aprender','Antecipar'];
-    var colors=['#185fa5','#0f6e56','#6b21a8','#c0392b'];
-    var n=4;
-    function ang(i){ return Math.PI*2*i/n - Math.PI/2; }
-    function px(r,i){ return ocx+r*Math.cos(ang(i)); }
-    function py(r,i){ return ocy+r*Math.sin(ang(i)); }
-    var s='<svg viewBox="0 0 '+VB+' '+VB+'" width="100%" height="100%"'
-         +' xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible">';
-    /* fundo */
-    s+='<rect width="'+VB+'" height="'+VB+'" fill="#f8f9fc" rx="10"/>';
-    /* grades */
-    [20,40,60,80,100].forEach(function(pct){
-      var r=R*pct/100, pts='';
-      for(var i=0;i<n;i++) pts+=px(r,i).toFixed(1)+','+py(r,i).toFixed(1)+' ';
-      var isMax=pct===100;
-      s+='<polygon points="'+pts.trim()+'" fill="'+(isMax?'none':'rgba(255,255,255,0.6)')+'"'
-        +' stroke="'+(isMax?'#b0b8cc':'#d8dde8')+'" stroke-width="'+(isMax?1.5:1)+'"'
-        +(pct<100?' stroke-dasharray="4,3"':'')+'/>';
-      if(pct%40===0 && pct>0){
-        s+='<text x="'+(ocx+4).toFixed(1)+'" y="'+(ocy-r+4).toFixed(1)+'"'
-          +' font-size="10" fill="#bbb" font-family="Segoe UI,sans-serif">'+pct+'</text>';
-      }
-    });
-    /* eixos */
-    for(var i=0;i<n;i++){
-      s+='<line x1="'+ocx.toFixed(1)+'" y1="'+ocy.toFixed(1)+'"'
-        +' x2="'+px(R,i).toFixed(1)+'" y2="'+py(R,i).toFixed(1)+'"'
-        +' stroke="#c8cfe0" stroke-width="1"/>';
-    }
-    /* área de dados */
-    var dpts='';
-    for(var i=0;i<n;i++){
-      var v=Math.min(100,Math.max(0,vals[i]||0));
-      dpts+=px(R*v/100,i).toFixed(1)+','+py(R*v/100,i).toFixed(1)+' ';
-    }
-    s+='<polygon points="'+dpts.trim()+'" fill="rgba(24,95,165,0.15)" stroke="#185fa5" stroke-width="2.5" stroke-linejoin="round"/>';
-    /* pontos + valores */
-    for(var i=0;i<n;i++){
-      var v=Math.min(100,Math.max(0,vals[i]||0));
-      var dx=px(R*v/100,i), dy=py(R*v/100,i);
-      s+='<circle cx="'+dx.toFixed(1)+'" cy="'+dy.toFixed(1)+'" r="6"'
-        +' fill="'+colors[i]+'" stroke="#fff" stroke-width="2"/>';
-      var vx=px(R*v/100+18,i), vy=py(R*v/100+18,i);
-      s+='<text x="'+vx.toFixed(1)+'" y="'+(vy+3).toFixed(1)+'"'
-        +' font-size="11" font-weight="bold" fill="'+colors[i]+'"'
-        +' text-anchor="middle" font-family="Segoe UI,sans-serif">'+v.toFixed(0)+'%</text>';
-    }
-    /* labels externos */
-    var lpad=38;
-    for(var i=0;i<n;i++){
-      var lx=px(R+lpad,i), ly=py(R+lpad,i);
-      var anchor=lx<ocx-8?'end':lx>ocx+8?'start':'middle';
-      var base=ly<ocy-8?'auto':ly>ocy+8?'hanging':'middle';
-      s+='<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'"'
-        +' font-size="13" font-weight="bold" fill="'+colors[i]+'"'
-        +' text-anchor="'+anchor+'" dominant-baseline="'+base+'"'
-        +' font-family="Segoe UI,sans-serif">'+labels[i]+'</text>';
-    }
-    /* centro */
-    s+='<circle cx="'+ocx+'" cy="'+ocy+'" r="3" fill="#99aabb"/>';
-    s+='</svg>';
-    wrap.innerHTML=s;
-  }
-
-  function renderDgrUI(){
-    var d=calcDgrOps();
-    var vals=[d.IM,d.IR,d.IA,d.IAn];
-
-    /* ── Cards ── */
-    var cards=document.getElementById('dgr-cards');
-    if(cards){
-      var arr=[
-        ['Monitorar',d.IM,'Detectar sinais, indicadores e mudanças relevantes.'],
-        ['Responder',d.IR,'Agir de modo coordenado diante da variabilidade.'],
-        ['Aprender',d.IA,'Converter experiência em melhoria organizacional.'],
-        ['Antecipar',d.IAn,'Preparar-se para perturbações e cenários futuros.'],
-        ['DGR-OPS Global',d.global,'Média das quatro capacidades resilientes.']
-      ];
-      cards.style.gridTemplateColumns='repeat(auto-fit,minmax(150px,1fr))';
-      cards.innerHTML=arr.map(function(c){
-        var v=num(c[1]),co=colDGR(v);
-        return '<div style="background:#fff;border:1px solid #e0e0ea;border-radius:10px;padding:16px 12px;text-align:center">'+
-          '<div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:8px">'+esc(c[0])+'</div>'+
-          '<div style="font-size:30px;font-weight:800;color:'+co+'">'+v.toFixed(1).replace('.',',')+'%</div>'+
-          '<div style="font-size:11px;font-weight:700;color:'+dgrClass(v).color+';margin-top:2px">'+dgrClass(v).label+'</div>'+
-          '<div style="height:5px;background:#eee;border-radius:3px;margin:8px 0"><div style="height:5px;width:'+Math.min(100,v)+'%;background:'+co+';border-radius:3px"></div></div>'+
-          '<div style="font-size:10px;color:#999">'+esc(c[2])+'</div></div>';
-      }).join('');
-    }
-
-    /* ── Radar SVG ── */
-    renderRadarSVG(vals);
-
-    /* ── Matriz Mecanismos × Capacidades ── */
-    var matEl=document.getElementById('dgr-matrix');
-    if(matEl){
-      var sel=d.selected||{};
-      function shortLbl(row){ return row.label.replace(/^[A-Z]+-[A-Z]+ ?[—–-] */,'').substring(0,36); }
-      function dots(n){ var f='<span style="color:#185fa5;font-size:13px">&#9679;</span>', e='<span style="color:#e0e0ea;font-size:13px">&#9675;</span>', r=''; for(var i=0;i<3;i++) r+=(i<n?f:e); return r; }
-      var h='<table style="width:100%;border-collapse:collapse;font-size:11.5px">'
-           +'<thead><tr style="background:#f0f2f8">'
-           +'<th style="padding:7px 8px;text-align:left;border:1px solid #dde">Grupo</th>'
-           +'<th style="padding:7px;text-align:center;border:1px solid #dde;color:#185fa5">Monitorar</th>'
-           +'<th style="padding:7px;text-align:center;border:1px solid #dde;color:#0f6e56">Responder</th>'
-           +'<th style="padding:7px;text-align:center;border:1px solid #dde;color:#6b21a8">Aprender</th>'
-           +'<th style="padding:7px;text-align:center;border:1px solid #dde;color:#c0392b">Antecipar</th>'
-           +'<th style="padding:7px;text-align:center;border:1px solid #dde">Intensidade</th>'
-           +'</tr></thead><tbody>';
-      DGR_MAP.forEach(function(row,i){
-        var isSel=!!sel[row.g], bg=isSel?'#eef6ff':(i%2?'#f8f9fc':'#fff');
-        h+='<tr style="background:'+bg+'">';
-        h+='<td style="padding:6px 8px;border:1px solid #dde"><b style="color:#185fa5;font-size:11px">'+esc(row.g)+'</b>'
-          +'<br><span style="font-size:10px;color:#777">'+esc(shortLbl(row))+'</span></td>';
-        ['IM','IR','IA','IAn'].forEach(function(k){
-          var wk=row[k]||0, w=isSel?(sel[row.g]||0):0;
-          h+='<td style="padding:5px;text-align:center;border:1px solid #dde">'+dots(wk);
-          if(isSel && wk) h+='<br><span style="font-size:10px;font-weight:700;color:'+colDGR(w)+'">'+Math.round(w*100)+'%</span>';
-          h+='</td>';
-        });
-        h+='<td style="padding:5px;text-align:center;border:1px solid #dde">';
-        if(isSel){
-          var w=sel[row.g]||0, lbl=w>=0.95?'Máxima':w>=0.50?'Média':'Mínima', co=w>=0.95?'#c0392b':w>=0.50?'#854f0b':'#0f6e56';
-          h+='<div style="background:#eee;border-radius:3px;height:5px;margin:2px 4px"><div style="height:5px;width:'+Math.round(w*100)+'%;background:'+co+';border-radius:3px"></div></div>';
-          h+='<span style="font-size:10px;font-weight:700;color:'+co+'">'+lbl+'</span>';
-        } else { h+='<span style="color:#ccc;font-size:11px">—</span>'; }
-        h+='</td></tr>';
-      });
-      h+='</tbody></table>';
-      matEl.innerHTML=h;
-    }
-
-    /* ── Interpretação ── */
-    var interp=document.getElementById('dgr-interp');
-    if(interp){
-      var sorted=[['Monitorar',d.IM],['Responder',d.IR],['Aprender',d.IA],['Antecipar',d.IAn]].sort(function(a,b){return b[1]-a[1];});
-      var nSel=Object.keys(d.selected||{}).length;
-      if(!nSel){
-        interp.innerHTML='<em style="color:#aaa">Selecione grupos VAE, VAX ou MR para calcular os índices.</em>';
-      } else {
-        interp.innerHTML='<strong>DGR-OPS — Cálculo ponderado por intensidade</strong><br>'
-          +'Capacidade mais desenvolvida: <b>'+sorted[0][0]+'</b> ('+sorted[0][1].toFixed(1).replace('.',',')+'%), '
-          +'seguida de <b>'+sorted[1][0]+'</b> ('+sorted[1][1].toFixed(1).replace('.',',')+'%).<br>'
-          +'<b>DGR-OPS Global = '+d.global.toFixed(1).replace('.',',')+'%</b> (média das quatro capacidades).<br>'
-          +'<span style="font-size:11px;color:#667">As capacidades resilientes desenvolvidas foram calculadas a partir da combinação de VAE, VAX e MR ponderados pela intensidade selecionada e pela quantidade de critérios efetivamente avaliados em cada grupo. Pesos: Mínima=0,33 | Média=0,66 | Máxima=1,00. O denominador considera somente grupos elegíveis/cadastrados para cada função.</span>';
-      }
-    }
-  }
-
-  /* ══════════════════════════════════════════════════════════════════════
-     exportPDF — VERSÃO ÚNICA DEFINITIVA
-     Gera PDF em orientação paisagem (A4), 5 páginas + DGR-OPS.
-     Usa EXCLUSIVAMENTE pctSmart, calcDgrOps, globalStats locais.
-  ══════════════════════════════════════════════════════════════════════ */
-  function doExportPDF(){
-    var jsPDF=window.jspdf&&window.jspdf.jsPDF;
-    if(!jsPDF){ alert('Biblioteca jsPDF não carregada.'); return; }
-    if(!(S.fns||[]).length){ alert('Cadastre ao menos uma função antes de exportar.'); return; }
-    var rs=rows();
-    if(!rs.length){ try{ M.runSimulation(); }catch(e){} rs=rows(); }
-    if(!rs.length){ alert('Execute a simulação antes de exportar o PDF.'); return; }
-
-    refreshOpProb();
-    var g=globalStats(), d=calcDgrOps();
-    var mathProblems=validateMath(g,d,rs);
-    if(mathProblems.length){ alert('Inconsistência matemática detectada. Revisar cálculos antes da exportação.\n- '+mathProblems.join('\n- ')); return; }
-
-    /* helpers PDF */
-    var ALIAS='{total_pages}';
-    var doc=new jsPDF('l','mm','a4');
-    var W=297,H=210,mg=14;
-    var page=0, y=0;
-
-    function newPage(title){
-      if(page>0) doc.addPage();
-      page++;
-      doc.setFillColor(31,37,50); doc.rect(0,0,W,11,'F');
-      doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255,255,255);
-      doc.text('DGR-FRAM Analyze — Relatório Monte Carlo',mg,7.5);
-      doc.text('Página '+page+' de '+ALIAS,W-mg,7.5,{align:'right'});
-      doc.setFont('helvetica','normal'); doc.setTextColor(24,30,50);
-      doc.setFontSize(14); y=18; doc.text(title,mg,y); y+=8;
-      doc.setFontSize(8); doc.setTextColor(30,35,50);
-    }
-    function tx(t,x,yy,sz,bold,rgb,opt){
-      doc.setFont('helvetica',bold?'bold':'normal');
-      doc.setFontSize(sz||8);
-      var c=rgb||[30,35,50]; doc.setTextColor(c[0],c[1],c[2]);
-      doc.text(String(t==null?'':t),x,yy,opt||{});
-    }
-    function lines(t,w){ return doc.splitTextToSize(String(t||''),w); }
-    function need(sp,title){ if(y+sp>196) newPage(title||'Continuação'); }
-    function card(x,yy,w,h,lbl,val,rgb){
-      rgb=rgb||[24,95,165];
-      doc.setDrawColor(220,225,235); doc.setFillColor(255,255,255);
-      doc.roundedRect(x,yy,w,h,2,2,'FD');
-      tx(lbl,x+w/2,yy+5.5,6,true,[100,105,120],{align:'center'});
-      tx(val, x+w/2,yy+14, 12,true,rgb,        {align:'center'});
-    }
-    function colorBar(t){
-      t=Math.max(0,Math.min(1,num(t)));
-      if(t<.30) return[15,110,86];
-      if(t<.50) return[234,179,8];
-      if(t<.70) return[245,158,11];
-      return[192,57,43];
-    }
-    function txCanvas(text,x,yy,maxW,sz,bold,rgb){
-      // Preserva símbolos matemáticos como Σ no PDF, evitando substituicao incorreta do simbolo.
-      var scale=3, c=document.createElement('canvas'), ctx=c.getContext('2d');
-      var font=(bold?'700 ':'400 ')+(sz*scale)+'px Segoe UI, Arial, sans-serif';
-      ctx.font=font;
-      var words=String(text||'').split(/\s+/), linesArr=[], line='';
-      var maxPx=maxW*scale*3.78;
-      words.forEach(function(wd){
-        var test=line?line+' '+wd:wd;
-        if(ctx.measureText(test).width>maxPx && line){ linesArr.push(line); line=wd; } else line=test;
-      });
-      if(line) linesArr.push(line);
-      var h=Math.ceil((sz*1.35*linesArr.length+2)*scale), w=Math.ceil(maxW*scale*3.78);
-      c.width=w; c.height=h; ctx=c.getContext('2d'); ctx.font=font; ctx.fillStyle='rgb('+((rgb||[30,35,50]).join(','))+')'; ctx.textBaseline='top';
-      linesArr.forEach(function(ln,i){ ctx.fillText(ln,0,i*sz*1.35*scale); });
-      doc.addImage(c.toDataURL('image/png'),'PNG',x,yy,maxW,h/(scale*3.78));
-      return h/(scale*3.78);
-    }
-    function drawRadarPdf(cx,cy,R,vals){
-      var labs=['Monitorar','Responder','Aprender','Antecipar'];
-      var cols=[[24,95,165],[15,110,86],[107,33,168],[192,57,43]];
-      doc.setDrawColor(225,228,238); doc.setLineWidth(.25);
-      for(var ring=1; ring<=4; ring++){
-        var rr=R*ring/4, pts=[];
-        for(var i=0;i<4;i++){ var a=-Math.PI/2+i*2*Math.PI/4; pts.push([cx+Math.cos(a)*rr,cy+Math.sin(a)*rr]); }
-        for(var j=0;j<4;j++){ doc.line(pts[j][0],pts[j][1],pts[(j+1)%4][0],pts[(j+1)%4][1]); }
-      }
-      for(var i=0;i<4;i++){ var a=-Math.PI/2+i*2*Math.PI/4; doc.line(cx,cy,cx+Math.cos(a)*R,cy+Math.sin(a)*R); }
-      var poly=[];
-      for(var i=0;i<4;i++){ var a=-Math.PI/2+i*2*Math.PI/4, rr=R*Math.max(0,Math.min(100,num(vals[i])))/100; poly.push([cx+Math.cos(a)*rr,cy+Math.sin(a)*rr]); }
-      doc.setDrawColor(24,95,165); doc.setFillColor(24,95,165); doc.setGState && doc.setGState(new doc.GState({opacity:0.18}));
-      doc.triangle(poly[0][0],poly[0][1],poly[1][0],poly[1][1],poly[2][0],poly[2][1],'F');
-      doc.triangle(poly[0][0],poly[0][1],poly[2][0],poly[2][1],poly[3][0],poly[3][1],'F');
-      doc.setGState && doc.setGState(new doc.GState({opacity:1}));
-      doc.setDrawColor(24,95,165); doc.setLineWidth(.8);
-      for(var i=0;i<4;i++) doc.line(poly[i][0],poly[i][1],poly[(i+1)%4][0],poly[(i+1)%4][1]);
-      doc.setFont('helvetica','bold'); doc.setFontSize(7);
-      for(var i=0;i<4;i++){ var a=-Math.PI/2+i*2*Math.PI/4, lx=cx+Math.cos(a)*(R+13), ly=cy+Math.sin(a)*(R+13); doc.setTextColor(cols[i][0],cols[i][1],cols[i][2]); doc.text(labs[i],lx,ly,{align:i===1?'left':i===3?'right':'center'}); }
-      doc.setTextColor(30,35,50);
-    }
-
-    /* ── PÁGINA 1: Síntese Executiva ─────────────────────────────────── */
-    newPage('Síntese Executiva');
-    tx('Relatório DGR-FRAM — Monte Carlo',mg,y,14,true); y+=7;
-    lines('Monte Carlo: '+(S.mcN||0).toLocaleString('pt-BR')+' iterações por função. '+
-      'Total agregado: '+num(g.total).toLocaleString('pt-BR')+' amostras. '+
-      'P95 Global separado do Maior P95 Individual. LC Operacional = '+pctBR(g.operationalLC,0)+'.',260
-    ).forEach(function(l){tx(l,mg,y,8); y+=4.5;});
-    y+=3;
-
-    /* 9 cards em 2 linhas */
-    var topCards=[
-      ['VFRR Média Global',   pctSmart(g.mean),                               [31,37,50]],
-      ['P90 Global',           pctSmart(g.p90),                                [31,37,50]],
-      ['P95 Global',           pctSmart(g.p95),                                [192,57,43]],
-      ['P99 Global',           pctSmart(g.p99),                                [124,0,0]],
-      ['Prob. Estatística',    pctSmart(g.probCrit,2),                         [133,79,11]],
-      ['Prob. Operacional',    pctSmart(g.operationalProb,2), opCrit(g.operationalProb).rgb],
-      ['LC Operacional',       pctBR(g.operationalLC,0),                       [90,95,110]],
-      ['Maior P95 Individual', pctSmart(g.maxIndividualP95),  crit(g.maxIndividualP95).rgb],
-      ['DGR-OPS Global',       d.global.toFixed(1).replace('.',',')+'%',      [24,95,165]],
-      ['Classificação Global', crit(g.p95).plain, crit(g.p95).rgb]
-    ];
-    /* linha 1: 5 cards | linha 2: 4 cards */
-    topCards.forEach(function(c,i){
-      var row=Math.floor(i/5), col=i%5;
-      card(mg+col*55, y+row*22, 51,18, c[0],c[1],c[2]);
-    });
-    y+=48;
-
-    tx('Fórmulas de Probabilidade',mg,y,9,true); y+=6;
-    [
-      'Probabilidade Estatística = Prob(VFRR > P95 Global). Como o limite é o próprio P95, a excedência tende a aproximadamente 5% por construção estatística.',
-      'Probabilidade Operacional = Prob(VFRR > LC Operacional), onde LC Operacional é um limiar definido pelo analista para representar criticidade operacional.',
-      'Nesta rodada — VFRR > P95 Global: '+num(g.eventsCrit).toLocaleString('pt-BR')+' / '+num(g.total).toLocaleString('pt-BR')+' = '+pctSmart(g.probCrit,2)+'.',
-      'Nesta rodada — VFRR > LC Operacional: '+num(g.operationalEvents).toLocaleString('pt-BR')+' / '+num(g.total).toLocaleString('pt-BR')+' = '+pctSmart(g.operationalProb,2)+'.',
-      'Observação: o Maior P95 Individual ('+pctSmart(g.maxIndividualP95)+') não deve ser confundido com o P95 Global.'
-    ].forEach(function(ln){ lines(ln,260).forEach(function(l){tx(l,mg,y,8); y+=4.3;}); });
-    y+=3;
-    tx('Critérios de Classificação (pelo P95 Individual): Baixa <30% | Moderada 30–50% | Alta 50–70% | Crítica >70%.',mg,y,7.5,false,[70,75,90]);
-
-    /* ── PÁGINA 2: Indicadores por função ────────────────────────────── */
-    newPage('Indicadores por Função');
-    tx('Classificação pelo P95 Individual. Valores <0,1% indicam risco muito baixo.',mg,y,7.5,false,[70,75,90]); y+=6;
-    var xs=[mg,mg+108,mg+121,mg+134,mg+147,mg+160,mg+173,mg+186,mg+199,mg+213,mg+229];
-    ['Função','VDE','VDX','MR','VFR','Média','P90','P95','P99','Prob.Est.(>P95G)','Classe'].forEach(function(h,i){
-      tx(h,xs[i],y,6.3,true);
-    });
-    y+=4; doc.setDrawColor(210,215,225); doc.line(mg,y,W-mg,y); y+=4;
-    rs.forEach(function(row,idx){
-      var r=row.r, ci=crit(r.p95);
-      need(7,'Indicadores por Função');
-      tx((idx+1)+'. '+fnName(row.fn).slice(0,48),xs[0],y,6.2);
-      [r.vde||r.ve, r.vdx||r.vx, r.mr, r.vfr||r.beforeMR,
-       r.mean, r.p90, r.p95, r.p99, r.probCrit
-      ].forEach(function(v,i){
-        tx(pctSmart(v,i===8?2:1), xs[i+1], y, 6.2, i===6, i===6?ci.rgb:[30,35,50]);
-      });
-      tx(ci.plain, xs[10], y, 6.2, true, ci.rgb);
-      y+=5.3;
-    });
-
-    /* ── PÁGINA 3: Ranking + Histograma ─────────────────────────────── */
-    newPage('Ranking de Criticidade');
-    tx('Maior P95 Individual = '+pctSmart(g.maxIndividualP95)+'.  P95 Global = '+pctSmart(g.p95)+'.  LC Operacional = '+pctBR(g.operationalLC,0)+'.',mg,y,8,false,[70,75,90]); y+=8;
-    var maxP=Math.max(.001,g.maxIndividualP95);
-    rs.forEach(function(row,i){
-      var v=num(row.r.p95), ci=crit(v), opi=opCrit(num(row.r.operationalProb));
-      need(7,'Ranking de Criticidade');
-      tx((i+1)+'º '+fnName(row.fn),mg,y,8,true);
-      doc.setFillColor(238,240,246); doc.rect(115,y-3.5,80,4,'F');
-      doc.setFillColor.apply(doc,ci.rgb); doc.rect(115,y-3.5,80*v/maxP,4,'F');
-      tx(pctSmart(v)+' '+ci.plain,200,y,7.5,true,ci.rgb);
-      tx('Prob.Op.: '+pctSmart(num(row.r.operationalProb),2)+' ('+opi.plain+')',232,y,7,false,opi.rgb);
-      y+=6;
-    });
-    y+=4;
-    tx('Histograma Monte Carlo Agregado',mg,y,11,true); y+=6;
-    tx('LC (P95 Global) = '+pctSmart(g.p95)+'  |  LC Operacional = '+pctBR(g.operationalLC,0),mg,y,8,true); y+=5;
-    var hbins=new Array(20).fill(0);
-    g.samples.forEach(function(v){hbins[Math.min(19,Math.floor(Math.min(Math.max(v,0),1.9999)/2*20))]++;});
-    var hmx=Math.max.apply(null,hbins.concat([1]));
-    var hx=mg,hy=y+50,hw=230/20;
-    hbins.forEach(function(b,i){ var hh=46*b/hmx; doc.setFillColor.apply(doc,colorBar(i/20)); doc.rect(hx+i*hw,hy-hh,hw-.8,hh,'F'); });
-    y=hy+8;
-    tx('Prob. Estatística: '+pctSmart(g.probCrit,2)+' | Prob. Operacional: '+pctSmart(g.operationalProb,2)+' | Média: '+pctSmart(g.mean)+' | P90: '+pctSmart(g.p90)+' | P99: '+pctSmart(g.p99),mg,y,7.5);
-
-    /* ── PÁGINA 4: Efeito MR + Interpretações automáticas ─────────────── */
-    newPage('Efeito dos MR e Interpretações');
-    var before=avg(rs.map(function(x){return num(x.r.vfr||x.r.beforeMR);}));
-    var after =avg(rs.map(function(x){return num(x.r.mean);}));
-    var gain  =before>0?Math.max(0,(before-after)/before):0;
-    card(mg,     y,60,21,'Antes dos MR',       pctSmart(before),[192,57,43]);
-    card(mg+66,  y,60,21,'Após MR',            pctSmart(after), [15,110,86]);
-    card(mg+132, y,60,21,'Ganho de Resiliência',pctBR(gain,1),  [24,95,165]);
-    y+=30;
-    tx('Interpretações automáticas por função',mg,y,10,true); y+=7;
-    rs.forEach(function(row){
-      var r=row.r, ci=crit(r.p95), oi=opCrit(r.operationalProb);
-      var ln=fnName(row.fn)+': criticidade '+ci.plain+' (P95 = '+pctSmart(r.p95)+'). '+
-        'Probabilidade Estatística = Prob(VFRR_i > P95 Global) = '+pctSmart(r.probCrit,2)+'. '+
-        'Probabilidade Operacional = Prob(VFRR_i > LC Operacional) = '+pctSmart(r.operationalProb,2)+' ('+oi.plain+').';
-      lines(ln,260).forEach(function(l){ need(5,'Interpretações'); tx(l,mg,y,7.2); y+=4.4; });
-      y+=1.5;
-    });
-
-    /* ── PÁGINA 5: DGR-OPS ───────────────────────────────────────────── */
-    newPage('Capacidades Resilientes Desenvolvidas (DGR-OPS)');
-    tx('Índices de Capacidades Resilientes Desenvolvidas',mg,y,11,true); y+=8;
-    [['Monitorar',d.IM,[24,95,165]],['Responder',d.IR,[15,110,86]],
-     ['Aprender',d.IA,[107,33,168]],['Antecipar',d.IAn,[192,57,43]],
-     ['DGR-OPS Global',d.global,[31,37,50]]
-    ].forEach(function(c,i){
-      card(mg+i*55,y,51,20,c[0],num(c[1]).toFixed(1).replace('.',',')+'%',c[2]);
-    });
-    y+=27;
-    tx('Radar DGR-OPS',mg,y,9,true); y+=5;
-    drawRadarPdf(mg+42,y+32,28,[d.IM,d.IR,d.IA,d.IAn]);
-    var formula='DGR-OPS = Σ(função × grupo selecionado × intensidade × peso da capacidade × número de critérios do grupo) / Σ(função × grupo elegível × peso da capacidade × número de critérios do grupo) × 100. Os índices são calculados a partir de VAE, VAX e MR, ponderados pela intensidade e pelo número de critérios efetivamente avaliados em cada grupo. Grupos não cadastrados para a função não entram no denominador; grupos elegíveis não selecionados valem zero no numerador. Pesos: Mínima = 0,33 | Média = 0,66 | Máxima = 1,00. DGR-OPS Global = (Monitorar + Responder + Aprender + Antecipar) / 4.';
-    y += txCanvas(formula,mg+95,y,170,7.5,false,[30,35,50]) + 4;
-    tx('Probabilidade Operacional por Capacidade',mg+95,y,9,true); y+=6;
-    [['Monitorar',d.IM],['Responder',d.IR],['Aprender',d.IA],['Antecipar',d.IAn]].forEach(function(c){
-      var dc=dgrClass(c[1]);
-      tx(c[0]+': Índice '+num(c[1]).toFixed(1).replace('.',',')+'% — Classificação '+dc.plain,mg+95,y,7.5,true,dc.rgb||[30,35,50]); y+=4.6;
-    });
-    y+=2;
-    tx('Grupos selecionados: intensidade média ponderada por função',mg,y,9,true); y+=6;
-    var selVals=d.selected||{};
-    Object.keys(selVals).sort().forEach(function(k){
-      need(6,'Capacidades Resilientes Desenvolvidas');
-      tx(k,mg,y,7.5,true);
-      tx((num(selVals[k])*100).toFixed(0)+'%',mg+32,y,7.5);
-      var mapRow=(DGR_MAP||[]).find(function(x){return x.g===k;});
-      if(mapRow) tx(mapRow.label,mg+55,y,7.2);
-      y+=5;
-    });
-    var tVAE=Object.keys(selVals).filter(function(k){return k.indexOf('VAE-')===0;}).length;
-    var tVAX=Object.keys(selVals).filter(function(k){return k.indexOf('VAX-')===0;}).length;
-    var tMR =Object.keys(selVals).filter(function(k){return k.indexOf('MR-') ===0;}).length;
-    y+=2;
-    tx('Total selecionado — VAE: '+tVAE+' | VAX: '+tVAX+' | MR: '+tMR+' | Total geral: '+(tVAE+tVAX+tMR),mg,y,8,true);
-
-    if(doc.putTotalPages) doc.putTotalPages(ALIAS);
-    doc.save('dgr-fram-relatorio-definitivo-2026b.pdf');
-  } /* fim doExportPDF */
-
-  /* Expõe como M.exportPDF */
-  M.exportPDF = doExportPDF;
-
-  M.renderDGROPS = renderDgrUI;
-
-  /* ── refreshUI ───────────────────────────────────────────────────────── */
-  if(!M.__defB_refresh){
-    M.__defB_refresh=true;
-    var _old=M.refreshUI?M.refreshUI.bind(M):null;
-    M.refreshUI=function(){
-      if(_old){ try{_old();}catch(e){} }
-      ensureOpControl();
-      refreshOpProb();
-      var has=(S.fns||[]).some(function(fn){return S.mcRes&&S.mcRes[fn.id];});
-      if(S.curPage==='mc'){ M.renderKPIs(has); if(has){M.renderCharts(has); M.renderMCPanel(has);} }
-      if(S.curPage==='dgr') renderDgrUI();
-    };
-  }
-
-  /* Inicialização imediata */
-  ensureOpControl();
-  refreshOpProb();
-  renderDgrUI();
-  try{ if(M.refreshUI) M.refreshUI(); }catch(e){}
-
-  /* Atualiza DGR-OPS quando a página estiver aberta e também evita cache visual. */
-  if(!M.__defB_interval){
-    M.__defB_interval=true;
-    setInterval(function(){ if(S.curPage==='dgr') renderDgrUI(); },300);
-  }
-
-  /* REBIND BOTÃO — aqui e só aqui, garante que clique sempre chame doExportPDF */
+function ready(cb, tries){
+  tries = tries || 0;
   try{
-    document.querySelectorAll('button').forEach(function(b){
-      if((b.textContent||'').toLowerCase().indexOf('exportar pdf')!==-1){
-        b.onclick=function(){ doExportPDF(); };
-      }
-    });
+    if (typeof DGRManager !== 'undefined' && typeof DGRState !== 'undefined' && typeof TAXO !== 'undefined') { cb(); return; }
   }catch(e){}
-
-  return true;
+  if (tries < 120) setTimeout(function(){ ready(cb, tries+1); }, 60);
 }
 
-/* Aplica imediatamente e re-aplica com delays crescentes para vencer todos
-   os timers de patches anteriores (o mais tardio conhecido: 6000ms).      */
-install();
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',install);
-} else {
-  install();
-}
-[50,150,350,700,1200,2000,3500,6500,9000].forEach(function(ms){
-  setTimeout(install,ms);
-});
+ready(function(){
+  var M = DGRManager, S = DGRState, T = TAXO;
 
-})();
+  function n(v){ v = Number(v); return isFinite(v) ? v : 0; }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function pct(v,d){ d = d==null ? 1 : d; return (n(v)*100).toFixed(d).replace('.',',') + '%'; }
+  function pct100(v,d){ d = d==null ? 1 : d; return n(v).toFixed(d).replace('.',',') + '%'; }
+  function clamp01(v){ return Math.max(0, Math.min(1, n(v))); }
+  function fns(){ return Array.isArray(S.fns) ? S.fns : []; }
+  function avg(a){ return a && a.length ? a.reduce(function(x,y){return x+n(y);},0)/a.length : 0; }
+  function q(a,p){ if(!a || !a.length) return 0; var i=Math.min(a.length-1, Math.max(0, Math.floor(a.length*p))); return a[i] || 0; }
+  function color(v){ v=n(v); return v>=0.70?'#c0392b':v>=0.50?'#f59e0b':v>=0.30?'#854f0b':'#0f6e56'; }
+  function levelWeight(level, sv){
+    var l = String(level || (sv && sv.level) || '').toLowerCase();
+    if (l.indexOf('max') >= 0 || l.indexOf('máx') >= 0) return 1;
+    if (l.indexOf('min') >= 0 || l.indexOf('mín') >= 0) return 0.25;
+    if (l.indexOf('med') >= 0 || l.indexOf('méd') >= 0) return 0.50;
+    var mp = n(sv && (sv.mp != null ? sv.mp : sv.mean));
+    if (mp >= 0.70) return 1;
+    if (mp <= 0.30) return 0.25;
+    return 0.50;
+  }
+  function sample(p){
+    p = p || {};
+    if (typeof M.betaPertSample === 'function') return M.betaPertSample(n(p.mn), n(p.mp), n(p.mx));
+    return n(p.mp);
+  }
 
-
-/* ===== PATCH DEFINITIVO 2026-06-23: ponderação real por quantidade de critérios e funções =====
-   Corrige VDE, VDX, VAE, VAX, MR, Monte Carlo, DGR-OPS e PDF.
-   Regra aplicada:
-   - Cada grupo A, B, C... pesa pelo nº de critérios internos.
-   - O denominador considera todos os critérios possíveis da dimensão.
-   - Grupos não selecionados entram como zero.
-   - A seleção em uma função não é projetada para todas as funções.
-*/
-(function(){
-  if(!window.DGRManager || !window.DGRState || !window.TAXO) return;
-  var M=window.DGRManager, S=window.DGRState, T=window.TAXO;
-  function n(v){ return Number.isFinite(+v)?+v:0; }
-  function allItems(){
-    var arr=[];
-    ['VDE','VDX','VAE','VAX','MR','RE','RX'].forEach(function(k){
-      if(T[k] && T[k].items) arr=arr.concat(T[k].items);
+  function scoreGlobal(key){
+    var items = (T[key] && T[key].items) ? T[key].items : [];
+    var den = Math.max(1, fns().length * items.length);
+    var num = 0, selected = 0;
+    fns().forEach(function(fn){
+      var subs = (S.subs && S.subs[fn.id]) || {};
+      items.forEach(function(item){
+        var sv = subs[item.code];
+        if (sv && sv.sel === true) { selected++; num += levelWeight(sv.level, sv); }
+      });
     });
-    return arr;
+    return {key:key, num:num, den:den, selected:selected, totalItems:items.length, pct:den ? num/den : 0};
   }
-  function tax(prefix){ return T[prefix] || (prefix==='RE'?T.VDE:null) || (prefix==='RX'?T.VDX:null); }
-  function levelPreset(level){
-    if(M.evalPreset) return M.evalPreset(level);
-    return level==='minima'?{mn:.05,mp:.15,mx:.30}:level==='maxima'?{mn:.60,mp:.80,mx:1}:{mn:.25,mp:.50,mx:.70};
+
+  function setMRLabels(){
+    var ni = document.getElementById('ni-mr');
+    if (ni) {
+      var svg = ni.querySelector('svg');
+      ni.innerHTML = (svg ? svg.outerHTML : '') + ' Mecanismos de Resiliência (MR) DGR-OPS';
+    }
+    var title = document.querySelector('#s-mr .page-title');
+    if (title) title.textContent = 'Mecanismos de Resiliência (MR) DGR-OPS';
+    document.querySelectorAll('h3,.page-title,.page-sub,.item-card-title,.adv-text').forEach(function(el){
+      if ((el.textContent||'').trim() === 'Mecanismos de Resiliência (MR)') el.textContent = 'Mecanismos de Resiliência (MR) DGR-OPS';
+    });
   }
-  function levelWeight(v){
-    var l=(v&&v.level)||'media';
-    if(l==='minima') return .33;
-    if(l==='maxima') return 1;
-    return .66;
-  }
-  function idsOfVar(v){
-    var ids=[];
-    if(v&&Array.isArray(v.affected_function_ids)) ids=ids.concat(v.affected_function_ids);
-    if(v&&v.affected_function_id) ids.push(v.affected_function_id);
-    return Array.from(new Set(ids.filter(Boolean)));
-  }
-  function groupItemCount(prefix,key){
-    var tx=tax(prefix), groups=(tx&&tx.groups)||[];
-    var g=groups.find(function(x){return x.key===key;});
-    return Math.max(1, g&&g.items ? g.items.length : 1);
-  }
-  function weightedParam(fnId,prefix,manualCats){
-    manualCats=(manualCats||[]).map(function(x){return String(x).toLowerCase();});
-    var tx=tax(prefix), groups=(tx&&tx.groups)||[], sb=(S.subs||{})[fnId]||{};
-    var den=0, mn=0, mp=0, mx=0;
-    groups.forEach(function(g){
-      var itemCount=Math.max(1,(g.items||[]).length);
-      den += itemCount;
-      var groupCode=prefix+'-'+g.key;
-      var direct=sb[groupCode];
-      if(direct && direct.sel){
-        mn += n(direct.mn)*itemCount;
-        mp += n(direct.mp)*itemCount;
-        mx += n(direct.mx)*itemCount;
+
+  function ensureDGRPage(){
+    setMRLabels();
+    var nav = document.getElementById('nav-items');
+    if (nav && !document.getElementById('ni-dgr')) {
+      var div = document.createElement('div');
+      div.className = 'nav-item'; div.id = 'ni-dgr';
+      div.onclick = function(){ M.switchPage('dgr'); };
+      div.innerHTML = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg> Capacidades Resilientes Desenvolvidas (DGR-OPS)';
+      var func = document.getElementById('ni-funcres');
+      nav.insertBefore(div, func || null);
+    }
+    var screen = document.getElementById('s-dgr');
+    var content = document.getElementById('content');
+    if (!screen && content) {
+      screen = document.createElement('div');
+      screen.className = 'screen scroll-screen'; screen.id = 's-dgr'; screen.style.overflowY = 'auto';
+      content.appendChild(screen);
+    }
+    if (screen) {
+      var wrap = screen.querySelector('.form-wrap');
+      if (!wrap) {
+        screen.innerHTML = '<div class="form-wrap"><div class="page-title">Capacidades Resilientes Desenvolvidas (DGR-OPS)</div><div class="page-sub">Exibição separada dos indicadores MR, VAE e VAX. Não há matriz, radar, Monitorar/Responder/Aprender/Antecipar nem DGR-OPS sintético.</div><div id="dgr-indicadores" style="margin:18px 0"></div><div style="font-weight:600;font-size:13px;margin-bottom:8px">Interpretação Automática</div><div id="dgr-interp" style="background:#f8f9fc;border-left:4px solid #185fa5;padding:14px 16px;border-radius:4px;font-size:13px;line-height:1.7;color:#2a2e45"></div></div>';
       } else {
-        (g.items||[]).forEach(function(it){
-          var v=sb[it.code];
-          if(v && v.sel){ mn+=n(v.mn); mp+=n(v.mp); mx+=n(v.mx); }
-        });
+        var title = wrap.querySelector('.page-title'); if(title) title.textContent = 'Capacidades Resilientes Desenvolvidas (DGR-OPS)';
+        var sub = wrap.querySelector('.page-sub'); if(sub) sub.textContent = 'Exibição separada dos indicadores MR, VAE e VAX. Não há matriz, radar, Monitorar/Responder/Aprender/Antecipar nem DGR-OPS sintético.';
+        if (!document.getElementById('dgr-indicadores')) wrap.insertAdjacentHTML('beforeend','<div id="dgr-indicadores" style="margin:18px 0"></div>');
+        if (!document.getElementById('dgr-interp')) wrap.insertAdjacentHTML('beforeend','<div style="font-weight:600;font-size:13px;margin-bottom:8px">Interpretação Automática</div><div id="dgr-interp" style="background:#f8f9fc;border-left:4px solid #185fa5;padding:14px 16px;border-radius:4px;font-size:13px;line-height:1.7;color:#2a2e45"></div>');
       }
-    });
-    (S.vars||[]).forEach(function(v){
-      if(idsOfVar(v).indexOf(fnId)>=0 && manualCats.indexOf(String(v.category||'').toLowerCase())>=0){
-        den += 1; mn += .25; mp += .50; mx += .70;
-      }
-    });
-    return den ? {mn:mn/den, mp:mp/den, mx:mx/den} : {mn:0,mp:0,mx:0};
-  }
-  M.recalcParams=function(fnId){
-    if(!S.params) S.params={};
-    if(!S.params[fnId]) S.params[fnId]={};
-    S.params[fnId].vde=weightedParam(fnId,'VDE',['endogena','re','vde']);
-    S.params[fnId].vdx=weightedParam(fnId,'VDX',['exogena','rx','vdx']);
-    S.params[fnId].vae=weightedParam(fnId,'VAE',['vae']);
-    S.params[fnId].vax=weightedParam(fnId,'VAX',['vax']);
-    S.params[fnId].mr =weightedParam(fnId,'MR', []);
-  };
-  M.normalizeEvaluationLevels=function(){
-    (S.fns||[]).forEach(function(fn){
-      if(!S.subs) S.subs={};
-      if(!S.subs[fn.id]) S.subs[fn.id]={};
-      allItems().forEach(function(item){
-        var cur=S.subs[fn.id][item.code]||{sel:false};
-        var level=cur.level || (M.inferEvalLevel ? M.inferEvalLevel(cur) : 'media');
-        var preset=levelPreset(level);
-        S.subs[fn.id][item.code]=Object.assign({},cur,{level:level},preset);
-      });
-      M.recalcParams(fn.id);
-    });
-  };
-  function dgrGroupScore(sb, code){
-    sb=sb||{};
-    var direct=sb[code];
-    if(direct && direct.sel) return levelWeight(direct);
-    var parts=String(code).split('-'), prefix=parts[0], key=parts[1];
-    var tx=tax(prefix), g=(tx&&tx.groups||[]).find(function(x){return x.key===key;});
-    var items=(g&&g.items)||[];
-    var total=Math.max(1,items.length), sum=0;
-    items.forEach(function(it){ var v=sb[it.code]; if(v&&v.sel) sum+=levelWeight(v); });
-    return sum/total;
-  }
-  function dgrGroupItems(code){ var p=String(code).split('-'); return groupItemCount(p[0],p[1]); }
-  if(window.DGR_MAP){
-    M.calculateDGROPS=function(){
-      var acc={IM:{n:0,d:0},IR:{n:0,d:0},IA:{n:0,d:0},IAn:{n:0,d:0}}, selected={}, eligible={}, fns=S.fns||[];
-      window.DGR_MAP.forEach(function(row){ selected[row.g]=0; eligible[row.g]=0; });
-      fns.forEach(function(fn){
-        var sb=(S.subs||{})[fn.id]||{};
-        window.DGR_MAP.forEach(function(row){
-          var w=dgrGroupScore(sb,row.g);
-          if(w<=0) return;
-          var itens=dgrGroupItems(row.g);
-          selected[row.g]+=w;
-          eligible[row.g]+=1;
-          ['IM','IR','IA','IAn'].forEach(function(k){
-            var wk=n(row[k]);
-            if(wk>0){ acc[k].d += wk*itens; acc[k].n += w*wk*itens; }
-          });
-        });
-      });
-      Object.keys(selected).forEach(function(k){ selected[k]=eligible[k]?selected[k]/eligible[k]:0; if(selected[k]<=0) delete selected[k]; });
-      function cap(k){ return acc[k].d ? parseFloat(((acc[k].n/acc[k].d)*100).toFixed(1)) : 0; }
-      var out={IM:cap('IM'),IR:cap('IR'),IA:cap('IA'),IAn:cap('IAn'),selected:selected,denominators:acc,eligible:eligible};
-      out.global=parseFloat(((out.IM+out.IR+out.IA+out.IAn)/4).toFixed(1));
-      return out;
-    };
-    window.DGRCalcIndices=M.calculateDGROPS;
-  }
-  function stamp(){
-    var sub=document.querySelector('#topbar .sub');
-    if(sub && sub.textContent.indexOf('ponderação por critérios')<0) sub.textContent += ' • ponderação por critérios';
-    var mc=document.querySelector('#s-mc .page-sub');
-    if(mc && mc.innerHTML.indexOf('ponderados pelo número de critérios')<0){
-      mc.innerHTML += ' <b>VDE, VDX, VAE, VAX e MR são ponderados pelo número de critérios internos de cada grupo.</b>';
     }
   }
-  var oldRefresh=M.refreshUI?M.refreshUI.bind(M):null;
-  M.refreshUI=function(){
-    (S.fns||[]).forEach(function(fn){ M.recalcParams(fn.id); });
-    if(oldRefresh) oldRefresh();
-    stamp();
+
+  function indicatorCard(title, v, formula, detail, c){
+    return '<div class="dash-section" style="border-left:4px solid '+c+'">'
+      + '<div style="display:flex;justify-content:space-between;gap:12px;align-items:center">'
+      + '<h3 style="margin:0;color:'+c+'">'+esc(title)+'</h3>'
+      + '<div style="font-size:28px;font-weight:800;color:'+c+'">'+pct(v.pct)+'</div></div>'
+      + '<div style="height:10px;background:#eef0f6;border-radius:6px;overflow:hidden;margin:10px 0"><div style="height:100%;width:'+Math.max(0,Math.min(100,v.pct*100)).toFixed(1)+'%;background:'+c+'"></div></div>'
+      + '<div class="adv-text"><b>Fórmula:</b> '+formula+'<br>'+detail+'</div></div>';
+  }
+
+  function renderDGR(){
+    ensureDGRPage();
+    var el = document.getElementById('dgr-indicadores');
+    var interp = document.getElementById('dgr-interp');
+    if (!el) return;
+    var mr = scoreGlobal('MR'), vae = scoreGlobal('VAE'), vax = scoreGlobal('VAX');
+    el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">'
+      + indicatorCard('Mecanismos de Resiliência (MR) DGR-OPS', mr, 'MR = [Σ(Critérios MR selecionados x Intensidade x Peso) / Σ(Critérios MR possíveis x Peso)] x 100', 'Totalização ponderada: '+mr.num.toFixed(2).replace('.',',')+' / '+mr.den+'. Critérios selecionados: '+mr.selected+'. Pesos: Máxima=1,00; Média=0,50; Mínima=0,25.', '#0f6e56')
+      + indicatorCard('VAE - Variabilidade Adaptativa Endógena', vae, 'VAE = [Σ(Critérios VAE selecionados x Intensidade x Peso) / Σ(Critérios VAE possíveis x Peso)] x 100', 'VAE é apresentada separadamente e não é média com VAX. Totalização ponderada: '+vae.num.toFixed(2).replace('.',',')+' / '+vae.den+'. Critérios selecionados: '+vae.selected+'.', '#6b21a8')
+      + indicatorCard('VAX - Variabilidade Adaptativa Exógena', vax, 'VAX = [Σ(Critérios VAX selecionados x Intensidade x Peso) / Σ(Critérios VAX possíveis x Peso)] x 100', 'VAX é apresentada separadamente e não é média com VAE. Totalização ponderada: '+vax.num.toFixed(2).replace('.',',')+' / '+vax.den+'. Critérios selecionados: '+vax.selected+'.', '#7c3aed')
+      + '</div>';
+    if (interp) interp.innerHTML = '<b>Indicadores separados:</b> MR = '+pct(mr.pct)+'; VAE = '+pct(vae.pct)+'; VAX = '+pct(vax.pct)+'.<br>Não há cálculo sintético de DGR-OPS nesta página. O Monte Carlo executa duas simulações: uma com MR como redutor e outra com a soma VAE + VAX como redutor.';
+  }
+
+  function ensureFunctionPage(){
+    var nav = document.getElementById('nav-items');
+    if (nav && !document.getElementById('ni-funcres')) {
+      var div = document.createElement('div');
+      div.className = 'nav-item'; div.id = 'ni-funcres';
+      div.onclick = function(){ M.switchPage('funcres'); };
+      div.innerHTML = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="4" width="3" height="13"/></svg> Resultados por Função';
+      var dgr = document.getElementById('ni-dgr');
+      nav.insertBefore(div, dgr ? dgr.nextSibling : null);
+    }
+    var content = document.getElementById('content');
+    if (content && !document.getElementById('s-funcres')) {
+      var s = document.createElement('div');
+      s.className = 'screen scroll-screen'; s.id = 's-funcres';
+      s.innerHTML = '<div class="form-wrap" style="max-width:1220px"><div class="page-title">Resultados das Simulações por Função</div><div class="page-sub">Detalhamento separado para o cenário MR e para o cenário VAE + VAX.</div><div id="funcres-inner"></div></div>';
+      content.appendChild(s);
+    }
+  }
+
+  function simStats(arr, details){
+    arr.sort(function(a,b){return a-b;});
+    var hist = Array(20).fill(0);
+    arr.forEach(function(v){ hist[Math.min(19, Math.floor(Math.min(Math.max(v,0),0.9999)*20))]++; });
+    var hmax = Math.max(1, Math.max.apply(null,hist));
+    return {
+      mean:avg(arr), p90:q(arr,0.90), p95:q(arr,0.95), p99:q(arr,0.99),
+      probCrit:arr.filter(function(v){return v>=0.70;}).length/(arr.length||1),
+      hist:hist.map(function(h){return h/hmax;}),
+      vde:avg(details.vde), vdx:avg(details.vdx), vae:avg(details.vae), vax:avg(details.vax), mr:avg(details.mr), vd:avg(details.vd)
+    };
+  }
+
+  function globalStats(pooled, map){
+    pooled.sort(function(a,b){return a-b;});
+    var vals = Object.keys(map||{}).map(function(k){return map[k];});
+    return {
+      mean:avg(pooled), p90:q(pooled,0.90), p95:q(pooled,0.95), p99:q(pooled,0.99),
+      probCrit:pooled.filter(function(v){return v>=0.70;}).length/(pooled.length||1),
+      mr:avg(vals.map(function(r){return r.mr;})),
+      vae:avg(vals.map(function(r){return r.vae;})),
+      vax:avg(vals.map(function(r){return r.vax;})),
+      vd:avg(vals.map(function(r){return r.vd;}))
+    };
+  }
+
+  function runDualSimulation(){
+    if (!fns().length) { alert('Adicione funções antes de rodar a simulação.'); return; }
+    var N = S.mcN || 5000;
+    S.mcResMR = {}; S.mcResVA = {}; S.mcRes = {};
+    var pooledMR = [], pooledVA = [];
+    fns().forEach(function(fn){
+      if (typeof M.recalcParams === 'function') M.recalcParams(fn.id);
+      var p = (S.params && S.params[fn.id]) || {};
+      var arrMR = [], arrVA = [];
+      var detMR = {vde:[],vdx:[],vae:[],vax:[],mr:[],vd:[]};
+      var detVA = {vde:[],vdx:[],vae:[],vax:[],mr:[],vd:[]};
+      for (var i=0;i<N;i++) {
+        var VDE = sample(p.vde), VDX = sample(p.vdx), VAE = sample(p.vae), VAX = sample(p.vax), MR = sample(p.mr);
+        var VD = Math.max(0, VDE + VDX);
+        var redVA = clamp01(VAE + VAX);
+        var redMR = clamp01(MR);
+        var vMR = Math.max(0, Math.min(2, VD * (1 - redMR)));
+        var vVA = Math.max(0, Math.min(2, VD * (1 - redVA)));
+        arrMR.push(vMR); arrVA.push(vVA); pooledMR.push(vMR); pooledVA.push(vVA);
+        ['vde','vdx','vae','vax','mr','vd'].forEach(function(k){
+          var val = k==='vde'?VDE:k==='vdx'?VDX:k==='vae'?VAE:k==='vax'?VAX:k==='mr'?MR:VD;
+          detMR[k].push(val); detVA[k].push(val);
+        });
+      }
+      S.mcResMR[fn.id] = simStats(arrMR, detMR);
+      S.mcResVA[fn.id] = simStats(arrVA, detVA);
+      S.mcRes[fn.id] = S.mcResMR[fn.id];
+    });
+    S.mcGlobalMR = globalStats(pooledMR, S.mcResMR);
+    S.mcGlobalVA = globalStats(pooledVA, S.mcResVA);
+    S.mcGlobal = S.mcGlobalMR;
+    S.mcLastMode = 'DUAL_MR_VAE_VAX';
+    renderMC(); renderFunctionResults(); renderDGR();
+    if (typeof M.saveToLocalStorage === 'function') { try{ M.saveToLocalStorage(); }catch(e){} }
+  }
+
+  function hasDual(){ return fns().some(function(fn){ return S.mcResMR && S.mcResMR[fn.id] && S.mcResVA && S.mcResVA[fn.id]; }); }
+
+  function metricGrid(g,c){
+    return '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:8px 0 10px">'
+      + [['Média',g.mean],['P90',g.p90],['P95',g.p95],['P99',g.p99],['Prob.Crit.',g.probCrit]].map(function(k){
+        return '<div class="sbox"><span class="sval" style="color:'+c+'">'+pct(k[1])+'</span><span class="slbl">'+k[0]+'</span></div>';
+      }).join('') + '</div>';
+  }
+  function hist(map,c){
+    var h = Array(20).fill(0);
+    fns().forEach(function(fn){ var r=map&&map[fn.id]; if(r&&r.hist) r.hist.forEach(function(v,i){ h[i]+=v; }); });
+    var mx = Math.max(1, Math.max.apply(null,h));
+    return '<div class="histbars" style="height:58px;margin:8px 0">'+h.map(function(v){ var z=v/mx; return '<div class="hb" style="height:'+Math.max(1,Math.round(z*56))+'px;background:'+c+';opacity:'+(0.35+z*0.65).toFixed(2)+'"></div>'; }).join('')+'</div>';
+  }
+  function globalCard(t,sub,g,map,c){
+    return '<div class="dc" style="min-width:320px;flex:1"><div class="dc-head"><span style="color:'+c+'">'+esc(t)+'</span></div><div class="adv-text">'+sub+'</div>'+metricGrid(g,c)+hist(map,c)+'</div>';
+  }
+
+  function renderMC(){
+    var ok = hasDual(), gMR = S.mcGlobalMR || {}, gVA = S.mcGlobalVA || {};
+    var stats = document.getElementById('dash-stats');
+    if (stats) {
+      var cards = [
+        ['Funções', fns().length, '#4778e8'],
+        ['Acoplamentos', (S.coups||[]).length, '#185fa5'],
+        ['Redutor MR médio', ok?pct(gMR.mr):'—', '#0f6e56'],
+        ['Redutor VAE médio', ok?pct(gVA.vae):'—', '#6b21a8'],
+        ['Redutor VAX médio', ok?pct(gVA.vax):'—', '#7c3aed'],
+        ['Média cenário MR', ok?pct(gMR.mean):'—', '#0f6e56'],
+        ['P95 cenário MR', ok?pct(gMR.p95):'—', '#0f6e56'],
+        ['Média cenário VAE+VAX', ok?pct(gVA.mean):'—', '#6b21a8'],
+        ['P95 cenário VAE+VAX', ok?pct(gVA.p95):'—', '#6b21a8']
+      ];
+      stats.innerHTML = cards.map(function(x){ return '<div class="dash-card"><div class="dash-card-val" style="color:'+x[2]+'">'+x[1]+'</div><div class="dash-card-lbl">'+x[0]+'</div></div>'; }).join('');
+    }
+    var ttl = document.querySelector('#s-mc .dash-section h3'); if (ttl) ttl.textContent = 'Monte Carlo - resultados globais';
+    var canvas = document.getElementById('ch-vfr'); if (canvas) canvas.style.display='none';
+    var empty = document.getElementById('ch-vfr-empty'); if (empty) { empty.style.display='block'; empty.textContent = ok ? 'Resultados globais exibidos abaixo. O detalhamento por função está no botão Resultados por Função.' : 'Execute a simulação para calcular MR, VAE e VAX.'; }
+    var inner = document.getElementById('mc-inner'); if (!inner) return;
+    if (!ok) { inner.innerHTML = ''; return; }
+    var melhor = n(gMR.p95) <= n(gVA.p95) ? 'MR' : 'VAE + VAX';
+    var dif = Math.abs(n(gMR.p95) - n(gVA.p95)) * 100;
+    inner.innerHTML = '<div class="dash-section" style="border-left:4px solid #185fa5"><h3>Comparação global</h3><div class="adv-text">Duas simulações independentes: <b>VFRR_MR = VD x (1 - MR)</b> e <b>VFRR_(VAE+VAX) = VD x (1 - (VAE + VAX))</b>. VAE e VAX não são apresentados como média; aparecem separadamente. Menor P95 residual: <b>'+melhor+'</b>. Diferença: '+dif.toFixed(1).replace('.',',')+' pp.</div></div>'
+      + '<div style="display:flex;gap:14px;flex-wrap:wrap">'
+      + globalCard('Cenário MR','Redutor aplicado: somente Mecanismos de Resiliência (MR). Redutor médio MR: <b>'+pct(gMR.mr)+'</b>.',gMR,S.mcResMR,'#0f6e56')
+      + globalCard('Cenário VAE + VAX','Redutor aplicado: soma VAE + VAX. VAE médio: <b>'+pct(gVA.vae)+'</b>; VAX médio: <b>'+pct(gVA.vax)+'</b>; soma limitada a 100%.',gVA,S.mcResVA,'#6b21a8')
+      + '</div>';
+  }
+
+  function rows(map){
+    return '<table class="adv-table"><thead><tr><th>Função</th><th style="text-align:right">VDE</th><th style="text-align:right">VDX</th><th style="text-align:right">VAE</th><th style="text-align:right">VAX</th><th style="text-align:right">MR</th><th style="text-align:right">Média</th><th style="text-align:right">P90</th><th style="text-align:right">P95</th><th style="text-align:right">P99</th><th style="text-align:right">Prob.</th></tr></thead><tbody>'
+      + fns().map(function(fn){ var r=map&&map[fn.id]; if(!r) return ''; return '<tr><td>'+esc(fn.name)+'</td><td style="text-align:right">'+pct(r.vde)+'</td><td style="text-align:right">'+pct(r.vdx)+'</td><td style="text-align:right">'+pct(r.vae)+'</td><td style="text-align:right">'+pct(r.vax)+'</td><td style="text-align:right">'+pct(r.mr)+'</td><td style="text-align:right">'+pct(r.mean)+'</td><td style="text-align:right">'+pct(r.p90)+'</td><td style="text-align:right;font-weight:700;color:'+color(r.p95)+'">'+pct(r.p95)+'</td><td style="text-align:right">'+pct(r.p99)+'</td><td style="text-align:right">'+pct(r.probCrit)+'</td></tr>'; }).join('')
+      + '</tbody></table>';
+  }
+
+  function renderFunctionResults(){
+    ensureFunctionPage();
+    var el = document.getElementById('funcres-inner'); if (!el) return;
+    if (!hasDual()) { el.innerHTML = '<div class="empty">Execute a simulação no botão Monte Carlo para visualizar os resultados por função.</div>'; return; }
+    el.innerHTML = '<div class="dash-section"><h3>Cenário MR - por função</h3><div class="adv-text">Resultado de VFRR_MR = VD x (1 - MR).</div>'+rows(S.mcResMR)+'</div>'
+      + '<div class="dash-section"><h3>Cenário VAE + VAX - por função</h3><div class="adv-text">Resultado de VFRR_(VAE+VAX) = VD x (1 - (VAE + VAX)). VAE e VAX aparecem em colunas separadas.</div>'+rows(S.mcResVA)+'</div>';
+  }
+
+  function exportPDF(){
+    if (!hasDual()) runDualSimulation();
+    var jsPDF = window.jspdf && window.jspdf.jsPDF;
+    if (!jsPDF) { alert('Biblioteca jsPDF não carregada.'); return; }
+    var doc = new jsPDF('l','mm','a4'), W=297,H=210,MG=12,page=1;
+    function text(t,x,y,s,b,c,opt){
+      var str=String(t==null?'':t).replace(/[×]/g,'x').replace(/[−–—]/g,'-').replace(/£/g,'Σ');
+      doc.setFont('helvetica',b?'bold':'normal'); doc.setFontSize(s||8); if(c) doc.setTextColor(c[0],c[1],c[2]); else doc.setTextColor(35);
+      if(str.indexOf('Σ')>=0 && !opt){
+        var parts=str.split('Σ'), cx=x;
+        for(var pi=0; pi<parts.length; pi++){
+          if(parts[pi]){ doc.setFont('helvetica',b?'bold':'normal'); doc.text(parts[pi],cx,y); cx += doc.getTextWidth(parts[pi]); }
+          if(pi<parts.length-1){ doc.setFont('symbol','normal'); doc.text('S',cx,y); cx += doc.getTextWidth('S'); }
+        }
+        doc.setFont('helvetica',b?'bold':'normal'); return;
+      }
+      doc.text(str,x,y,opt||{});
+    }
+    function header(title){ doc.setFillColor(31,37,50); doc.rect(0,0,W,15,'F'); text('DGR-FRAM Analyze',MG,10,10,true,[255,255,255]); text(title,W-MG,10,8,false,[220,226,240],{align:'right'}); text('Página '+page,W-MG,H-6,7,false,[110,110,120],{align:'right'}); }
+    function add(title){ if(page>1) doc.addPage(); header(title); page++; return 26; }
+    function box(x,y,w,h,t,v,c){ doc.setDrawColor(220); doc.roundedRect(x,y,w,h,2,2,'D'); text(v,x+w/2,y+10,12,true,c,{align:'center'}); text(t,x+w/2,y+18,7,false,[90,95,110],{align:'center'}); }
+    function metric(g,y,c,label){ text(label,MG,y,12,true,c); y+=5; [['Média',g.mean],['P90',g.p90],['P95',g.p95],['P99',g.p99],['Prob. Crit.',g.probCrit]].forEach(function(k,i){ box(MG+i*34,y,30,22,k[0],pct(k[1]),c); }); return y+30; }
+    var mr=scoreGlobal('MR'), vae=scoreGlobal('VAE'), vax=scoreGlobal('VAX'), gMR=S.mcGlobalMR||{}, gVA=S.mcGlobalVA||{};
+    var y = add('Capacidades Resilientes Desenvolvidas');
+    text('Capacidades Resilientes Desenvolvidas (DGR-OPS)',MG,y,16,true); y+=10;
+    [[ 'MR', mr, [15,110,86], 'MR = Σ(Critérios MR selecionados x Intensidade x Peso) / Σ(Critérios MR possíveis x Peso) x 100' ], [ 'VAE', vae, [107,33,168], 'VAE = Σ(Critérios VAE selecionados x Intensidade x Peso) / Σ(Critérios VAE possíveis x Peso) x 100' ], [ 'VAX', vax, [124,58,237], 'VAX = Σ(Critérios VAX selecionados x Intensidade x Peso) / Σ(Critérios VAX possíveis x Peso) x 100' ]].forEach(function(it,i){ box(MG+i*58,y,52,24,it[0],pct(it[1].pct),it[2]); text(it[3],MG+i*58,y+32,7,false,[60,65,80]); text('Totalização: '+it[1].num.toFixed(2).replace('.',',')+' / '+it[1].den,MG+i*58,y+38,7,false,[60,65,80]); });
+    y+=55; text('Não há matriz, radar, Monitorar/Responder/Aprender/Antecipar nem DGR-OPS sintético. VAE e VAX são exibidos separadamente.',MG,y,8,false,[45,50,65]);
+    y = add('Monte Carlo - resultados globais');
+    text('Monte Carlo - duas simulações globais',MG,y,16,true); y+=9;
+    text('Simulação 1: cenário MR estima a variabilidade residual usando somente MR como redutor: VFRR_MR = VD x (1 - MR).',MG,y,8); y+=5; text('Simulação 2: cenário VAE+VAX estima a variabilidade residual usando a soma VAE + VAX como redutor adaptativo: VFRR = VD x (1 - (VAE + VAX)).',MG,y,8); y+=8;
+    text('Redutor MR médio: '+pct(gMR.mr)+' | Redutor VAE médio: '+pct(gVA.vae)+' | Redutor VAX médio: '+pct(gVA.vax),MG,y,9,true); y+=10;
+    y = metric(gMR,y,[15,110,86],'Cenário MR - VFRR_MR = VD x (1 - MR)');
+    y = metric(gVA,y+4,[107,33,168],'Cenário VAE+VAX - VFRR = VD x (1 - (VAE + VAX))');
+    function table(title,map){
+      var y=add(title); text(title,MG,y,14,true); y+=8;
+      var headers=['Função','VDE','VDX','VAE','VAX','MR','Média','P90','P95','P99','Prob.'], widths=[62,20,20,20,20,20,22,20,20,20,22], x=MG;
+      function head(){ x=MG; doc.setFillColor(245,247,252); doc.rect(MG,y-5,273,8,'F'); headers.forEach(function(h,i){ text(h,x+1,y,7,true,[70,75,90]); x+=widths[i]; }); y+=6; }
+      head();
+      fns().forEach(function(fn){ var r=map&&map[fn.id]; if(!r) return; if(y>198){ y=add(title+' - continuação'); head(); } x=MG; [fn.name,pct(r.vde),pct(r.vdx),pct(r.vae),pct(r.vax),pct(r.mr),pct(r.mean),pct(r.p90),pct(r.p95),pct(r.p99),pct(r.probCrit)].forEach(function(v,i){ text(String(v).slice(0,i?12:36),x+1,y,6.6,false,[45,50,65]); x+=widths[i]; }); y+=5.2; });
+    }
+    table('Resultados por função - Cenário MR', S.mcResMR);
+    table('Resultados por função - Cenário VAE + VAX', S.mcResVA);
+    doc.save('dgr-fram-relatorio-montecarlo-vae-vax-mr-corrigido.pdf');
+  }
+
+  var oldSwitch = M.switchPage ? M.switchPage.bind(M) : null;
+  M.switchPage = function(page){
+    ensureDGRPage(); ensureFunctionPage(); setMRLabels();
+    if (oldSwitch) oldSwitch(page);
+    if (page === 'dgr') renderDGR();
+    if (page === 'funcres') renderFunctionResults();
+    if (page === 'mc') renderMC();
   };
-  M.normalizeEvaluationLevels();
-  stamp();
-  try{ M.refreshUI(); }catch(e){}
+  var oldRefresh = M.refreshUI ? M.refreshUI.bind(M) : null;
+  M.refreshUI = function(){
+    if (oldRefresh) oldRefresh();
+    ensureDGRPage(); ensureFunctionPage(); setMRLabels();
+    if (S.curPage === 'dgr') renderDGR();
+    if (S.curPage === 'funcres') renderFunctionResults();
+    if (S.curPage === 'mc') renderMC();
+  };
+  M.runSimulation = runDualSimulation;
+  M.renderDGROPS = renderDGR;
+  M.renderKPIs = function(){ renderMC(); };
+  M.renderMCPanel = function(){ renderMC(); };
+  M.renderCharts = function(){ var c=document.getElementById('ch-vfr'); if(c)c.style.display='none'; var e=document.getElementById('ch-vfr-empty'); if(e){e.style.display='block'; e.textContent=hasDual()?'Resultados globais exibidos abaixo.':'Execute a simulação para calcular.';} };
+  M.exportPDF = exportPDF;
+
+  document.addEventListener('click', function(){ setTimeout(function(){ if(S.curPage==='dgr') renderDGR(); if(S.curPage==='funcres') renderFunctionResults(); }, 40); }, true);
+  document.addEventListener('change', function(){ setTimeout(function(){ if(S.curPage==='dgr') renderDGR(); if(S.curPage==='funcres') renderFunctionResults(); }, 40); }, true);
+
+  ensureDGRPage(); ensureFunctionPage(); setMRLabels();
+  if (S.curPage === 'dgr') renderDGR();
+  if (S.curPage === 'funcres') renderFunctionResults();
+  if (S.curPage === 'mc') renderMC();
+});
 })();
 </script>
 
-<!-- Correções aplicadas nesta versão: título CRD/DGR-OPS; Σ; UTF-8; radar no PDF; probabilidade operacional por capacidade; denominador DGR-OPS por grupos elegíveis; ponderação por critérios. Correções 2026-06-23: Σ no PDF, caracteres VFRR_i, DGR-OPS denominador por grupos avaliados, título CRD e radar no PDF. -->
+<script>
+// PATCH GRÁFICO PDF v11 — melhora layout, fórmulas e comparativos visuais do relatório PDF
+(function(){
+  function applyGraphicPdfPatch(){
+    if(!window.DGRManager || !window.DGRState){ setTimeout(applyGraphicPdfPatch,60); return; }
+    const M = window.DGRManager, S = window.DGRState, T = window.TAXO || {};
+    const num = v => Number.isFinite(+v) ? +v : 0;
+    const fns = () => Array.isArray(S.fns) ? S.fns : [];
+    const pct = (v,d=1) => (num(v)*100).toFixed(d).replace('.',',') + '%';
+    const safe = s => String(s == null ? '' : s).replace(/[\u0010-\u001f\u007f-\u009f]/g,'').replace(/[£]/g,'Σ').replace(/[“”]/g,'"').replace(/[‘’]/g,"'");
+    const levelWeight = (level, sv) => {
+      const l = String(level || (sv && sv.level) || '').toLowerCase();
+      if(l.includes('max') || l.includes('máx')) return 1.00;
+      if(l.includes('min') || l.includes('mín')) return 0.25;
+      if(l.includes('med') || l.includes('méd')) return 0.50;
+      const mp = num(sv && (sv.mp != null ? sv.mp : sv.mean));
+      if(mp >= 0.70) return 1.00;
+      if(mp <= 0.30) return 0.25;
+      return 0.50;
+    };
+    const scoreGlobal = key => {
+      const items = (T[key] && T[key].items) ? T[key].items : [];
+      const den = Math.max(1, fns().length * items.length);
+      let nume = 0, selected = 0;
+      fns().forEach(fn => {
+        const subs = (S.subs && S.subs[fn.id]) || {};
+        items.forEach(item => {
+          const sv = subs[item.code];
+          if(sv && sv.sel === true){ selected++; nume += levelWeight(sv.level, sv); }
+        });
+      });
+      return {key, num:nume, den, selected, pct: den ? nume/den : 0};
+    };
+    const getRows = map => fns().map(fn => ({fn, r: map && map[fn.id]})).filter(x => x.r);
+    const avg = arr => arr.length ? arr.reduce((a,b)=>a+num(b),0)/arr.length : 0;
+
+    M.exportPDF = function(){
+      if((!S.mcGlobalMR || !S.mcGlobalVA) && typeof M.runSimulation === 'function'){
+        try{ M.runSimulation(); }catch(e){ console.warn(e); }
+      }
+      const jsPDF = window.jspdf && window.jspdf.jsPDF;
+      if(!jsPDF){ alert('Biblioteca jsPDF não carregada.'); return; }
+      const doc = new jsPDF('l','mm','a4');
+      const W=297, H=210, MG=12;
+      let page = 0;
+      const C = {
+        navy:[31,37,50], blue:[24,95,165], text:[35,42,58], muted:[96,104,122], line:[224,228,238], bg:[248,250,252],
+        mr:[15,110,86], vae:[107,33,168], vax:[124,58,237], bad:[192,57,43], warn:[245,158,11]
+      };
+      function setText(c=C.text){ doc.setTextColor(c[0],c[1],c[2]); }
+      function txt(t,x,y,s=8,b=false,c=C.text,opt){
+        let str = safe(t).replace(/[×]/g,'x').replace(/[−–—]/g,'-');
+        doc.setFont('helvetica', b?'bold':'normal'); doc.setFontSize(s); setText(c);
+        // Renderiza Σ por fonte Symbol para evitar substituição por £ no PDF.
+        if(str.indexOf('Σ') >= 0 && !opt){
+          let cx=x, parts=str.split('Σ');
+          parts.forEach((p,i)=>{
+            if(p){ doc.setFont('helvetica', b?'bold':'normal'); doc.text(p,cx,y); cx += doc.getTextWidth(p); }
+            if(i < parts.length-1){ doc.setFont('symbol','normal'); doc.text('S',cx,y); cx += doc.getTextWidth('S') + 0.5; }
+          });
+          doc.setFont('helvetica', b?'bold':'normal'); return;
+        }
+        doc.text(str,x,y,opt||{});
+      }
+      function wrap(t,x,y,w,lh=4.6,s=8,c=C.text){ doc.setFont('helvetica','normal'); doc.setFontSize(s); setText(c); const lines=doc.splitTextToSize(safe(t).replace(/[×]/g,'x').replace(/[−–—]/g,'-'),w); doc.text(lines,x,y); return y + lines.length*lh; }
+      function header(title, subtitle){
+        page++; if(page>1) doc.addPage();
+        doc.setFillColor(C.navy[0],C.navy[1],C.navy[2]); doc.rect(0,0,W,18,'F');
+        txt('DGR-FRAM Analyze',MG,11,11,true,[255,255,255]);
+        txt(title,W-MG,10,8.5,false,[230,235,245],{align:'right'});
+        if(subtitle) txt(subtitle,MG,25,16,true,C.text);
+        txt('Página '+page,W-MG,H-6,7,false,C.muted,{align:'right'});
+        return subtitle ? 35 : 26;
+      }
+      function section(x,y,w,h,title){
+        doc.setFillColor(255,255,255); doc.setDrawColor(C.line[0],C.line[1],C.line[2]); doc.roundedRect(x,y,w,h,2.5,2.5,'FD');
+        txt(title,x+4,y+7,9,true,C.text); return y+12;
+      }
+      function card(x,y,w,h,label,value,c){
+        doc.setFillColor(255,255,255); doc.setDrawColor(C.line[0],C.line[1],C.line[2]); doc.roundedRect(x,y,w,h,2.5,2.5,'FD');
+        doc.setFillColor(c[0],c[1],c[2]); doc.rect(x,y,w,3,'F');
+        txt(value,x+w/2,y+13,15,true,c,{align:'center'}); txt(label,x+w/2,y+21,7,false,C.muted,{align:'center'});
+      }
+      function formulaBox(x,y,w,title,lines,c){
+        doc.setFillColor(248,250,252); doc.setDrawColor(c[0],c[1],c[2]); doc.setLineWidth(0.45); doc.roundedRect(x,y,w,33,2.5,2.5,'FD');
+        txt(title,x+4,y+7.5,8.5,true,c);
+        lines.forEach((l,i)=>txt(l,x+5,y+15+i*6.2,8,false,C.text));
+        return y+38;
+      }
+      function fracFormula(x,y,w,title,numLine,denLine,resultLine,c){
+        doc.setFillColor(255,255,255); doc.setDrawColor(c[0],c[1],c[2]); doc.roundedRect(x,y,w,39,2.5,2.5,'FD');
+        txt(title,x+4,y+7.2,8.5,true,c);
+        txt(numLine,x+w/2,y+16,7.2,false,C.text,{align:'center'});
+        doc.setDrawColor(80,86,105); doc.line(x+8,y+19,x+w-8,y+19);
+        txt(denLine,x+w/2,y+25,7.2,false,C.text,{align:'center'});
+        txt(resultLine,x+w/2,y+34,8,true,c,{align:'center'});
+      }
+      function bar(x,y,w,label,value,c,maxVal=1){
+        const bw = Math.max(0, Math.min(w, w*(num(value)/Math.max(0.0001,maxVal))));
+        txt(label,x,y+4,7,false,C.text); doc.setFillColor(234,238,246); doc.roundedRect(x+54,y,w,5,1.5,1.5,'F');
+        doc.setFillColor(c[0],c[1],c[2]); doc.roundedRect(x+54,y,bw,5,1.5,1.5,'F'); txt(pct(value),x+58+w,y+4,7,true,c);
+      }
+      function metricsPanel(x,y,w,title,g,c){
+        doc.setFillColor(255,255,255); doc.setDrawColor(C.line[0],C.line[1],C.line[2]); doc.roundedRect(x,y,w,55,2.5,2.5,'FD');
+        doc.setFillColor(c[0],c[1],c[2]); doc.rect(x,y,w,4,'F'); txt(title,x+5,y+11,10,true,c);
+        const metrics=[['Média',g.mean],['P90',g.p90],['P95',g.p95],['P99',g.p99],['Prob.',g.probCrit]];
+        metrics.forEach((m,i)=>card(x+5+i*((w-10)/5),y+17,(w-14)/5,24,m[0],pct(m[1]),c));
+        return y+61;
+      }
+      function p95BarChart(x,y,w,h,map,title,c){
+        const rows=getRows(map).sort((a,b)=>num(b.r.p95)-num(a.r.p95));
+        doc.setFillColor(255,255,255); doc.setDrawColor(C.line[0],C.line[1],C.line[2]); doc.roundedRect(x,y,w,h,2.5,2.5,'FD');
+        txt(title,x+4,y+7.5,9,true,C.text);
+        const maxv=Math.max(0.01,...rows.map(z=>num(z.r.p95))); let yy=y+15;
+        rows.slice(0,12).forEach(z=>{ const name=safe(z.fn.name).slice(0,45); const val=num(z.r.p95); txt(name,x+4,yy+3.5,6.6,false,C.text); doc.setFillColor(235,238,246); doc.roundedRect(x+74,yy,w-98,4.5,1.2,1.2,'F'); doc.setFillColor(c[0],c[1],c[2]); doc.roundedRect(x+74,yy,(w-98)*val/maxv,4.5,1.2,1.2,'F'); txt(pct(val),x+w-20,yy+3.5,6.6,true,c,{align:'right'}); yy+=8; });
+      }
+      function tablePage(title, map, c){
+        let y=header(title,null); txt(title,MG,y,15,true,C.text); y+=9;
+        p95BarChart(MG,y,130,108,map,'Ranking visual por P95 individual',c);
+        const x0=148, widths=[56,18,18,18,18,18,20,18,18,18,19], headers=['Função','VDE','VDX','VAE','VAX','MR','Média','P90','P95','P99','Prob.'];
+        let x=x0, ty=y;
+        doc.setFillColor(245,247,252); doc.rect(x0,ty-5,137,8,'F');
+        headers.forEach((h,i)=>{ txt(h,x+1,ty,6.6,true,C.muted); x+=widths[i]; }); ty+=6;
+        getRows(map).forEach(z=>{
+          if(ty>198){ return; }
+          x=x0; const r=z.r; const vals=[safe(z.fn.name).slice(0,31),pct(r.vde),pct(r.vdx),pct(r.vae),pct(r.vax),pct(r.mr),pct(r.mean),pct(r.p90),pct(r.p95),pct(r.p99),pct(r.probCrit)];
+          vals.forEach((v,i)=>{ txt(v,x+1,ty,6.3,i===8,i===8?c:C.text); x+=widths[i]; }); ty+=5.6;
+        });
+      }
+
+      const mr=scoreGlobal('MR'), vae=scoreGlobal('VAE'), vax=scoreGlobal('VAX');
+      const gMR=S.mcGlobalMR||{}, gVA=S.mcGlobalVA||{};
+      let y=header('Capacidades Resilientes Desenvolvidas','Capacidades Resilientes Desenvolvidas (DGR-OPS)');
+      wrap('Esta página apresenta os indicadores separados de MR, VAE e VAX e explicita as fórmulas com numerador, denominador e intensidade. A totalização considera os critérios selecionados por função.',MG,y,270,4.5,8,C.muted); y+=12;
+      card(MG,y,52,25,'MR',pct(mr.pct),C.mr); card(MG+58,y,52,25,'VAE',pct(vae.pct),C.vae); card(MG+116,y,52,25,'VAX',pct(vax.pct),C.vax);
+      y+=33;
+      fracFormula(MG,y,86,'Fórmula MR','Σ(Critérios MR selecionados x Intensidade x Peso)','Σ(Critérios MR possíveis x Peso)','Totalização: '+mr.num.toFixed(2).replace('.',',')+' / '+mr.den,C.mr);
+      fracFormula(MG+94,y,86,'Fórmula VAE','Σ(Critérios VAE selecionados x Intensidade x Peso)','Σ(Critérios VAE possíveis x Peso)','Totalização: '+vae.num.toFixed(2).replace('.',',')+' / '+vae.den,C.vae);
+      fracFormula(MG+188,y,86,'Fórmula VAX','Σ(Critérios VAX selecionados x Intensidade x Peso)','Σ(Critérios VAX possíveis x Peso)','Totalização: '+vax.num.toFixed(2).replace('.',',')+' / '+vax.den,C.vax);
+      y+=50;
+      txt('Leitura visual dos indicadores',MG,y,10,true,C.text); y+=6;
+      bar(MG,y,170,'MR',mr.pct,C.mr); y+=9; bar(MG,y,170,'VAE',vae.pct,C.vae); y+=9; bar(MG,y,170,'VAX',vax.pct,C.vax); y+=14;
+      formulaBox(MG+190,132,83,'Critério de intensidade',['Máxima = 1,00','Média = 0,50','Mínima = 0,25'],C.blue);
+
+      y=header('Monte Carlo - resultados globais','Monte Carlo - duas simulações globais');
+      formulaBox(MG,y,86,'Modelo-base',['VD = VDE + VDX','VA = VAE + VAX','VFR = max(0, VD - VA)'],C.blue);
+      formulaBox(MG+94,y,86,'Simulação 1 - MR',['VFRR_MR = VD x (1 - MR)','Redutor: MR médio = '+pct(gMR.mr),'Prob. Crit. = P(VFRR_MR > P95)'],C.mr);
+      formulaBox(MG+188,y,86,'Simulação 2 - VAE+VAX',['VFRR_VA = VD x [1 - min(1, VAE+VAX)]','VAE = '+pct(gVA.vae)+' | VAX = '+pct(gVA.vax),'Prob. Crit. = P(VFRR_VA > P95)'],C.vae);
+      y+=45;
+      metricsPanel(MG,y,130,'Cenário MR',gMR,C.mr); metricsPanel(MG+143,y,130,'Cenário VAE + VAX',gVA,C.vae); y+=68;
+      txt('Comparação visual dos percentis globais',MG,y,10,true,C.text); y+=8;
+      const maxp=Math.max(0.01,num(gMR.p99),num(gVA.p99));
+      [['MR - Média',gMR.mean,C.mr],['MR - P95',gMR.p95,C.mr],['VAE+VAX - Média',gVA.mean,C.vae],['VAE+VAX - P95',gVA.p95,C.vae]].forEach(row=>{ bar(MG,y,145,row[0],row[1],row[2],maxp); y+=9; });
+      const better = num(gMR.p95) <= num(gVA.p95) ? 'MR' : 'VAE + VAX';
+      wrap('Interpretação: as simulações são independentes. O cenário com menor P95 indica menor variabilidade residual no percentil crítico. Neste relatório, o menor P95 global é: '+better+'.',MG+165,150,108,5,8,C.muted);
+
+      tablePage('Resultados por função - Cenário MR',S.mcResMR,C.mr);
+      tablePage('Resultados por função - Cenário VAE + VAX',S.mcResVA,C.vae);
+      doc.save('dgr-fram-relatorio-montecarlo-vae-vax-mr-grafico.pdf');
+    };
+    M.exportPDF.__graphic_pdf_v11 = true;
+    console.log('DGR-FRAM PDF gráfico v11 ativo');
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyGraphicPdfPatch); else applyGraphicPdfPatch();
+})();
+</script>
+
 </body>
 </html>
