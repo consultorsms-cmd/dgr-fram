@@ -6159,5 +6159,115 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 })();
 </script>
 
+
+
+<script>
+/* ===== PATCH FINAL v16 — GitHub stable: DGR-OPS gráfico + duas simulações comparativas + PDF consistente ===== */
+(function(){
+  function bootV16(){
+    if(!window.DGRManager || !window.DGRState || !window.TAXO){ setTimeout(bootV16,60); return; }
+    const M=window.DGRManager, S=window.DGRState, T=window.TAXO;
+    const $=id=>document.getElementById(id);
+    const n=v=>Number.isFinite(+v)?+v:0;
+    const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,n(v)));
+    const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const fns=()=>Array.isArray(S.fns)?S.fns:[];
+    const avg=a=>a&&a.length?a.reduce((x,y)=>x+n(y),0)/a.length:0;
+    const q=(a,p)=>a&&a.length?a[Math.min(a.length-1,Math.max(0,Math.floor(a.length*p)))]:0;
+    const pct=(v,d=1)=>((n(v)*100).toFixed(d).replace('.',','))+'%';
+    const pctProb=v=>{ const x=n(v)*100; return x>0 && x<0.1 ? '<0,1%' : x.toFixed(1).replace('.',',')+'%'; };
+    const cls=v=>v>=.70?['Crítica','#c0392b']:v>=.50?['Alta','#d97706']:v>=.30?['Moderada','#eab308']:['Baixa','#0f6e56'];
+    const levelWeight=sv=>{ const l=String((sv&&sv.level)||'media').toLowerCase(); if(l.includes('max'))return 1; if(l.includes('min'))return .25; return .5; };
+    function items(key){ return (T[key]&&Array.isArray(T[key].items))?T[key].items:[]; }
+    function fixedScore(fnId,key){
+      const its=items(key), subs=(S.subs&&S.subs[fnId])||{}; let num=0, sel=0; const den=Math.max(1,its.length);
+      its.forEach(it=>{ const sv=subs[it.code]; if(sv&&sv.sel===true){ sel++; num+=levelWeight(sv); } });
+      return {value:clamp(num/den),num,den,selected:sel};
+    }
+    function fixedGlobal(key){ const arr=fns().map(fn=>fixedScore(fn.id,key)); const num=arr.reduce((a,b)=>a+b.num,0); const den=arr.reduce((a,b)=>a+b.den,0)||1; return {value:clamp(num/den),num,den,selected:arr.reduce((a,b)=>a+b.selected,0)}; }
+    function sample(p){
+      if(M.betaPertSample) return M.betaPertSample(n(p&&p.mn), n(p&&p.mp), n(p&&p.mx));
+      const mn=clamp(p&&p.mn), mp=clamp(p&&p.mp), mx=Math.max(mn,clamp(p&&p.mx)); return clamp((mn+4*mp+mx)/6);
+    }
+    function hist(arr){ const h=Array(24).fill(0); (arr||[]).forEach(v=>h[Math.min(23,Math.floor(clamp(v,0,.9999)*24))]++); const mx=Math.max(1,...h); return h.map(x=>x/mx); }
+    function baseStats(arr,det){
+      arr.sort((a,b)=>a-b); const p95=q(arr,.95); return {mean:avg(arr),p90:q(arr,.90),p95,p99:q(arr,.99),probCrit:arr.filter(v=>v>p95).length/(arr.length||1),hist:hist(arr),samples:arr,
+        vde:avg(det.vde),vdx:avg(det.vdx),vae:avg(det.vae),vax:avg(det.vax),vd:avg(det.vd),redutorAdaptativo:avg(det.red),mr:avg(det.mr)};
+    }
+    function applyGlobalThreshold(resMap, threshold){ Object.values(resMap||{}).forEach(r=>{ const s=r.samples||[]; r.probCrit=s.filter(v=>v>threshold).length/(s.length||1); }); }
+    function hasDual(){ return fns().some(fn=>S.mcResMR&&S.mcResMR[fn.id]&&S.mcResVA&&S.mcResVA[fn.id]); }
+
+    function runSimulationV16(){
+      if(!fns().length){ alert('Adicione funções antes de rodar a simulação.'); return; }
+      const N=S.mcN||5000; S.mcResMR={}; S.mcResVA={}; S.mcRes={}; const pooledMR=[], pooledVA=[];
+      fns().forEach(fn=>{
+        if(typeof M.recalcParams==='function') try{ M.recalcParams(fn.id); }catch(e){}
+        const p=(S.params&&S.params[fn.id])||{}; const mrFixed=fixedScore(fn.id,'MR').value;
+        const arrMR=[], arrVA=[]; const detMR={vde:[],vdx:[],vae:[],vax:[],vd:[],red:[],mr:[]}, detVA={vde:[],vdx:[],vae:[],vax:[],vd:[],red:[],mr:[]};
+        for(let i=0;i<N;i++){
+          const VDE=sample(p.vde), VDX=sample(p.vdx), VAE=sample(p.vae), VAX=sample(p.vax), VD=Math.max(0,VDE+VDX);
+          const redVA=clamp(1-(1-clamp(VAE))*(1-clamp(VAX))); // preserva diferenças e nunca ultrapassa 100%
+          const vMR=clamp(VD*(1-mrFixed),0,2), vVA=clamp(VD*(1-redVA),0,2);
+          arrMR.push(vMR); arrVA.push(vVA); pooledMR.push(vMR); pooledVA.push(vVA);
+          detMR.vde.push(VDE); detMR.vdx.push(VDX); detMR.vae.push(VAE); detMR.vax.push(VAX); detMR.vd.push(VD); detMR.red.push(mrFixed); detMR.mr.push(mrFixed);
+          detVA.vde.push(VDE); detVA.vdx.push(VDX); detVA.vae.push(VAE); detVA.vax.push(VAX); detVA.vd.push(VD); detVA.red.push(redVA); detVA.mr.push(mrFixed);
+        }
+        S.mcResMR[fn.id]=baseStats(arrMR,detMR); S.mcResVA[fn.id]=baseStats(arrVA,detVA); S.mcRes[fn.id]=S.mcResMR[fn.id];
+      });
+      S.mcGlobalMR=baseStats(pooledMR,{vde:fns().map(fn=>S.mcResMR[fn.id].vde),vdx:fns().map(fn=>S.mcResMR[fn.id].vdx),vae:fns().map(fn=>S.mcResMR[fn.id].vae),vax:fns().map(fn=>S.mcResMR[fn.id].vax),vd:fns().map(fn=>S.mcResMR[fn.id].vd),red:fns().map(fn=>S.mcResMR[fn.id].mr),mr:fns().map(fn=>S.mcResMR[fn.id].mr)});
+      S.mcGlobalVA=baseStats(pooledVA,{vde:fns().map(fn=>S.mcResVA[fn.id].vde),vdx:fns().map(fn=>S.mcResVA[fn.id].vdx),vae:fns().map(fn=>S.mcResVA[fn.id].vae),vax:fns().map(fn=>S.mcResVA[fn.id].vax),vd:fns().map(fn=>S.mcResVA[fn.id].vd),red:fns().map(fn=>S.mcResVA[fn.id].redutorAdaptativo),mr:fns().map(fn=>S.mcResVA[fn.id].mr)});
+      applyGlobalThreshold(S.mcResMR,S.mcGlobalMR.p95); applyGlobalThreshold(S.mcResVA,S.mcGlobalVA.p95);
+      const gMR=fixedGlobal('MR'), gVAE=fixedGlobal('VAE'), gVAX=fixedGlobal('VAX');
+      S.mcGlobalMR.mr=gMR.value; S.mcGlobalVA.vae=gVAE.value; S.mcGlobalVA.vax=gVAX.value; S.mcGlobalVA.redutorAdaptativoConsolidado=clamp(1-(1-gVAE.value)*(1-gVAX.value));
+      S.mcLastMode='MC_DUAS_SIMULACOES_COMPARATIVAS_V16_REDUTOR_MULTIPLICATIVO_GITHUB_STABLE';
+      renderMCV16(); renderDGRV16(); renderFunctionResultsV16(); if(M.saveToLocalStorage) try{M.saveToLocalStorage();}catch(e){}
+    }
+
+    function kpi(title,val,color){ const raw=typeof val==='string'?parseFloat(val.replace(',','.')):n(val)*100; const w=Number.isFinite(raw)?Math.max(0,Math.min(100,raw)):0; return '<div class="dash-card" style="border-top:3px solid '+color+'"><div class="dash-card-val" style="color:'+color+'">'+val+'</div><div class="dash-card-lbl">'+title+'</div><div style="height:4px;background:#eef0f6;border-radius:99px;overflow:hidden;margin-top:8px"><div style="height:100%;width:'+w+'%;background:'+color+'"></div></div></div>'; }
+    function histHTML(h,color){ return '<div class="histbars" style="height:76px;margin-top:8px">'+(h||[]).map(v=>'<div class="hb" style="height:'+Math.max(2,Math.round(n(v)*72))+'px;background:'+color+';opacity:'+(0.35+n(v)*0.65).toFixed(2)+'"></div>').join('')+'</div><div class="histax"><span>0%</span><span>50%</span><span>100%</span></div>'; }
+    function metric(label,val,color,prob){ return '<div style="display:flex;align-items:center;gap:8px;margin:6px 0"><div style="width:72px;font-size:11px;font-weight:700">'+label+'</div><div style="flex:1;height:8px;background:#e5e7eb;border-radius:99px;overflow:hidden"><div style="height:100%;width:'+Math.max(0,Math.min(100,n(val)*100))+'%;background:'+color+'"></div></div><div style="width:58px;text-align:right;font-weight:800;color:'+color+'">'+(prob?pctProb(val):pct(val))+'</div></div>'; }
+    function globalCard(title,desc,g,map,color){ return '<div class="dash-section" style="flex:1;min-width:360px;border-left:5px solid '+color+';border-radius:12px"><h3>'+title+'</h3><div class="adv-text">'+desc+'</div>'+histHTML(g.hist,color)+'<div style="margin-top:10px">'+metric('Média',g.mean,color)+metric('P90',g.p90,'#d97706')+metric('P95',g.p95,cls(g.p95)[1])+metric('P99',g.p99,'#c0392b')+metric('Prob.',g.probCrit,'#c0392b',true)+'</div></div>'; }
+    function comparisonTable(){ const a=S.mcGlobalMR||{}, b=S.mcGlobalVA||{}; return '<table class="adv-table"><thead><tr><th>Indicador</th><th style="text-align:right">Cenário MR</th><th style="text-align:right">Cenário VAE+VAX</th></tr></thead><tbody>'+
+      [['Média','mean'],['P90','p90'],['P95','p95'],['P99','p99']].map(r=>'<tr><td>'+r[0]+'</td><td style="text-align:right">'+pct(a[r[1]])+'</td><td style="text-align:right">'+pct(b[r[1]])+'</td></tr>').join('')+
+      '<tr><td>Probabilidade operacional crítica</td><td style="text-align:right">'+pctProb(a.probCrit)+'</td><td style="text-align:right">'+pctProb(b.probCrit)+'</td></tr></tbody></table>'; }
+    function renderMCV16(){
+      const ok=hasDual(), gMR=S.mcGlobalMR||{}, gVA=S.mcGlobalVA||{}; const sub=document.querySelector('#s-mc .page-sub');
+      if(sub) sub.innerHTML='Duas leituras comparativas da mesma amostragem Monte Carlo: <b>Cenário MR</b> e <b>Cenário VAE+VAX</b>. VAE e VAX são exibidos separadamente; não há média VA.';
+      const stats=$('dash-stats'); if(stats) stats.innerHTML=[
+        kpi('Funções',fns().length,'#4778e8'),kpi('Iterações',S.mcN||0,'#185fa5'),kpi('MR avaliado',ok?pct(gMR.mr):'—','#0f6e56'),kpi('VAE avaliado',ok?pct(gVA.vae):'—','#6b21a8'),kpi('VAX avaliado',ok?pct(gVA.vax):'—','#7c3aed'),kpi('Redutor VAE+VAX',ok?pct(gVA.redutorAdaptativoConsolidado):'—','#2563eb'),kpi('P95 MR',ok?pct(gMR.p95):'—','#0f6e56'),kpi('P95 VAE+VAX',ok?pct(gVA.p95):'—','#6b21a8'),kpi('Prob. MR',ok?pctProb(gMR.probCrit):'—','#c0392b'),kpi('Prob. VAE+VAX',ok?pctProb(gVA.probCrit):'—','#c0392b')].join('');
+      const canvas=$('ch-vfr'); if(canvas) canvas.style.display='none'; const empty=$('ch-vfr-empty'); if(empty){ empty.style.display='block'; empty.textContent=ok?'Resultados globais exibidos abaixo. Detalhamento no botão Resultados por Função.':'Execute a simulação para calcular MR, VAE e VAX.'; }
+      const ttl=document.querySelector('#s-mc .dash-section h3'); if(ttl) ttl.textContent='Monte Carlo - resultados globais'; const inner=$('mc-inner'); if(!inner) return; if(!ok){ inner.innerHTML=''; return; }
+      inner.innerHTML='<div class="dash-section" style="border-left:5px solid #185fa5;border-radius:12px"><h3>Síntese executiva comparativa</h3><div class="adv-text">O relatório compara dois mecanismos de redução da variabilidade residual: <b>mitigação por MR</b> e <b>adaptação por VAE+VAX</b>. O redutor adaptativo foi alterado para <b>1 − (1 − VAE) × (1 − VAX)</b>, evitando redução superior a 100% sem zerar artificialmente a distribuição quando VAE e VAX são altos.</div>'+comparisonTable()+'</div>'+
+        '<div class="dash-section"><h3>Explicação dos redutores sorteados</h3><div class="adv-text">Os valores médios de VAE e VAX abaixo são médias das amostras Beta-PERT por função durante a simulação. Eles não substituem os índices observados da página DGR-OPS; servem para representar incerteza operacional em Monte Carlo.</div></div>'+
+        '<div style="display:flex;gap:14px;flex-wrap:wrap">'+globalCard('Cenário MR','Fórmula: <b>VFRR_MR = VD × (1 − MR)</b>. MR é fixo e deriva da avaliação dos critérios selecionados.',gMR,S.mcResMR,'#0f6e56')+globalCard('Cenário VAE + VAX','Fórmula: <b>VFRR = VD × [1 − (1 − (1 − VAE)(1 − VAX))]</b>. O redutor preserva diferenças entre funções.',gVA,S.mcResVA,'#6b21a8')+'</div>';
+    }
+    function rows(map){ return '<table class="adv-table"><thead><tr><th>Função</th><th style="text-align:right">VDE</th><th style="text-align:right">VDX</th><th style="text-align:right">VAE</th><th style="text-align:right">VAX</th><th style="text-align:right">Redutor</th><th style="text-align:right">MR</th><th style="text-align:right">Média</th><th style="text-align:right">P95</th><th style="text-align:right">Prob.</th></tr></thead><tbody>'+fns().map(fn=>{ const r=(map&&map[fn.id])||{}; return '<tr><td>'+esc(fn.name)+'</td><td style="text-align:right">'+pct(r.vde)+'</td><td style="text-align:right">'+pct(r.vdx)+'</td><td style="text-align:right">'+pct(r.vae)+'</td><td style="text-align:right">'+pct(r.vax)+'</td><td style="text-align:right">'+pct(r.redutorAdaptativo)+'</td><td style="text-align:right">'+pct(r.mr)+'</td><td style="text-align:right">'+pct(r.mean)+'</td><td style="text-align:right;font-weight:800;color:'+cls(r.p95)[1]+'">'+pct(r.p95)+'</td><td style="text-align:right">'+pctProb(r.probCrit)+'</td></tr>'; }).join('')+'</tbody></table>'; }
+    function renderFunctionResultsV16(){ const el=$('funcres-inner'); if(!el) return; if(!hasDual()){ el.innerHTML='<div class="empty">Execute a simulação no botão Monte Carlo para visualizar os resultados por função.</div>'; return; } el.innerHTML='<div class="dash-section"><h3>Cenário MR - por função</h3><div class="adv-text">Resultado de VFRR_MR = VD × (1 − MR).</div>'+rows(S.mcResMR)+'</div><div class="dash-section"><h3>Cenário VAE + VAX - por função</h3><div class="adv-text">Resultado de VFRR = VD × [1 − RedutorAdaptativo], com RedutorAdaptativo = 1 − (1 − VAE)(1 − VAX).</div>'+rows(S.mcResVA)+'</div>'; }
+    function formulaCard(title,o,color,formula){ return '<div class="dash-section" style="border-left:5px solid '+color+';border-radius:12px"><div style="display:flex;justify-content:space-between;gap:12px"><div><h3 style="color:'+color+'">'+title+'</h3><div class="adv-text">'+formula+'</div></div><div style="font-size:34px;font-weight:900;color:'+color+'">'+pct(o.value)+'</div></div><div style="height:12px;background:#eef0f6;border-radius:999px;overflow:hidden;margin-top:10px"><div style="height:100%;width:'+Math.max(0,Math.min(100,o.value*100))+'%;background:'+color+'"></div></div><div style="font-size:11px;color:#6b7280;margin-top:8px"><b>Totalização:</b> '+o.num.toFixed(2).replace('.',',')+' / '+o.den+' · Critérios selecionados: '+o.selected+'</div></div>'; }
+    function renderDGRV16(){ const cont=$('dgr-indicadores'), interp=$('dgr-interp'); if(!cont) return; const mr=fixedGlobal('MR'), vae=fixedGlobal('VAE'), vax=fixedGlobal('VAX'); const red=clamp(1-(1-vae.value)*(1-vax.value)); cont.innerHTML='<div class="dash-grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">'+formulaCard('MR',mr,'#0f6e56','MR = Σ(Critérios MR selecionados × Intensidade × Peso) / Σ(Critérios MR possíveis × Peso) × 100')+formulaCard('VAE',vae,'#6b21a8','VAE = Σ(Critérios VAE selecionados × Intensidade × Peso) / Σ(Critérios VAE possíveis × Peso) × 100')+formulaCard('VAX',vax,'#7c3aed','VAX = Σ(Critérios VAX selecionados × Intensidade × Peso) / Σ(Critérios VAX possíveis × Peso) × 100')+'</div><div class="dash-section" style="border-left:5px solid #185fa5;border-radius:12px"><h3>Síntese gráfica do redutor adaptativo</h3><div class="adv-text">RedutorAdaptativo = <b>1 − (1 − VAE) × (1 − VAX)</b> = <b>'+pct(red)+'</b>. Esta forma impede reduções acima de 100% e evita que a distribuição seja zerada pela simples soma VAE + VAX.</div>'+metric('MR',mr.value,'#0f6e56')+metric('VAE',vae.value,'#6b21a8')+metric('VAX',vax.value,'#7c3aed')+metric('Redutor',red,'#185fa5')+'</div>'; if(interp) interp.innerHTML='O DGR-OPS foi reestruturado para apresentar MR, VAE e VAX separadamente, com fórmulas e totalizações explícitas. O relatório exportado compara MR e VAE+VAX sem média entre VAE e VAX.'; }
+
+    function exportPDFV16(){
+      const jsPDF=window.jspdf&&window.jspdf.jsPDF; if(!jsPDF){ alert('Biblioteca jsPDF não carregada.'); return; } if(!hasDual()) runSimulationV16();
+      const doc=new jsPDF('l','mm','a4'), W=297,H=210,MG=12; const C={dark:[31,37,50],blue:[24,95,165],green:[15,110,86],purple:[107,33,168],violet:[124,58,237],red:[192,57,43],orange:[217,119,6],gray:[90,98,115],line:[220,224,232],light:[248,250,252]}; let pg=0;
+      function set(c){doc.setTextColor(c[0],c[1],c[2]);} function safe(s){return String(s??'').replace(/→/g,'->').replace(/×/g,'x').replace(/−/g,'-').replace(/Σ/g,'Σ');}
+      function txt(s,x,y,z=8,b=false,c=C.dark,opt){doc.setFont('helvetica',b?'bold':'normal');doc.setFontSize(z);set(c);doc.text(safe(s),x,y,opt||{});} function fill(c){doc.setFillColor(c[0],c[1],c[2]);}
+      function head(t){pg++; if(pg>1)doc.addPage(); fill(C.dark); doc.rect(0,0,W,16,'F'); txt('DGR-FRAM Analyze',MG,10,10,true,[255,255,255]); txt(t,W-MG,10,9,false,[220,226,238],{align:'right'}); txt('Página '+pg,W-MG,H-6,7,false,C.gray,{align:'right'}); return 27;}
+      function card(x,y,w,h,l,v,c){fill(C.light);doc.rect(x,y,w,h,'F');doc.setDrawColor(C.line[0],C.line[1],C.line[2]);doc.rect(x,y,w,h);fill(c);doc.rect(x,y,w,3,'F');txt(v,x+w/2,y+13,14,true,c,{align:'center'});txt(l,x+w/2,y+21,7,false,C.gray,{align:'center'});} function bar(x,y,w,h,val,c){fill([229,231,235]);doc.rect(x,y,w,h,'F');fill(c);doc.rect(x,y,Math.max(0,Math.min(w,w*n(val))),h,'F');}
+      const mr=fixedGlobal('MR'), vae=fixedGlobal('VAE'), vax=fixedGlobal('VAX'), red=clamp(1-(1-vae.value)*(1-vax.value)), gMR=S.mcGlobalMR||{}, gVA=S.mcGlobalVA||{}; let y=head('Capacidades resilientes desenvolvidas');
+      txt('Capacidades Resilientes Desenvolvidas (DGR-OPS)',MG,y,16,true); y+=10; [['MR',mr,C.green],['VAE',vae,C.purple],['VAX',vax,C.violet]].forEach((r,i)=>{ const yy=y+i*39; card(MG,yy,43,25,r[0],pct(r[1].value),r[2]); txt(r[0]+' = Σ(Critérios selecionados x Intensidade x Peso) / Σ(Critérios possíveis x Peso) x 100',MG+52,yy+9,8,false); txt('Totalização: '+r[1].num.toFixed(2).replace('.',',')+' / '+r[1].den+' | Critérios selecionados: '+r[1].selected,MG+52,yy+18,7,true,C.gray); bar(MG+52,yy+24,190,5,r[1].value,r[2]); }); y+=126; txt('RedutorAdaptativo = 1 - (1 - VAE) x (1 - VAX) = '+pct(red),MG,y,10,true,C.blue);
+      y=head('Monte Carlo - comparação global'); txt('Duas simulações comparativas: MR e VAE+VAX',MG,y,15,true); y+=9; txt('O redutor VAE+VAX usa forma multiplicativa para evitar zeragem artificial da distribuição.',MG,y,8,false,C.gray); y+=12; [['Média MR',gMR.mean,C.green],['P95 MR',gMR.p95,C.green],['Prob. MR',gMR.probCrit,C.red],['Média VAE+VAX',gVA.mean,C.purple],['P95 VAE+VAX',gVA.p95,C.purple],['Prob. VAE+VAX',gVA.probCrit,C.red]].forEach((r,i)=>card(MG+i*46,y,42,25,r[0],i==2||i==5?pctProb(r[1]):pct(r[1]),r[2])); y+=40; txt('Fórmulas',MG,y,12,true); y+=8; ['Cenário MR: VFRR_MR = VD x (1 - MR)','Cenário VAE+VAX: RedutorAdaptativo = 1 - (1 - VAE)(1 - VAX)','VFRR_VAEVAX = VD x (1 - RedutorAdaptativo)','Probabilidade crítica = Prob(VFRR > P95 Global do cenário)'].forEach(s=>{txt(s,MG,y,9,false,C.gray); y+=7;});
+      function tablePage(title,map,color){ y=head(title); const cols=[MG,72,94,116,138,164,190,215,240,265]; ['Função','VDE','VDX','VAE','VAX','Redutor','MR','Média','P95','Prob.'].forEach((h,i)=>txt(h,cols[i],y,7,true)); y+=5; doc.line(MG,y,W-MG,y); y+=6; fns().forEach((fn,idx)=>{ if(y>190){ y=head(title+' - continuação'); } const r=(map&&map[fn.id])||{}; const row=[(idx+1)+'. '+(fn.name||''),pct(r.vde),pct(r.vdx),pct(r.vae),pct(r.vax),pct(r.redutorAdaptativo),pct(r.mr),pct(r.mean),pct(r.p95),pctProb(r.probCrit)]; row.forEach((v,i)=>txt(i===0?(v.length>34?v.slice(0,33)+'…':v):v,cols[i],y,6.8,i===8,i===8?color:C.dark)); y+=6; }); }
+      tablePage('Resultados por função - Cenário MR',S.mcResMR,C.green); tablePage('Resultados por função - Cenário VAE + VAX',S.mcResVA,C.purple); doc.save('dgr-fram-relatorio-montecarlo-vae-vax-mr-v16.pdf');
+    }
+    M.runSimulation=runSimulationV16; M.renderDGROPS=renderDGRV16; M.renderFunctionResults=renderFunctionResultsV16; M.exportPDF=exportPDFV16; M.renderKPIs=renderMCV16; M.renderMCPanel=renderMCV16; M.renderCharts=function(){ const c=$('ch-vfr'); if(c)c.style.display='none'; const e=$('ch-vfr-empty'); if(e){e.style.display='block';e.textContent=hasDual()?'Resultados globais exibidos abaixo.':'Execute a simulação para calcular.';} };
+    const oldSwitch=M.switchPage&&M.switchPage.bind(M); M.switchPage=function(page){ if(oldSwitch) oldSwitch(page); if(page==='mc')renderMCV16(); if(page==='dgr')renderDGRV16(); if(page==='funcres')renderFunctionResultsV16(); };
+    const oldRefresh=M.refreshUI&&M.refreshUI.bind(M); M.refreshUI=function(){ if(oldRefresh) oldRefresh(); if(S.curPage==='mc')renderMCV16(); if(S.curPage==='dgr')renderDGRV16(); if(S.curPage==='funcres')renderFunctionResultsV16(); };
+    setTimeout(()=>{ if(S.curPage==='mc')renderMCV16(); if(S.curPage==='dgr')renderDGRV16(); if(S.curPage==='funcres')renderFunctionResultsV16(); },200);
+    console.log('PATCH v16 aplicado: GitHub stable, DGR-OPS gráfico, duas simulações e PDF consistente.');
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bootV16); else bootV16();
+})();
+</script>
+
 </body>
 </html>
