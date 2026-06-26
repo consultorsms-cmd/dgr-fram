@@ -7330,3 +7330,225 @@ function bootV23(){
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bootV23); else bootV23();
 })();
 </script>
+
+<script id="dgr-final-v24-vae-vax-github-safe">
+/* PATCH FINAL v24 — correção do cenário VAE+VAX sem saturação artificial e GitHub-safe
+   - VDE e VDX continuam sorteados por Beta-PERT.
+   - MR, VAE e VAX são índices avaliados pelos critérios selecionados, não sorteios adaptativos altos.
+   - Cenário MR: usa MR global determinístico.
+   - Cenário VAE+VAX: usa redutor determinístico POR FUNÇÃO: min(1, VAE_função + VAX_função).
+   - Impede zeragens artificiais: só zera se o redutor da própria função alcançar 100%.
+   - Mantém todo o patch inline, sem dependência de build, para não degradar no GitHub Pages. */
+(function(){
+'use strict';
+function bootV24(){
+  const M = window.DGRManager, S = window.DGRState, T = window.TAXO;
+  if(!M || !S || !T){ setTimeout(bootV24,80); return; }
+  if(M.__dgrFinalV24Applied) return; M.__dgrFinalV24Applied = true;
+
+  const n = v => Number.isFinite(+v) ? +v : 0;
+  const clamp01 = v => Math.max(0, Math.min(1, n(v)));
+  const fns = () => Array.isArray(S.fns) ? S.fns : [];
+  const avg = a => a && a.length ? a.reduce((x,y)=>x+n(y),0)/a.length : 0;
+  const pct = (v,d=1) => (n(v)*100).toFixed(d).replace('.',',') + '%';
+  const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const q = (arr,p) => { const b=[...(arr||[])].sort((x,y)=>x-y); return b.length ? b[Math.min(b.length-1, Math.max(0, Math.floor(b.length*p)))] : 0; };
+  const hist = arr => { const h=Array(20).fill(0); (arr||[]).forEach(v=>h[Math.min(19, Math.floor(Math.min(.9999, Math.max(0,n(v)))*20))]++); const mx=Math.max(1,...h); return h.map(x=>x/mx); };
+  const samplePert = p => { p=p||{}; return typeof M.betaPertSample==='function' ? clamp01(M.betaPertSample(n(p.mn), n(p.mp), n(p.mx))) : clamp01(p.mp); };
+
+  function levelWeight(sv){
+    const l = String((sv && sv.level) || '').toLowerCase();
+    if(l.includes('max') || l.includes('máx')) return 1;
+    if(l.includes('min') || l.includes('mín')) return .25;
+    if(l.includes('med') || l.includes('méd')) return .5;
+    const mp = n(sv && (sv.mp != null ? sv.mp : sv.mean));
+    return mp >= .70 ? 1 : mp <= .30 ? .25 : .5;
+  }
+
+  function fixedScore(fnId,key){
+    const items = (T[key] && T[key].items) ? T[key].items : [];
+    const subs = (S.subs && S.subs[fnId]) || {};
+    let num = 0, selected = 0;
+    items.forEach(it => {
+      const sv = subs[it.code];
+      if(sv && sv.sel === true){ selected++; num += levelWeight(sv); }
+    });
+    const den = Math.max(1, items.length);
+    return { value: clamp01(num/den), num, den, selected };
+  }
+
+  function fixedGlobal(key){
+    let num = 0, den = 0, selected = 0;
+    fns().forEach(fn => { const r = fixedScore(fn.id,key); num += r.num; den += r.den; selected += r.selected; });
+    den = Math.max(1, den);
+    return { value: clamp01(num/den), num, den, selected };
+  }
+
+  function calcStats(arr,det,threshold){
+    const p95 = q(arr,.95), thr = Number.isFinite(+threshold) ? +threshold : p95;
+    return {
+      mean: avg(arr), p90: q(arr,.90), p95, p99: q(arr,.99),
+      probCrit: (arr||[]).filter(v => n(v) > thr).length / Math.max(1,(arr||[]).length),
+      hist: hist(arr), threshold: thr,
+      vde: avg(det.vde), vdx: avg(det.vdx), vae: avg(det.vae), vax: avg(det.vax),
+      mr: avg(det.mr), vd: avg(det.vd), redutorAdaptativo: avg(det.red)
+    };
+  }
+
+  function classifyText(v,k){
+    v = n(v);
+    if(v === 0) return k + ' = 0,0%; não há critérios selecionados nesta dimensão.';
+    if(v < .15) return k + ' baixo: presença inicial ou limitada.';
+    if(v < .40) return k + ' moderado: capacidade parcial instalada.';
+    if(v < .70) return k + ' elevado: capacidade relevante para reduzir a variabilidade residual.';
+    return k + ' muito elevado: forte capacidade resiliente/adaptativa.';
+  }
+
+  function saturationText(red){
+    red = n(red);
+    if(red <= 0) return 'Sem saturação: VAE+VAX = 0,0%, portanto não há redução adaptativa.';
+    if(red < .60) return 'Sem saturação excessiva: o redutor adaptativo permanece abaixo de 60%.';
+    if(red < .95) return 'Atenção: redutor adaptativo elevado, mas ainda distante da redução total.';
+    if(red < 1) return 'Atenção forte: redutor muito próximo de 100%; verificar se os critérios selecionados refletem capacidade adaptativa real.';
+    return 'Saturação total controlada: min(1,VAE+VAX)=100%; a função só zera porque o redutor avaliado chegou ao limite máximo.';
+  }
+
+  function hasDual(){ return !!(S.mcGlobalMR && S.mcGlobalVAEVAX && Object.keys(S.mcGlobalMR).length); }
+
+  function runSimulationV24(){
+    if(!fns().length){ alert('Adicione funções antes de rodar a simulação.'); return; }
+    const N = Math.max(100, n(S.mcN) || 5000);
+    const fgMR = fixedGlobal('MR'), fgVAE = fixedGlobal('VAE'), fgVAX = fixedGlobal('VAX');
+    const redGlobal = Math.min(1, fgVAE.value + fgVAX.value);
+    S.mcResMR = {}; S.mcResVAEVAX = {}; S.mcResVA = S.mcResVAEVAX; S.mcRes = {};
+    const poolMR = [], poolVA = [], store = [];
+
+    fns().forEach(fn => {
+      if(typeof M.recalcParams === 'function') { try { M.recalcParams(fn.id); } catch(e){} }
+      const p = (S.params && S.params[fn.id]) || {};
+      const vaeFn = fixedScore(fn.id,'VAE').value;
+      const vaxFn = fixedScore(fn.id,'VAX').value;
+      const redFn = Math.min(1, vaeFn + vaxFn);
+      const arrMR = [], arrVA = [];
+      const dMR = {vde:[],vdx:[],vae:[],vax:[],mr:[],vd:[],red:[]};
+      const dVA = {vde:[],vdx:[],vae:[],vax:[],mr:[],vd:[],red:[]};
+
+      for(let i=0;i<N;i++){
+        const VDE = samplePert(p.vde), VDX = samplePert(p.vdx), VD = Math.max(0, VDE + VDX);
+        const vfrrMR = Math.max(0, Math.min(2, VD * (1 - fgMR.value)));
+        const vfrrVA = Math.max(0, Math.min(2, VD * (1 - redFn)));
+        arrMR.push(vfrrMR); arrVA.push(vfrrVA); poolMR.push(vfrrMR); poolVA.push(vfrrVA);
+        dMR.vde.push(VDE); dMR.vdx.push(VDX); dMR.vae.push(vaeFn); dMR.vax.push(vaxFn); dMR.mr.push(fgMR.value); dMR.vd.push(VD); dMR.red.push(fgMR.value);
+        dVA.vde.push(VDE); dVA.vdx.push(VDX); dVA.vae.push(vaeFn); dVA.vax.push(vaxFn); dVA.mr.push(fgMR.value); dVA.vd.push(VD); dVA.red.push(redFn);
+      }
+      store.push({fn, arrMR, arrVA, dMR, dVA, redFn, vaeFn, vaxFn});
+    });
+
+    const p95MR = q(poolMR,.95), p95VA = q(poolVA,.95);
+    store.forEach(o => {
+      S.mcResMR[o.fn.id] = Object.assign(calcStats(o.arrMR,o.dMR,p95MR), { redutorFuncao: fixedScore(o.fn.id,'MR').value });
+      S.mcResVAEVAX[o.fn.id] = Object.assign(calcStats(o.arrVA,o.dVA,p95VA), { redutorFuncao: o.redFn, vaeFuncao: o.vaeFn, vaxFuncao: o.vaxFn });
+      S.mcRes[o.fn.id] = S.mcResMR[o.fn.id];
+    });
+    S.mcGlobalMR = Object.assign(calcStats(poolMR,{vde:[],vdx:[],vae:[],vax:[],mr:[],vd:[],red:[]},p95MR), { mr: fgMR.value, vae: fgVAE.value, vax: fgVAX.value, redutorAdaptativo: fgMR.value });
+    S.mcGlobalVAEVAX = Object.assign(calcStats(poolVA,{vde:[],vdx:[],vae:[],vax:[],mr:[],vd:[],red:[]},p95VA), { mr: fgMR.value, vae: fgVAE.value, vax: fgVAX.value, redutorAdaptativo: redGlobal });
+    S.mcGlobalVA = S.mcGlobalVAEVAX; S.mcGlobal = S.mcGlobalMR; S.mcLastMode = 'DUAL_VFRR_MR_VAEVAX_v24_FUNCAO_SEM_SATURACAO_ARTIFICIAL';
+    renderMCV24(); renderDGRV24();
+    if(typeof M.saveToLocalStorage === 'function') { try { M.saveToLocalStorage(); } catch(e){} }
+  }
+
+  function metricGrid(g,c){
+    return '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0">' +
+      [['Média',g.mean],['P90',g.p90],['P95',g.p95],['P99',g.p99],['Prob. Crit.',g.probCrit]].map(x => '<div class="sbox"><span class="sval" style="color:'+c+'">'+pct(x[1])+'</span><span class="slbl">'+x[0]+'</span></div>').join('') +
+      '</div>';
+  }
+  function histHTML(g,c){
+    return '<div class="histbars" style="height:56px">' + ((g.hist||[]).map(v => '<div class="hb" style="height:'+Math.max(1,n(v)*54)+'px;background:'+c+';opacity:'+(.35+n(v)*.65).toFixed(2)+'"></div>').join('')) + '</div><div class="histax"><span>0%</span><span>50%</span><span>100%</span></div>';
+  }
+  function globalCard(title,desc,g,c){
+    return '<div class="dc" style="min-width:330px;flex:1;border-top:4px solid '+c+'"><div class="dc-head"><span style="font-size:14px;color:'+c+';font-weight:800">'+title+'</span></div><div class="adv-text">'+desc+'</div>'+metricGrid(g,c)+histHTML(g,c)+'</div>';
+  }
+
+  function renderMCV24(){
+    const ok = hasDual(), gMR = S.mcGlobalMR || {}, gVA = S.mcGlobalVAEVAX || {};
+    const mr = fixedGlobal('MR'), vae = fixedGlobal('VAE'), vax = fixedGlobal('VAX'), red = Math.min(1, vae.value + vax.value);
+    const sub = document.querySelector('#s-mc .page-sub');
+    if(sub) sub.innerHTML = 'Simulação Monte Carlo com <b>Beta-PERT para VDE e VDX</b>. MR, VAE e VAX são <b>índices avaliados pelos critérios selecionados</b>. No cenário VAE+VAX, o redutor é calculado <b>por função</b>: min(1,VAE_função+VAX_função), evitando zeragens artificiais por sorteios adaptativos excessivos.';
+    const statsEl = document.getElementById('dash-stats');
+    if(statsEl) statsEl.innerHTML = '<div style="grid-column:1/-1;background:#1f2532;color:#fff;border-radius:10px;padding:14px 18px"><div style="font-size:11px;color:#9aa4b8;text-transform:uppercase;font-weight:800;letter-spacing:.07em">Metodologia revisada da simulação</div><div style="font-size:14px;line-height:1.65;margin-top:4px">Iterações: <b>'+(S.mcN||5000)+'</b>. VDE e VDX são sorteados por distribuição <b>Beta-PERT</b>. MR, VAE e VAX são índices avaliados e determinísticos. Cenário MR: <b>VFRR = VD × (1 − MR)</b>. Cenário VAE+VAX: <b>VFRR = VD × [1 − min(1,VAE_função+VAX_função)]</b>. Probabilidade de criticidade = <b>P(VFRR &gt; P95 Global do próprio cenário)</b>.</div></div>'+
+      '<div class="dash-card"><div class="dash-card-val" style="color:#4778e8">'+fns().length+'</div><div class="dash-card-lbl">Funções</div></div><div class="dash-card"><div class="dash-card-val" style="color:#185fa5">'+(S.mcN||5000)+'</div><div class="dash-card-lbl">Iterações</div></div><div class="dash-card"><div class="dash-card-val" style="color:#0f6e56">'+pct(mr.value)+'</div><div class="dash-card-lbl">MR avaliado</div></div><div class="dash-card"><div class="dash-card-val" style="color:#16a34a">'+pct(vae.value)+'</div><div class="dash-card-lbl">VAE global</div></div><div class="dash-card"><div class="dash-card-val" style="color:#7c3aed">'+pct(vax.value)+'</div><div class="dash-card-lbl">VAX global</div></div><div class="dash-card"><div class="dash-card-val" style="color:#2563eb">'+pct(red)+'</div><div class="dash-card-lbl">Redutor global de referência</div></div>';
+    const ttl = document.querySelector('#s-mc .dash-section h3'); if(ttl) ttl.textContent = 'Monte Carlo - resultados globais';
+    const canvas = document.getElementById('ch-vfr'); if(canvas) canvas.style.display='none';
+    const empty = document.getElementById('ch-vfr-empty'); if(empty){ empty.style.display = ok ? 'none' : 'block'; empty.textContent = ok ? '' : 'Execute a simulação para calcular.'; }
+    const inner = document.getElementById('mc-inner'); if(!inner) return; if(!ok){ inner.innerHTML=''; return; }
+
+    const rowsVA = fns().map(fn => ({fn, r:(S.mcResVAEVAX||{})[fn.id]||{}}));
+    const zeroRows = rowsVA.filter(x => n(x.r.p95) === 0 && n(x.r.vd) > 0);
+    const satRows = rowsVA.filter(x => n(x.r.redutorFuncao) >= .95);
+    const zeroNote = zeroRows.length ? '<br><b>Atenção:</b> '+zeroRows.length+' função(ões) ficaram com P95=0 no cenário VAE+VAX. Isso só é aceitável se o redutor da própria função estiver próximo de 100%; caso contrário, revisar critérios VAE/VAX.' : '<br><b>Verificação:</b> não há zeragem generalizada indevida no cenário VAE+VAX.';
+    const maxRed = rowsVA.length ? Math.max(...rowsVA.map(x => n(x.r.redutorFuncao))) : 0;
+
+    inner.innerHTML = '<div class="dash-section" style="border-left:4px solid #185fa5"><h3>Comparação global</h3><div class="adv-text">São apresentados dois cenários calculados sobre a mesma base de amostragem. No cenário VAE+VAX, o redutor é aplicado por função para preservar diferenças locais e evitar saturação artificial. <b>Maior redutor funcional:</b> '+pct(maxRed)+'. '+saturationText(maxRed)+zeroNote+'</div></div><div style="display:flex;gap:14px;flex-wrap:wrap">'+
+      globalCard('Cenário MR','MR avaliado aplicado como redutor: <b>VFRR = VD × (1 − MR)</b>.',gMR,'#0f6e56')+
+      globalCard('Cenário VAE + VAX','Redutor adaptativo por função: <b>min(1,VAE_função+VAX_função)</b>; <b>VFRR = VD × (1 − RedutorAdaptativo)</b>.',gVA,'#7c3aed')+'</div>'+
+      '<div class="dash-section"><h3>Resultados por função - Cenário VAE+VAX</h3><table class="adv-table"><thead><tr><th>Função</th><th>VDE</th><th>VDX</th><th>VAE</th><th>VAX</th><th>Redutor</th><th>Média</th><th>P95</th><th>P99</th><th>Diagnóstico</th></tr></thead><tbody>'+rowsVA.map(x=>{ const r=x.r, diag=n(r.redutorFuncao)>=1?'Saturação total avaliada':(n(r.p95)===0&&n(r.vd)>0?'Verificar zeragem':'OK'); return '<tr><td>'+esc(x.fn.name)+'</td><td>'+pct(r.vde)+'</td><td>'+pct(r.vdx)+'</td><td>'+pct(r.vae)+'</td><td>'+pct(r.vax)+'</td><td>'+pct(r.redutorFuncao)+'</td><td>'+pct(r.mean)+'</td><td>'+pct(r.p95)+'</td><td>'+pct(r.p99)+'</td><td>'+diag+'</td></tr>'; }).join('')+'</tbody></table></div>';
+  }
+
+  function formCard(title,o,c,desc){
+    const w = Math.max(0, Math.min(100, o.value*100));
+    return '<div class="dash-section" style="border-left:5px solid '+c+';border-radius:12px"><div style="display:flex;justify-content:space-between;gap:12px"><div><h3 style="color:'+c+';font-size:15px;margin-bottom:4px">'+title+'</h3><div class="adv-text">'+desc+'</div></div><div style="font-size:32px;font-weight:900;color:'+c+'">'+pct(o.value)+'</div></div><div style="height:12px;background:#eef0f6;border-radius:999px;overflow:hidden;margin:12px 0"><div style="height:100%;width:'+w+'%;background:'+c+'"></div></div><div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.6"><b>Fórmula:</b><br>'+title+' = Σ(Critérios selecionados × Intensidade × Peso) / Σ(Critérios possíveis × Peso) × 100<br><b>Totalização ponderada:</b> '+o.num.toFixed(2).replace('.',',')+' / '+o.den+' | Critérios selecionados: '+o.selected+'</div></div>';
+  }
+  function renderDGRV24(){
+    const el = document.getElementById('dgr-indicadores'), interp = document.getElementById('dgr-interp'), sub = document.querySelector('#s-dgr .page-sub');
+    if(sub) sub.textContent = 'Indicadores separados, interpretação automática e uso direto nos cenários Monte Carlo sem saturação artificial.';
+    if(!el) return;
+    const mr = fixedGlobal('MR'), vae = fixedGlobal('VAE'), vax = fixedGlobal('VAX'), red = Math.min(1,vae.value+vax.value);
+    el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">'+formCard('MR',mr,'#0f6e56','Índice determinístico usado como redutor no cenário MR.')+formCard('VAE',vae,'#16a34a','Capacidade adaptativa endógena usada no redutor adaptativo.')+formCard('VAX',vax,'#7c3aed','Capacidade adaptativa exógena usada no redutor adaptativo.')+'</div><div class="dash-section" style="margin-top:16px;border-left:5px solid #185fa5"><h3>Interpretação automática</h3><div class="adv-text"><b>MR:</b> '+classifyText(mr.value,'MR')+'<br><b>VAE:</b> '+classifyText(vae.value,'VAE')+'<br><b>VAX:</b> '+classifyText(vax.value,'VAX')+'<br><b>RedutorAdaptativo global de referência:</b> min(1, '+pct(vae.value)+' + '+pct(vax.value)+') = <b>'+pct(red)+'</b>.<br><b>Nota:</b> no cálculo por função, cada função usa seu próprio VAE+VAX, evitando que uma média global ou sorteios excessivos zerem indevidamente os resultados.</div></div>';
+    if(interp) interp.innerHTML = '<b>MR:</b> '+classifyText(mr.value,'MR')+'<br><b>VAE:</b> '+classifyText(vae.value,'VAE')+'<br><b>VAX:</b> '+classifyText(vax.value,'VAX')+'<br><b>RedutorAdaptativo:</b> aplicado por função como min(1,VAE_função+VAX_função).<br><b>Probabilidade de criticidade:</b> P(VFRR &gt; P95 Global do próprio cenário).';
+  }
+
+  function exportPDFV24(){
+    const jsPDF = window.jspdf && window.jspdf.jsPDF; if(!jsPDF){ alert('Biblioteca jsPDF não carregada.'); return; }
+    if(!hasDual()) runSimulationV24();
+    const doc = new jsPDF('l','mm','a4'), W=297, H=210, MG=12;
+    const C={dark:[31,37,50],blue:[24,95,165],green:[15,110,86],vae:[22,163,74],vax:[124,58,237],red:[192,57,43],gray:[90,98,115],line:[220,224,232],soft:[248,250,252]}; let page=0;
+    const safe = s => String(s??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[–—−]/g,'-').replace(/[×]/g,'x').replace(/[Σ∑]/g,'S');
+    function text(s,x,y,sz=9,b=false,c=C.dark,opt){ doc.setFont('helvetica',b?'bold':'normal'); doc.setFontSize(sz); doc.setTextColor(c[0],c[1],c[2]); doc.text(safe(s),x,y,opt||{}); }
+    function wrap(s,x,y,w,sz=8,c=C.gray){ doc.setFont('helvetica','normal'); doc.setFontSize(sz); doc.setTextColor(c[0],c[1],c[2]); const lines=doc.splitTextToSize(safe(s),w); doc.text(lines,x,y); return y+lines.length*(sz*.48+1.15); }
+    function header(t){ page++; if(page>1) doc.addPage(); doc.setFillColor(C.dark[0],C.dark[1],C.dark[2]); doc.rect(0,0,W,16,'F'); text('DGR-FRAM Analyze',MG,10,10,true,[255,255,255]); text(t,W-MG,10,9,false,[220,226,238],{align:'right'}); text('Pagina '+page,W-MG,H-6,7,false,C.gray,{align:'right'}); return 28; }
+    function box(x,y,w,h,label,val,c){ doc.setDrawColor(C.line[0],C.line[1],C.line[2]); doc.setFillColor(255,255,255); doc.roundedRect(x,y,w,h,2.5,2.5,'FD'); doc.setFillColor(c[0],c[1],c[2]); doc.rect(x,y,w,3,'F'); text(val,x+w/2,y+12,13,true,c,{align:'center'}); text(label,x+w/2,y+21,7,false,C.gray,{align:'center'}); }
+    function callout(x,y,w,h,title,body,c){ doc.setFillColor(C.soft[0],C.soft[1],C.soft[2]); doc.setDrawColor(c[0],c[1],c[2]); doc.roundedRect(x,y,w,h,2.5,2.5,'FD'); text(title,x+4,y+7,8.5,true,c); return wrap(body,x+4,y+14,w-8,7.2,C.gray); }
+    function metricRow(g,y,c,label){ text(label,MG,y,10,true,c); y+=5; [['Media',g.mean],['P90',g.p90],['P95',g.p95],['P99',g.p99],['Prob. Crit.',g.probCrit]].forEach((m,i)=>box(MG+i*43,y,38,24,m[0],pct(m[1]),c)); return y+32; }
+    const mr=fixedGlobal('MR'), vae=fixedGlobal('VAE'), vax=fixedGlobal('VAX'), red=Math.min(1,vae.value+vax.value), gMR=S.mcGlobalMR||{}, gVA=S.mcGlobalVAEVAX||{};
+    let y=header('Sintese Executiva e Metodologia'); text('Capacidades Resilientes Desenvolvidas (DGR-OPS)',MG,y,16,true); y+=9;
+    [['MR',mr,C.green],['VAE',vae,C.vae],['VAX',vax,C.vax]].forEach((r,i)=>box(MG+i*54,y,48,26,r[0],pct(r[1].value),r[2])); box(MG+162,y,58,26,'Redutor global ref.',pct(red),C.blue); box(MG+226,y,48,26,'Iteracoes',String(S.mcN||5000),C.dark); y+=36;
+    callout(MG,y,132,42,'Interpretacao automatica','MR: '+classifyText(mr.value,'MR')+' VAE: '+classifyText(vae.value,'VAE')+' VAX: '+classifyText(vax.value,'VAX'),C.blue);
+    callout(MG+140,y,145,42,'Metodologia sintetica','VDE e VDX sao sorteados por Beta-PERT. MR, VAE e VAX sao indices avaliados. Cenario MR: VFRR = VD x (1 - MR). Cenario VAE+VAX: VFRR = VD x [1 - min(1,VAE_funcao+VAX_funcao)].',C.green); y+=50;
+    callout(MG,y,W-MG*2,30,'Revisao do cenario VAE+VAX e verificacao de saturacao','O cenario VAE+VAX usa redutor adaptativo por funcao e deterministico, nao sorteios capazes de gerar saturacao artificial. Uma funcao so zera se seu proprio redutor VAE+VAX chegar a 100%.',C.red);
+
+    y=header('Monte Carlo - resultados globais'); text('Monte Carlo - simulacao VDE/VDX + cenarios MR e VAE+VAX',MG,y,15,true); y+=8;
+    y=callout(MG,y,W-MG*2,36,'Explicacao metodologica','Foram executadas '+(S.mcN||5000)+' iteracoes. VDE e VDX foram representados por distribuicao Beta-PERT. Foram avaliados dois cenarios sobre a mesma base: MR deterministico global e VAE+VAX com redutor adaptativo por funcao.',C.blue)+4;
+    y=callout(MG,y,W-MG*2,24,'Definicao da Probabilidade de Criticidade','Probabilidade de Criticidade = P(VFRR > P95 Global do proprio cenario). Media = valor esperado; P90/P95/P99 = percentis da distribuicao simulada.',C.red)+5;
+    y=metricRow(gMR,y,C.green,'Cenario MR - VFRR = VD x (1 - MR)'); y=metricRow(gVA,y,C.vax,'Cenario VAE+VAX - VFRR = VD x [1 - min(1,VAE_funcao + VAX_funcao)]');
+    function table(title,map,c){ y=header(title); text(title,MG,y,13,true); y+=8; const cols=[MG,80,103,126,149,172,198,221,244,267]; ['Funcao','VDE','VDX','VAE','VAX','Red./MR','Media','P95','P99','Prob.'].forEach((h,i)=>text(h,cols[i],y,7,true)); y+=6; fns().forEach((fn,idx)=>{ if(y>187){ y=header(title+' - continuacao'); } const r=map[fn.id]||{}; const redv=title.includes('VAE')?r.redutorFuncao:r.mr; [String(idx+1)+'. '+(fn.name||''),pct(r.vde),pct(r.vdx),pct(r.vae),pct(r.vax),pct(redv),pct(r.mean),pct(r.p95),pct(r.p99),pct(r.probCrit)].forEach((v,i)=>text(i===0&&v.length>34?v.slice(0,33)+'...':v,cols[i],y,6.6,i===7,i===7?c:C.dark)); y+=6; }); }
+    table('Resultados por funcao - Cenario MR',S.mcResMR||{},C.green); table('Resultados por funcao - Cenario VAE + VAX',S.mcResVAEVAX||{},C.vax);
+    doc.save('dgr-fram-relatorio-montecarlo-vae-vax-mr-v24-github-safe.pdf');
+  }
+
+  M.runSimulation = runSimulationV24;
+  M.renderKPIs = function(){ renderMCV24(); };
+  M.renderMCPanel = function(){ renderMCV24(); };
+  M.renderCharts = function(){ const c=document.getElementById('ch-vfr'); if(c)c.style.display='none'; const e=document.getElementById('ch-vfr-empty'); if(e){ e.style.display=hasDual()?'none':'block'; e.textContent=hasDual()?'':'Execute a simulação para calcular.'; } };
+  M.renderDGROPS = renderDGRV24;
+  M.exportPDF = exportPDFV24;
+  const oldSwitch = M.switchPage && M.switchPage.bind(M);
+  M.switchPage = function(page){ if(oldSwitch) oldSwitch(page); if(page==='mc') renderMCV24(); if(page==='dgr') renderDGRV24(); };
+  const oldRefresh = M.refreshUI && M.refreshUI.bind(M);
+  M.refreshUI = function(){ if(oldRefresh) oldRefresh(); if(S.curPage==='mc') renderMCV24(); if(S.curPage==='dgr') renderDGRV24(); };
+  setTimeout(()=>{ if(S.curPage==='mc') renderMCV24(); if(S.curPage==='dgr') renderDGRV24(); },250);
+  console.log('Patch final v24 ativo: VAE+VAX por função, sem saturação artificial e GitHub-safe.');
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded',bootV24); else bootV24();
+})();
+</script>
+
