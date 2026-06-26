@@ -6679,5 +6679,115 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 })();
 </script>
 
+
+<script>
+// PATCH v20 — relatório científico: metodologia, criticidade, interpretação e justificativa dos zeros VAE+VAX
+(function(){
+  function bootV20(){
+    if(!window.DGRManager || !window.DGRState || !window.TAXO){ setTimeout(bootV20,80); return; }
+    const M=window.DGRManager, S=window.DGRState, T=window.TAXO;
+    const n=v=>Number.isFinite(+v)?+v:0;
+    const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,n(v)));
+    const fns=()=>Array.isArray(S.fns)?S.fns:[];
+    const pct=(v,d=1)=>(n(v)*100).toFixed(d).replace('.',',')+'%';
+    const pctProb=v=> n(v)>0 && n(v)<0.001 ? '<0,1%' : pct(v);
+    const clean=s=>String(s??'').replace(/→/g,'->').replace(/×/g,'x').replace(/−/g,'-').replace(/≤/g,'<=').replace(/≥/g,'>=');
+    const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+    function levelWeight(sv){
+      const l=String((sv&&sv.level)||'media').toLowerCase();
+      if(l.includes('max')||l.includes('máx')) return 1.00;
+      if(l.includes('min')||l.includes('mín')) return 0.25;
+      return 0.50;
+    }
+    function items(key){ return (T[key]&&Array.isArray(T[key].items))?T[key].items:[]; }
+    function fixedScore(fnId,key){
+      const its=items(key), subs=(S.subs&&S.subs[fnId])||{}; let num=0, selected=0; const den=Math.max(1,its.length);
+      its.forEach(it=>{ const sv=subs[it.code]; if(sv&&sv.sel===true){ selected++; num+=levelWeight(sv); } });
+      return {value:clamp(num/den),num,den,selected};
+    }
+    function fixedGlobal(key){
+      const arr=fns().map(fn=>fixedScore(fn.id,key)); const num=arr.reduce((a,b)=>a+b.num,0); const den=arr.reduce((a,b)=>a+b.den,0)||1;
+      return {value:clamp(num/den),num,den,selected:arr.reduce((a,b)=>a+b.selected,0)};
+    }
+    function hasDual(){ return fns().some(fn=>S.mcResMR&&S.mcResMR[fn.id]&&S.mcResVA&&S.mcResVA[fn.id]); }
+    function zeroInfo(){
+      const rows=fns().map(fn=>({fn,r:(S.mcResVA&&S.mcResVA[fn.id])||{}}));
+      const total=rows.length||0;
+      const zeros=rows.filter(x=>n(x.r.p95)<0.0005).length;
+      const examples=rows.filter(x=>n(x.r.p95)<0.0005).slice(0,3).map(x=>x.fn.name).join(', ');
+      return {total,zeros,examples};
+    }
+
+    function renderInterpretiveUI(){
+      const sub=document.querySelector('#s-mc .page-sub');
+      if(sub) sub.innerHTML='Simulação Monte Carlo com <b>Beta-PERT</b> e '+(S.mcN||5000).toLocaleString('pt-BR')+' iterações. Em cada iteração, <b>VDE e VDX</b> são sorteados; <b>MR, VAE e VAX</b> permanecem como índices avaliados e são aplicados como redutores determinísticos nos cenários comparativos.';
+      const inner=document.getElementById('mc-inner');
+      if(inner && hasDual() && !document.getElementById('mc-v20-method')){
+        const gMR=S.mcGlobalMR||{}, gVA=S.mcGlobalVA||{}, zi=zeroInfo();
+        inner.insertAdjacentHTML('afterbegin','<div id="mc-v20-method" class="dash-section" style="border-left:5px solid #185fa5;border-radius:12px"><h3>Metodologia e interpretação automática</h3><div class="adv-text"><b>Método:</b> distribuição Beta-PERT; iterações: <b>'+(S.mcN||5000).toLocaleString('pt-BR')+'</b>; variável sorteada: VD = VDE + VDX. <b>Criticidade:</b> Prob(VFRR &gt; P95 Global do próprio cenário). <br><b>Leitura:</b> o cenário VAE+VAX reduziu a média residual de <b>'+pct(gMR.mean)+'</b> para <b>'+pct(gVA.mean)+'</b>. '+(zi.zeros>0?'No cenário VAE+VAX, '+zi.zeros+' de '+zi.total+' funções tiveram P95 aproximadamente zero, o que é esperado quando min(1,VAE+VAX) absorve integralmente a variabilidade degradadora simulada.':'Nenhuma função apresentou P95 residual aproximadamente nulo no cenário VAE+VAX.')+'</div></div>');
+      }
+      const interp=document.getElementById('dgr-interp');
+      if(interp) interp.innerHTML='MR, VAE e VAX são exibidos separadamente, sem média VA. A simulação usa Beta-PERT e compara dois redutores: MR determinístico e RedutorAdaptativo = min(1,VAE+VAX). A Probabilidade de Criticidade é definida como Prob(VFRR &gt; P95 Global do cenário). Valores zerados no cenário VAE+VAX são esperados quando o redutor adaptativo absorve integralmente a variabilidade degradadora simulada.';
+    }
+
+    function exportPDFV20(){
+      const jsPDF=window.jspdf&&window.jspdf.jsPDF; if(!jsPDF){ alert('Biblioteca jsPDF não carregada.'); return; }
+      if(!hasDual() && typeof M.runSimulation==='function') M.runSimulation();
+      const doc=new jsPDF('l','mm','a4'), W=297,H=210,MG=12;
+      const C={dark:[31,37,50],blue:[24,95,165],green:[15,110,86],purple:[107,33,168],violet:[124,58,237],red:[192,57,43],gray:[90,98,115],line:[220,224,232],light:[248,250,252],soft:[240,244,252]};
+      let pg=0;
+      function set(c){doc.setTextColor(c[0],c[1],c[2]);}
+      function txt(s,x,y,z=8,b=false,c=C.dark,opt){doc.setFont('helvetica',b?'bold':'normal');doc.setFontSize(z);set(c);doc.text(clean(s),x,y,opt||{});}
+      function wrap(s,x,y,w,z=8,b=false,c=C.dark,lh=5){doc.setFont('helvetica',b?'bold':'normal');doc.setFontSize(z);set(c);const lines=doc.splitTextToSize(clean(s),w);doc.text(lines,x,y);return y+lines.length*lh;}
+      function fill(c){doc.setFillColor(c[0],c[1],c[2]);}
+      function head(t){pg++; if(pg>1)doc.addPage(); fill(C.dark); doc.rect(0,0,W,16,'F'); txt('DGR-FRAM Analyze',MG,10,10,true,[255,255,255]); txt(t,W-MG,10,9,false,[220,226,238],{align:'right'}); txt('Página '+pg,W-MG,H-6,7,false,C.gray,{align:'right'}); return 27;}
+      function card(x,y,w,h,l,v,c){fill(C.light);doc.rect(x,y,w,h,'F');doc.setDrawColor(C.line[0],C.line[1],C.line[2]);doc.rect(x,y,w,h);fill(c);doc.rect(x,y,w,3,'F');txt(v,x+w/2,y+13,14,true,c,{align:'center'});txt(l,x+w/2,y+21,6.8,false,C.gray,{align:'center'});}
+      function bar(x,y,w,h,val,c){fill([229,231,235]);doc.rect(x,y,w,h,'F');fill(c);doc.rect(x,y,Math.max(0,Math.min(w,w*n(val))),h,'F');}
+      function metricLine(x,y,label,v,c,prob){txt(label,x,y+4,7,true,C.gray);bar(x+42,y,78,5,prob?Math.min(1,n(v)*8):n(v),c);txt(prob?pctProb(v):pct(v),x+126,y+4,7,true,c);}
+      const mr=fixedGlobal('MR'), vae=fixedGlobal('VAE'), vax=fixedGlobal('VAX'), red=clamp(vae.value+vax.value), gMR=S.mcGlobalMR||{}, gVA=S.mcGlobalVA||{}, zi=zeroInfo();
+
+      let y=head('Capacidades Resilientes Desenvolvidas');
+      txt('Capacidades Resilientes Desenvolvidas (DGR-OPS)',MG,y,16,true); y+=9;
+      y=wrap('Resumo executivo: o relatório apresenta MR, VAE e VAX separadamente, sem matriz, radar, Monitorar/Responder/Aprender/Antecipar nem DGR-OPS sintético. A primeira página concentra as fórmulas, a metodologia e a interpretação automática para reduzir ambiguidade na leitura.',MG,y,270,8,false,C.gray,4.6)+3;
+      [['MR',mr,C.green,'MR = Σ(Critérios MR selecionados x Intensidade x Peso) / Σ(Critérios MR possíveis x Peso) x 100'],['VAE',vae,C.purple,'VAE = Σ(Critérios VAE selecionados x Intensidade x Peso) / Σ(Critérios VAE possíveis x Peso) x 100'],['VAX',vax,C.violet,'VAX = Σ(Critérios VAX selecionados x Intensidade x Peso) / Σ(Critérios VAX possíveis x Peso) x 100']].forEach((r,i)=>{ const yy=y+i*31; card(MG,yy,43,23,r[0],pct(r[1].value),r[2]); txt(r[3],MG+52,yy+8,7.5,false,C.dark); txt('Totalização ponderada: '+r[1].num.toFixed(2).replace('.',',')+' / '+r[1].den+' | Critérios selecionados: '+r[1].selected,MG+52,yy+16,7,true,C.gray); bar(MG+52,yy+20,210,4,r[1].value,r[2]); });
+      y+=98;
+      fill(C.soft);doc.rect(MG,y,W-MG*2,38,'F');doc.setDrawColor(C.blue[0],C.blue[1],C.blue[2]);doc.rect(MG,y,W-MG*2,38);
+      txt('Metodologia Monte Carlo e interpretação automática',MG+4,y+8,10,true,C.blue);
+      wrap('Distribuição: Beta-PERT. Iterações: '+(S.mcN||5000).toLocaleString('pt-BR')+'. Em cada iteração, VDE e VDX são sorteados e compõem VD = VDE + VDX. MR, VAE e VAX são índices avaliados e aplicados como redutores determinísticos nos cenários comparativos.',MG+4,y+16,160,7.3,false,C.dark,4.2);
+      wrap('RedutorAdaptativo = min(1, VAE + VAX) = '+pct(red)+'. Probabilidade de Criticidade = Prob(VFRR > P95 Global do próprio cenário). Valores nulos no VAE+VAX são esperados quando o redutor absorve integralmente a variabilidade simulada.',MG+170,y+16,100,7.3,false,C.dark,4.2);
+
+      y=head('Monte Carlo - resultados globais');
+      txt('Monte Carlo - simulação VDE/VDX com cenários MR e VAE+VAX',MG,y,14,true,C.blue); y+=10;
+      [['Média MR',gMR.mean,C.green],['P90 MR',gMR.p90,C.green],['P95 MR',gMR.p95,C.green],['P99 MR',gMR.p99,C.green],['Prob. MR',gMR.probCrit,C.red],['Média VAE+VAX',gVA.mean,C.purple],['P95 VAE+VAX',gVA.p95,C.purple],['Prob. VAE+VAX',gVA.probCrit,C.red]].forEach((r,i)=>card(MG+i*34,y,31,24,r[0],(i===4||i===7)?pctProb(r[1]):pct(r[1]),r[2])); y+=34;
+      fill(C.light);doc.rect(MG,y,W-MG*2,30,'F');doc.setDrawColor(C.line[0],C.line[1],C.line[2]);doc.rect(MG,y,W-MG*2,30);
+      txt('Fórmulas do cálculo',MG+4,y+8,10,true,C.dark);
+      txt('Cenário MR: VFRR_MR = VD x (1 - MR)',MG+4,y+17,8,false,C.gray);
+      txt('Cenário VAE+VAX: RedutorAdaptativo = min(1, VAE + VAX); VFRR_VAE+VAX = VD x (1 - RedutorAdaptativo)',MG+4,y+24,8,false,C.gray);
+      txt('Criticidade: Prob(VFRR > P95 Global do cenário)',W-MG-4,y+17,8,true,C.red,{align:'right'}); y+=42;
+      txt('Interpretação automática',MG,y,11,true,C.blue); y+=7;
+      y=wrap('O cenário VAE+VAX reduziu a média residual de '+pct(gMR.mean)+' para '+pct(gVA.mean)+'. A diferença de P95 entre os cenários é '+pct(n(gVA.p95)-n(gMR.p95))+'. '+(zi.zeros>0?('No cenário VAE+VAX, '+zi.zeros+' de '+zi.total+' funções tiveram P95 aproximadamente zero; isso é compatível com o modelo quando VAE+VAX iguala ou supera a variabilidade degradadora sorteada, e não indica necessariamente saturação indevida do redutor.'):'Não houve zeragem relevante no cenário VAE+VAX.'),MG,y,260,8.5,false,C.dark,5.2)+5;
+      ['Média','P90','P95','P99','Probabilidade crítica'].forEach((lab,i)=>{ const key=['mean','p90','p95','p99','probCrit'][i]; metricLine(MG,y+i*8,lab+' MR',gMR[key],C.green,i===4); metricLine(155,y+i*8,lab+' VAE+VAX',gVA[key],C.purple,i===4); });
+
+      function tablePage(title,map,color){ y=head(title); txt(title,MG,y,14,true,color); y+=8; const cols=[MG,58,80,102,124,148,171,194,217,240,263,282]; ['Função','VDE','VDX','VAE','VAX','Redutor','MR','Média','P90','P95','P99','Prob.'].forEach((h,i)=>txt(h,cols[i],y,6.8,true,C.gray)); y+=5; doc.line(MG,y,W-MG,y); y+=6; const list=fns().map(fn=>({fn,r:(map&&map[fn.id])||{}})).sort((a,b)=>n(b.r.p95)-n(a.r.p95)); list.forEach((x,idx)=>{ if(y>190){ y=head(title+' - continuação'); } const r=x.r; const row=[(idx+1)+'. '+(x.fn.name||''),pct(r.vde),pct(r.vdx),pct(r.vae),pct(r.vax),pct(r.redutorAdaptativo),pct(r.mr),pct(r.mean),pct(r.p90),pct(r.p95),pct(r.p99),pctProb(r.probCrit)]; row.forEach((v,i)=>txt(i===0?(v.length>24?v.slice(0,23)+'...':v):v,cols[i],y,6.4,i===9,i===9?color:C.dark)); y+=6; });
+        if(title.indexOf('VAE')>=0){ y+=4; wrap('Observação: resultados aproximadamente zerados decorrem da fórmula VFRR = VD x [1 - min(1,VAE+VAX)]. Quando o redutor adaptativo é igual ou superior à variabilidade degradadora sorteada, a variabilidade residual tende a zero.',MG,y,260,8,false,C.gray,4.8); }
+      }
+      tablePage('Resultados por função - Cenário MR',S.mcResMR,C.green);
+      tablePage('Resultados por função - Cenário VAE + VAX',S.mcResVA,C.purple);
+      doc.save('dgr-fram-relatorio-montecarlo-vae-vax-mr-corrigido-v20.pdf');
+    }
+
+    const prevRefresh=M.refreshUI&&M.refreshUI.bind(M);
+    if(!M.__v20RefreshWrapped){ M.__v20RefreshWrapped=true; M.refreshUI=function(){ if(prevRefresh) prevRefresh(); setTimeout(renderInterpretiveUI,60); }; }
+    const prevSwitch=M.switchPage&&M.switchPage.bind(M);
+    if(!M.__v20SwitchWrapped){ M.__v20SwitchWrapped=true; M.switchPage=function(page){ if(prevSwitch) prevSwitch(page); setTimeout(renderInterpretiveUI,80); }; }
+    M.exportPDF=exportPDFV20;
+    setTimeout(renderInterpretiveUI,400);
+    console.log('PATCH v20 aplicado: metodologia, criticidade, interpretação automática e justificativa dos zeros no relatório PDF.');
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bootV20); else bootV20();
+})();
+</script>
+
 </body>
 </html>
