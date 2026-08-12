@@ -682,7 +682,7 @@ const DGRManager = {
   normalizeEvaluationLevels() {
     DGRState.fns.forEach(fn => {
       if (!DGRState.subs[fn.id]) DGRState.subs[fn.id] = {};
-      [...(TAXO.VDE?.items||[]), ...(TAXO.VDX?.items||[]), ...(TAXO.VAE?.items||[]), ...(TAXO.VAX?.items||[]), ...(TAXO.MR?.items||[])].forEach(item => {
+      [...(TAXO.VDE?.items||[]), ...(TAXO.VDX?.items||[]), ...(TAXO.VAE?.items||[]), ...(TAXO.VAX?.items||[])].forEach(item => {
         const cur = DGRState.subs[fn.id][item.code] || { sel:false };
         const level = cur.level || this.inferEvalLevel(cur);
         const preset = this.evalPreset(level);
@@ -1084,7 +1084,7 @@ const DGRManager = {
       DGRState.fns.push({ id: nid, name, description: desc, x: 40 + (DGRState.fns.length % 5) * 185, y: 45 + Math.floor(DGRState.fns.length / 5) * 145 });
       DGRState.params[nid] = { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.2,mp:0.4,mx:0.7} };
       DGRState.subs[nid] = {};
-      [...(TAXO.VDE?.items||[]), ...(TAXO.VDX?.items||[]), ...(TAXO.VAE?.items||[]), ...(TAXO.VAX?.items||[]), ...(TAXO.MR?.items||[])].forEach(i => {
+      [...(TAXO.VDE?.items||[]), ...(TAXO.VDX?.items||[]), ...(TAXO.VAE?.items||[]), ...(TAXO.VAX?.items||[])].forEach(i => {
         DGRState.subs[nid][i.code] = { sel: false, level: 'media', mn: 0.25, mp: 0.50, mx: 0.70 };
       });
     }
@@ -2213,7 +2213,7 @@ const DGRManager = {
     DGRState.fns.forEach(f => {
       DGRState.params[f.id] = { ve:{mn:0.1,mp:0.3,mx:0.6}, vx:{mn:0.1,mp:0.3,mx:0.6}, ar:{mn:0.2,mp:0.4,mx:0.7} };
       DGRState.subs[f.id] = {};
-      [...(TAXO.VDE?.items||[]),...(TAXO.VDX?.items||[]),...(TAXO.VAE?.items||[]),...(TAXO.VAX?.items||[]),...(TAXO.MR?.items||[])].forEach(i => { DGRState.subs[f.id][i.code] = { sel: false, level: 'media', mn: 0.25, mp: 0.50, mx: 0.70 }; });
+      [...(TAXO.VDE?.items||[]),...(TAXO.VDX?.items||[]),...(TAXO.VAE?.items||[]),...(TAXO.VAX?.items||[])].forEach(i => { DGRState.subs[f.id][i.code] = { sel: false, level: 'media', mn: 0.25, mp: 0.50, mx: 0.70 }; });
     });
     this.refreshUI();
   },
@@ -2587,7 +2587,7 @@ let openSubcatFn = {};
 
 <!-- Patches Monte Carlo legados removidos na v57 para compatibilidade exclusiva com o Capítulo 6. -->
 <script>
-/* PATCH v61 — restauração das taxonomias VDE/VDX/VAE/VAX e seleção de critérios.
+/* PATCH v61 — taxonomias VDE/VDX/VAE/VAX por função + MR sistêmico com 15 critérios.
    Não altera a implementação Monte Carlo/PDF da versão v60. */
 (function(){
   const esc61 = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -2659,10 +2659,35 @@ let openSubcatFn = {};
       item61('VAX-A.8','Checklists e permissões coordenados entre funções acopladas')]}
   ],get items(){return this.groups.flatMap(g=>g.items);}};
 
+
+  // MR sistêmico — 15 critérios avaliados uma única vez no nível organizacional.
+  TAXO.MR={label:'MR — Mecanismos Sistêmicos de Resiliência',color:'#185fa5',bg:'#eef6ff',groups:[
+    {key:'A',label:'MR-A — Governança de Dados como Barreira de Resiliência',items:[
+      item61('MR-A.1','Políticas de qualidade de dados'),
+      item61('MR-A.2','Processo decisório baseado em evidências'),
+      item61('MR-A.3','Trilhas de auditoria e rastreabilidade')]},
+    {key:'B',label:'MR-B — Capacidades Resilientes como Mecanismos',items:[
+      item61('MR-B.1','Monitoramento contínuo de variáveis críticas'),
+      item61('MR-B.2','Resposta estruturada a perturbações'),
+      item61('MR-B.3','Antecipação baseada em dados e modelos')]},
+    {key:'C',label:'MR-C — Continuidade Operacional em Infraestrutura Crítica',items:[
+      item61('MR-C.1','Redundância de infraestrutura crítica'),
+      item61('MR-C.2','Plano de recuperação de serviços essenciais'),
+      item61('MR-C.3','Procedimentos de disaster recovery')]},
+    {key:'D',label:'MR-D — Adaptação Sociotécnica',items:[
+      item61('MR-D.1','Cooperação interfuncional'),
+      item61('MR-D.2','Reorganização dinâmica de recursos'),
+      item61('MR-D.3','Tomada de decisão descentralizada')]},
+    {key:'E',label:'MR-E — Inteligência Informacional',items:[
+      item61('MR-E.1','Dashboards operacionais em tempo real'),
+      item61('MR-E.2','Alertas automatizados de risco'),
+      item61('MR-E.3','Analytics para apoio à decisão')]}
+  ],get items(){return this.groups.flatMap(g=>g.items);}};
+
   // Mantém compatibilidade com rotinas antigas sem perder a nova classificação.
   TAXO.RE=TAXO.VDE; TAXO.RX=TAXO.VDX;
 
-  const all61=()=>[...TAXO.VDE.items,...TAXO.VAE.items,...TAXO.VDX.items,...TAXO.VAX.items,...TAXO.MR.items];
+  const allFunctionCriteria=()=>[...TAXO.VDE.items,...TAXO.VAE.items,...TAXO.VDX.items,...TAXO.VAX.items];
   const avg61=(fnId,key)=>{
     const T=TAXO[key], sb=DGRState.subs[fnId]||{};
     const items=T.items||[];
@@ -2678,10 +2703,11 @@ let openSubcatFn = {};
     DGRState.params[fnId].vae=avg61(fnId,'VAE');
     DGRState.params[fnId].vdx=avg61(fnId,'VDX');
     DGRState.params[fnId].vax=avg61(fnId,'VAX');
-    DGRState.params[fnId].mr=avg61(fnId,'MR');
+    // MR é sistêmico e não integra os parâmetros de uma função FRAM.
+    delete DGRState.params[fnId].mr;
+    delete DGRState.params[fnId].ar;
     DGRState.params[fnId].ve=DGRState.params[fnId].vde;
     DGRState.params[fnId].vx=DGRState.params[fnId].vdx;
-    DGRState.params[fnId].ar=DGRState.params[fnId].mr;
   };
 
   DGRManager.renderTaxonomyAccordion=function(taxoKey,containerId){
@@ -2729,7 +2755,7 @@ let openSubcatFn = {};
       exo.insertAdjacentHTML('beforebegin','<div class="subcat-group-lbl" style="background:#fff7ed;color:#d97706;margin-bottom:8px">VDX — degradadora exógena</div>');
       exo.insertAdjacentHTML('afterend','<div style="height:12px"></div><div class="subcat-group-lbl" style="background:#ecfdf5;color:#138a2e;margin-bottom:8px">VAX — adaptativa exógena</div><div id="vax-subcat-sel-inline"></div>');
     }
-    DGRState.fns.forEach(fn=>{if(!DGRState.subs[fn.id])DGRState.subs[fn.id]={};all61().forEach(i=>{if(!DGRState.subs[fn.id][i.code])DGRState.subs[fn.id][i.code]={sel:false,level:'media',mn:0.25,mp:0.50,mx:0.70};});DGRManager.recalcParams(fn.id);});
+    DGRState.fns.forEach(fn=>{if(!DGRState.subs[fn.id])DGRState.subs[fn.id]={};allFunctionCriteria().forEach(i=>{if(!DGRState.subs[fn.id][i.code])DGRState.subs[fn.id][i.code]={sel:false,level:'media',mn:0.25,mp:0.50,mx:0.70};});DGRManager.recalcParams(fn.id);});
     DGRManager.renderTaxonomyAccordion('VDE','endo-subcat-sel');
     DGRManager.renderTaxonomyAccordion('VAE','vae-subcat-sel-inline');
     DGRManager.renderTaxonomyAccordion('VDX','exo-subcat-sel');
@@ -2958,7 +2984,7 @@ function bootV62(){
   M.refreshUI=function(){const r=oldRefresh?oldRefresh():undefined; if(S.curPage==='mc')renderMC(); if(S.curPage==='dgr')M.renderDGROPS(); return r;};
   const oldSwitch=M.switchPage?.bind(M);
   M.switchPage=function(page){const r=oldSwitch?oldSwitch(page):undefined; if(page==='mc')setTimeout(renderMC,0); if(page==='mr')setTimeout(()=>M.renderTaxonomyAccordion('MR','mr-subcat-sel'),0); return r;};
-  const top=document.querySelector('#topbar .sub');if(top)top.textContent='Modeler & Simulator • v64 • Capítulo 6 • VD/VA • MR sistêmico • P(VD>VA)';document.title='DGR-FRAM Analyze v64 — Capítulo 6';
+  const top=document.querySelector('#topbar .sub');if(top)top.textContent='Modeler & Simulator • v64.1 • Capítulo 6 • VD/VA • MR sistêmico (15 critérios) • P(VD>VA)';document.title='DGR-FRAM Analyze v64.1 — Capítulo 6';
   ensureSystemMR(); renderKPIs(); if(S.curPage==='mc')renderMC(); if(S.curPage==='mr')M.renderTaxonomyAccordion('MR','mr-subcat-sel');
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootV62);else bootV62();
