@@ -2844,8 +2844,53 @@ function bootV62(){
 
   function weightControls(){return '';}
   function bindWeights(){}
-  function interpretation(){return `<div class="dash-section" style="border-left:5px solid #185fa5"><h3>6.6 Interpretação dos Resultados do DGR-FRAM</h3><div class="adv-text" style="line-height:1.65"><p>O DGR-FRAM preserva a independência entre seus construtos e, por isso, os resultados devem ser interpretados em níveis complementares: categorias elementares de variabilidade, indicadores consolidados, comportamento probabilístico e mecanismos sistêmicos de resiliência.</p><p><b>VDE</b> identifica fatores degradadores originados dentro da própria função, como limitações de execução, procedimentos, recursos, capacitação ou sobrecarga. <b>VDX</b> representa pressões degradadoras provenientes de outras funções ou do ambiente, incluindo dependências, interfaces, recursos, comunicação e acoplamentos. <b>VAE</b> expressa capacidades adaptativas desenvolvidas localmente pela função, enquanto <b>VAX</b> representa suporte adaptativo proveniente de outras funções, equipes, recursos ou mecanismos externos.</p><p><b>VD</b> consolida a pressão degradadora da função e <b>VA</b> consolida sua capacidade adaptativa. Ambos são calculados com contribuição equivalente de seus dois componentes. <b>MR</b> representa capacidades organizacionais permanentes de aprendizagem, coordenação, monitoramento, governança e continuidade, sendo interpretado exclusivamente no nível sistêmico e sem atuar como redutor matemático de VD ou VA.</p><p>Na Simulação de Monte Carlo, a <b>média</b> representa o comportamento esperado; o <b>desvio-padrão</b> indica a dispersão e a incerteza; e <b>P50, P90, P95 e P99</b> permitem examinar faixas progressivamente superiores da distribuição. <b>P(VD &gt; VA)</b> é uma medida comparativa: informa a frequência simulada em que a pressão degradadora supera a capacidade adaptativa, não representando probabilidade de acidente, falha ou interrupção.</p><p>A interpretação integrada considera quatro padrões principais: <b>VD alta/VA baixa</b>, maior vulnerabilidade e prioridade de intervenção; <b>VD alta/VA alta</b>, operação pressionada sustentada por adaptações que devem ter sua sustentabilidade avaliada; <b>VD baixa/VA alta</b>, condição mais favorável à resiliência operacional; e <b>VD baixa/VA baixa</b>, possível estabilidade com menor necessidade de adaptação. O MR complementa a leitura ao indicar a maturidade dos mecanismos sistêmicos que sustentam a resposta organizacional ao longo do tempo.</p></div></div>`;}
-  function matrix(){return `<div class="dash-section"><h3>Matriz Interpretativa Cruzada — Quadro 6.5</h3><div class="adv-text" style="margin-bottom:8px">Matriz qualitativa de apoio. O Capítulo 6 não define cortes numéricos automáticos para Baixa/Média/Alta.</div><div style="overflow-x:auto"><table class="adv-table"><thead><tr><th></th><th>VA Baixa</th><th>VA Média</th><th>VA Alta</th></tr></thead><tbody><tr><th>VD Baixa</th><td>Sistema estável, porém com limitada capacidade adaptativa. Manter monitoramento.</td><td>Sistema estável com adaptação moderada.</td><td>Sistema robusto, com baixa degradação e elevada capacidade adaptativa.</td></tr><tr><th>VD Média</th><td>Atenção: fatores degradadores podem superar a capacidade adaptativa. Avaliar funções críticas.</td><td>Situação intermediária, exigindo acompanhamento contínuo.</td><td>A adaptação tende a compensar parte das pressões degradadoras, mas requer monitoramento.</td></tr><tr><th>VD Alta</th><td>Condição crítica. Elevada degradação com baixa adaptação. Priorizar intervenções.</td><td>Alta degradação parcialmente compensada por adaptação. Identificar origem das perturbações.</td><td>Sistema submetido a elevada pressão, mas com forte capacidade adaptativa. Avaliar a sustentabilidade dessas adaptações.</td></tr></tbody></table></div><div class="adv-text" style="margin-top:8px"><b>MR não altera a posição na matriz</b>; é dimensão sistêmica complementar.</div></div>`;}
+  function resultInterpretationData(){
+    const g=S.mcGlobal;
+    if(!(g?.vd&&g?.va&&g?.mr)) return null;
+    const vd=+g.vd.mean||0, va=+g.va.mean||0, mr=+g.mr.mean||0, prob=+g.probPred||0;
+    const diff=vd-va;
+    const tailDiff=(+g.vd.p95||0)-(+g.va.p95||0);
+    const relation = Math.abs(diff) < 0.03 ? 'equilibrada' : diff > 0 ? 'degradadora' : 'adaptativa';
+    let main='';
+    if(relation==='degradadora'){
+      main=`A pressão degradadora média (VD = ${pct(vd)}) supera a capacidade adaptativa média (VA = ${pct(va)}), diferença de ${pct(Math.abs(diff))}. O resultado indica predominância relativa dos fatores degradadores no conjunto analisado.`;
+    }else if(relation==='adaptativa'){
+      main=`A capacidade adaptativa média (VA = ${pct(va)}) supera a pressão degradadora média (VD = ${pct(vd)}), diferença de ${pct(Math.abs(diff))}. O resultado indica predominância relativa das capacidades adaptativas no conjunto analisado.`;
+    }else{
+      main=`VD (${pct(vd)}) e VA (${pct(va)}) apresentam médias próximas, com diferença de ${pct(Math.abs(diff))}. O resultado indica equilíbrio relativo entre pressão degradadora e capacidade adaptativa, devendo a dispersão e os percentis ser observados para identificar assimetrias.`;
+    }
+    let probTxt = prob >= .70
+      ? `Em ${pct(prob)} das iterações, VD superou VA, mostrando predominância probabilística consistente da pressão degradadora.`
+      : prob <= .30
+      ? `Em ${pct(prob)} das iterações, VD superou VA; portanto, a capacidade adaptativa predominou na maior parte das simulações.`
+      : `VD superou VA em ${pct(prob)} das iterações, indicando alternância relevante entre predominância degradadora e adaptativa.`;
+    let tailTxt = Math.abs(tailDiff) < .03
+      ? `No P95, VD (${pct(g.vd.p95)}) e VA (${pct(g.va.p95)}) permanecem próximos, sem predominância acentuada nas faixas superiores da distribuição.`
+      : tailDiff > 0
+      ? `No P95, VD (${pct(g.vd.p95)}) permanece acima de VA (${pct(g.va.p95)}), indicando que a predominância degradadora também aparece nas faixas superiores da distribuição.`
+      : `No P95, VA (${pct(g.va.p95)}) supera VD (${pct(g.vd.p95)}), indicando maior capacidade adaptativa também nas faixas superiores da distribuição.`;
+    const mrTxt=`O MR sistêmico apresenta média de ${pct(mr)} e deve ser lido como capacidade organizacional complementar: ele não altera matematicamente VD ou VA, mas informa o grau de desenvolvimento dos mecanismos permanentes que sustentam coordenação, aprendizagem, monitoramento, governança e continuidade.`;
+    return {vd,va,mr,prob,diff,tailDiff,relation,main,probTxt,tailTxt,mrTxt};
+  }
+  function interpretation(){
+    const d=resultInterpretationData();
+    if(!d) return `<div class="dash-section" style="border-left:5px solid #185fa5"><h3>Interpretação dos Resultados</h3><div class="adv-text">Execute a Simulação de Monte Carlo para gerar a interpretação dos resultados observados.</div></div>`;
+    const fnRows=rows().slice().sort((a,b)=>b.r.probPred-a.r.probPred);
+    const hi=fnRows[0], lo=fnRows[fnRows.length-1];
+    const fnTxt = fnRows.length
+      ? `Entre as funções, <b>${esc(hi.fn.name)}</b> apresenta a maior frequência de VD &gt; VA (${pct(hi.r.probPred)})${lo&&lo.fn.id!==hi.fn.id?`, enquanto <b>${esc(lo.fn.name)}</b> apresenta a menor (${pct(lo.r.probPred)})`:''}.`
+      : '';
+    return `<div class="dash-section" style="border-left:5px solid #185fa5"><h3>Interpretação dos Resultados</h3><div class="adv-text" style="line-height:1.65"><p>${d.main}</p><p>${d.probTxt} ${d.tailTxt}</p><p>${fnTxt}</p><p>${d.mrTxt}</p></div></div>`;
+  }
+  function matrix(){
+    const d=resultInterpretationData();
+    if(!d) return `<div class="dash-section"><h3>Interpretação Cruzada VD × VA</h3><div class="adv-text">A interpretação cruzada será apresentada após a simulação.</div></div>`;
+    let reading='';
+    if(d.relation==='degradadora') reading='O posicionamento relativo dos resultados aponta para maior pressão degradadora do que capacidade adaptativa. A prioridade analítica é identificar quais funções e componentes VDE/VDX mais contribuem para essa diferença e verificar se as capacidades VAE/VAX são suficientes e sustentáveis.';
+    else if(d.relation==='adaptativa') reading='O posicionamento relativo dos resultados aponta para capacidade adaptativa superior à pressão degradadora. A análise deve verificar se essa vantagem é distribuída entre as funções ou depende de adaptações concentradas, informais ou de difícil sustentação.';
+    else reading='O posicionamento relativo dos resultados aponta para equilíbrio entre VD e VA. Nessa condição, pequenas alterações nas variabilidades podem modificar a relação entre pressão degradadora e capacidade adaptativa, tornando especialmente relevante observar dispersão, percentis e diferenças entre funções.';
+    return `<div class="dash-section"><h3>Interpretação Cruzada VD × VA</h3><div class="adv-text" style="line-height:1.65"><p><b>Resultado observado:</b> VD médio = ${pct(d.vd)}; VA médio = ${pct(d.va)}; P(VD &gt; VA) = ${pct(d.prob)}.</p><p>${reading}</p><p><b>MR sistêmico = ${pct(d.mr)}.</b> O MR não altera a posição relativa de VD e VA; complementa a interpretação ao indicar os mecanismos organizacionais que podem sustentar a resposta do sistema ao longo do tempo.</p></div></div>`;
+  }
   function renderKPIs(){
     const el=document.getElementById('dash-stats');if(!el)return;const g=S.mcGlobal,ok=!!(g?.vd&&g?.va&&g?.mr);
     const a=ok?[[pct(g.vd.mean),'VD global — média','#c0392b'],[pct(g.va.mean),'VA global — média','#6b21a8'],[pct(g.mr.mean),'MR sistêmico — média','#0f6e56'],[pct(g.probPred),'P(VD > VA)','#d97706']]:[[fns().length,'Funções FRAM','#4778e8'],[S.coups?.length||0,'Acoplamentos','#185fa5'],[M.countSelectedTaxonomy?.('VDE')||0,'VDE selecionadas','#c0392b'],[M.countSelectedTaxonomy?.('VDX')||0,'VDX selecionadas','#d97706'],[M.countSelectedTaxonomy?.('VAE')||0,'VAE selecionadas','#0f6e56'],[M.countSelectedTaxonomy?.('VAX')||0,'VAX selecionadas','#138a2e'],[M.countMR(),'MR selecionados','#185fa5']];
@@ -2853,7 +2898,7 @@ function bootV62(){
   }
   function renderMC(){
     renderKPIs(); const sub=document.querySelector('#s-mc .page-sub');if(sub)sub.innerHTML='Simulação Beta-PERT de <b>VD</b> e <b>VA</b> por função, com <b>MR sistêmico</b> amostrado uma única vez em cada iteração. Estatísticas: média, desvio-padrão, P50, P90, P95, P99 e P(VD &gt; VA).';
-    const sum=document.getElementById('mc-summary-current');if(sum)sum.innerHTML='<div class="adv-text"><b>Capítulo 6:</b> VD, VA e MR são dimensões independentes. Não são calculados VFR, VFRR, P95 individual de residual nem Probabilidade de Criticidade por limiar fixo.</div>';
+    const sum=document.getElementById('mc-summary-current');if(sum)sum.innerHTML='<div class="adv-text">VD, VA e MR são dimensões independentes. A leitura abaixo interpreta os resultados efetivamente obtidos na simulação, sem converter P(VD &gt; VA) em probabilidade de acidente, falha ou interrupção.</div>';
     const inner=document.getElementById('mc-inner');if(!inner)return;const rs=rows(),g=S.mcGlobal;
     if(!rs.length){inner.innerHTML=interpretation()+matrix()+'<div class="empty">Clique em <b>Rodar Simulação</b> para calcular VD, VA e MR.</div>';return;}
     const global=`<div class="dash-section"><h3>Monte Carlo — resultados globais</h3><div style="overflow-x:auto"><table class="adv-table"><thead><tr><th>Indicador</th><th>Média</th><th>Desvio-padrão</th><th>P50</th><th>P90</th><th>P95</th><th>P99</th></tr></thead><tbody>${[['VD',g.vd],['VA',g.va],['MR sistêmico',g.mr]].map(z=>`<tr><td><b>${z[0]}</b></td><td>${pct(z[1].mean)}</td><td>${pct(z[1].sd)}</td><td>${pct(z[1].p50)}</td><td>${pct(z[1].p90)}</td><td>${pct(z[1].p95)}</td><td>${pct(z[1].p99)}</td></tr>`).join('')}</tbody></table></div><div class="adv-text" style="margin-top:8px"><b>P(VD &gt; VA) = ${pct(g.probPred)}</b>. Medida comparativa, não probabilidade de acidente.</div></div>`;
@@ -2866,7 +2911,7 @@ function bootV62(){
   M.renderMCPanel=renderMC;
   M.renderFunctionResults=renderMC;
   M.renderCharts=function(){};
-  M.renderDGROPS=function(){const c=document.getElementById('dgr-indicadores'),i=document.getElementById('dgr-interp'),g=S.mcGlobal;if(!c)return;c.innerHTML=`<div class="dash-grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))"><div class="dash-card"><div class="dash-card-val" style="color:#0f6e56">${g?.mr?pct(g.mr.mean):'—'}</div><div class="dash-card-lbl">MR sistêmico — média</div></div><div class="dash-card"><div class="dash-card-val" style="color:#c0392b">${g?.vd?pct(g.vd.p95):'—'}</div><div class="dash-card-lbl">VD global — P95</div></div><div class="dash-card"><div class="dash-card-val" style="color:#6b21a8">${g?.va?pct(g.va.p95):'—'}</div><div class="dash-card-lbl">VA global — P95</div></div></div>`;if(i)i.innerHTML='VD, VA e MR são dimensões distintas. O MR é sistêmico e não reduz matematicamente VD ou VA. A interpretação segue a seção 6.6 e deve combinar tendência central, dispersão, percentis e P(VD &gt; VA), contextualizados pelo especialista.';};
+  M.renderDGROPS=function(){const c=document.getElementById('dgr-indicadores'),i=document.getElementById('dgr-interp'),g=S.mcGlobal;if(!c)return;c.innerHTML=`<div class="dash-grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))"><div class="dash-card"><div class="dash-card-val" style="color:#0f6e56">${g?.mr?pct(g.mr.mean):'—'}</div><div class="dash-card-lbl">MR sistêmico — média</div></div><div class="dash-card"><div class="dash-card-val" style="color:#c0392b">${g?.vd?pct(g.vd.p95):'—'}</div><div class="dash-card-lbl">VD global — P95</div></div><div class="dash-card"><div class="dash-card-val" style="color:#6b21a8">${g?.va?pct(g.va.p95):'—'}</div><div class="dash-card-lbl">VA global — P95</div></div></div>`;if(i){const d=resultInterpretationData();i.innerHTML=d?`${d.main} ${d.probTxt} ${d.mrTxt}`:'Execute a simulação para gerar a interpretação integrada dos resultados.';}};
 
   // Exportador PDF coerente com a mesma fonte de dados da tela.
   M.exportPDF=function(){
@@ -2881,36 +2926,30 @@ function bootV62(){
     y=head('Resultados Monte Carlo por funcao','Sem VFR, VFRR, P95 individual residual ou Probabilidade de Criticidade.');
     const headers=['Funcao','VDE','VDX','VD med.','VD P90','VD P95','VD P99','VAE','VAX','VA med.','VA P90','VA P95','VA P99','P(VD>VA)'];const xs=[MG,62,78,95,113,131,149,166,182,199,217,235,253,276];headers.forEach((h,i)=>{doc.setFontSize(6.4);doc.text(clean(h),xs[i],y,{align:i?'right':'left'});});y+=6;doc.line(MG,y,W-MG,y);y+=6;
     rs.forEach(x=>{if(y>190){foot('Resultados por funcao');y=head('Resultados por funcao — continuacao');}const v=[x.fn.name,pct(x.r.vde.mean),pct(x.r.vdx.mean),pct(x.r.vd.mean),pct(x.r.vd.p90),pct(x.r.vd.p95),pct(x.r.vd.p99),pct(x.r.vae.mean),pct(x.r.vax.mean),pct(x.r.va.mean),pct(x.r.va.p90),pct(x.r.va.p95),pct(x.r.va.p99),pct(x.r.probPred)];v.forEach((q,i)=>{doc.setFontSize(6.3);doc.text(clean(i===0&&q.length>30?q.slice(0,29)+'...':q),xs[i],y,{align:i?'right':'left'});});y+=6;});foot('Resultados por funcao');
-    y=head('6.6 Interpretacao dos Resultados do DGR-FRAM','Leitura integrada das variabilidades, indicadores probabilisticos e mecanismos sistemicos de resiliencia.');
-    const pdfPara=(title,p)=>{if(y>176){foot('Secao 6.6');y=head('6.6 Interpretacao dos Resultados — continuacao');}txt(title,MG,y,9,true);y+=6;const lines=doc.splitTextToSize(clean(p),W-2*MG);doc.setFontSize(8);doc.text(lines,MG,y);y+=lines.length*4.3+5;};
-    pdfPara('Principio de interpretacao','O DGR-FRAM preserva a independencia entre seus construtos. Os resultados nao devem ser reduzidos a um unico indice sintetico: categorias elementares, indicadores consolidados, distribuicoes probabilisticas e MR devem ser lidos de forma especifica e depois integrados ao contexto operacional.');
-    pdfPara('VDE — Variabilidade Degradadora Endogena','Representa fatores internos a propria funcao que tendem a reduzir seu desempenho. Valores elevados sugerem revisar execucao local, procedimentos, capacitacao, recursos, carga cognitiva e demais condicoes internas que possam favorecer a degradacao do desempenho.');
-    pdfPara('VDX — Variabilidade Degradadora Exogena','Representa fatores provenientes de outras funcoes ou do ambiente operacional. Valores elevados indicam influencia relevante de acoplamentos, dependencias externas, indisponibilidade de recursos, falhas de comunicacao, interfaces ou informacoes recebidas de outras funcoes.');
-    pdfPara('VAE — Variabilidade Adaptativa Endogena','Expressa capacidades adaptativas desenvolvidas pela propria funcao, incluindo experiencia, aprendizagem, conhecimento tacito, flexibilidade operacional, antecipacao e ajustes seguros. Valores elevados sugerem capacidade local significativa para absorver perturbacoes e manter o desempenho.');
-    pdfPara('VAX — Variabilidade Adaptativa Exogena','Expressa capacidades adaptativas provenientes de outras funcoes ou do ambiente, como cooperacao entre equipes, coordenacao, compartilhamento de informacoes, recursos adicionais e redundancias. Valores elevados indicam suporte adaptativo externo relevante.');
-    pdfPara('VD e VA — indicadores consolidados','VD sintetiza a pressao degradadora e VA sintetiza a capacidade adaptativa. Nesta versao, cada indicador resulta da contribuicao equivalente de seus dois componentes: VD = (VDE + VDX)/2 e VA = (VAE + VAX)/2. Valores elevados de VD indicam maior exposicao a fatores potencialmente degradadores; valores elevados de VA sugerem maior capacidade de absorver perturbacoes, ajustar o desempenho e manter a continuidade operacional.');
-    pdfPara('MR — Mecanismos Sistemicos de Resiliencia','MR representa capacidades organizacionais permanentes que sustentam aprendizagem, governanca de dados, coordenacao, monitoramento, continuidade e resposta. E interpretado no nivel sistemico, nao esta associado a uma funcao especifica e nao atua como multiplicador ou redutor matematico de VD ou VA.');
-    foot('Secao 6.6 — categorias e indicadores');
+    const idata=resultInterpretationData();
+    y=head('Interpretacao dos Resultados','Leitura dos resultados efetivamente obtidos na Simulacao de Monte Carlo.');
+    if(idata){
+      const pdfParaResultado=(title,p)=>{if(y>176){foot('Interpretacao dos Resultados');y=head('Interpretacao dos Resultados — continuacao');}txt(title,MG,y,9,true);y+=6;const lines=doc.splitTextToSize(clean(p),W-2*MG);doc.setFontSize(8);doc.text(lines,MG,y);y+=lines.length*4.3+5;};
+      pdfParaResultado('Relacao entre VD e VA',idata.main);
+      pdfParaResultado('Comportamento probabilistico',idata.probTxt+' '+idata.tailTxt);
+      const fr=rows().slice().sort((a,b)=>b.r.probPred-a.r.probPred);
+      if(fr.length){
+        const hi=fr[0],lo=fr[fr.length-1];
+        pdfParaResultado('Diferencas entre funcoes',`A funcao ${hi.fn.name} apresenta a maior frequencia de VD > VA (${pct(hi.r.probPred)})${lo&&lo.fn.id!==hi.fn.id?`, enquanto ${lo.fn.name} apresenta a menor (${pct(lo.r.probPred)})`:''}.`);
+      }
+      pdfParaResultado('MR sistemico',idata.mrTxt);
+      foot('Interpretacao dos Resultados');
 
-    y=head('6.6 Interpretacao Probabilistica','Como interpretar media, dispersao, percentis e P(VD > VA).');
-    pdfPara('Media e desvio-padrao','A media representa o comportamento esperado do construto ao longo das simulacoes. O desvio-padrao expressa a dispersao em torno da media; maior dispersao indica maior incerteza nas estimativas ou maior sensibilidade dos resultados as variacoes dos parametros informados.');
-    pdfPara('Percentis P50, P90, P95 e P99','Os percentis permitem examinar diferentes faixas da distribuicao. P50 representa a mediana da simulacao. P90, P95 e P99 representam niveis progressivamente superiores, uteis para observar cenarios de maior intensidade sem transforma-los automaticamente em limiares de risco ou criticidade.');
-    pdfPara('P(VD > VA)','Esta probabilidade comparativa mede a frequencia relativa das iteracoes em que VD supera VA. Ela nao constitui um novo construto e nao representa probabilidade de acidente, falha, interrupcao ou dano. Deve ser usada apenas como apoio para compreender a relacao probabilistica entre pressao degradadora e capacidade adaptativa.');
-    pdfPara('Leitura integrada','VD alta com VA baixa sugere maior vulnerabilidade operacional e prioridade para intervencoes. VD alta com VA alta indica operacao pressionada, mas sustentada por adaptacoes continuas, cuja sustentabilidade deve ser avaliada. VD baixa com VA alta sugere condicao mais favoravel a resiliencia operacional. VD baixa com VA baixa pode caracterizar processo estavel, com menor necessidade de adaptacao durante a execucao.');
-    pdfPara('Papel complementar do MR','A leitura VD x VA deve ser complementada pelo MR. MR mais desenvolvido sugere melhores condicoes organizacionais para aprender, coordenar, monitorar e sustentar capacidades adaptativas ao longo do tempo. MR reduzido indica oportunidades de fortalecimento dessas capacidades, independentemente da posicao ocupada por VD e VA.');
-    foot('Secao 6.6 — interpretacao probabilistica');
-
-    y=head('6.6 Diretrizes para Interpretacao Gerencial','Sintese orientativa para transformar os resultados em subsidios a decisao.');
-    const mgrRows=[['VDE','Problemas internos a funcao','Revisar procedimentos, capacitacao e recursos'],['VDX','Dependencias externas criticas','Melhorar coordenacao e interfaces entre funcoes'],['VAE','Forte capacidade adaptativa local','Consolidar e disseminar boas praticas'],['VAX','Suporte adaptativo externo','Fortalecer cooperacao entre areas'],['VD','Maior pressao degradadora','Priorizar mitigacao e revisar fontes degradadoras'],['VA','Maior capacidade adaptativa','Preservar e ampliar capacidades adaptativas'],['MR','Maturidade organizacional em resiliencia','Investir em governanca, aprendizagem, coordenacao e continuidade']];
-    const c1=MG,c2=57,c3=148;txt('Indicador',c1,y,8,true);txt('Valores elevados sugerem',c2,y,8,true);txt('Possiveis acoes gerenciais',c3,y,8,true);y+=5;doc.line(MG,y,W-MG,y);y+=6;
-    mgrRows.forEach(r=>{const a=doc.splitTextToSize(clean(r[1]),80),b=doc.splitTextToSize(clean(r[2]),W-MG-c3);const h=Math.max(a.length,b.length)*4+4;if(y+h>190){foot('Diretrizes gerenciais');y=head('6.6 Diretrizes Gerenciais — continuacao');}txt(r[0],c1,y,8,true);doc.setFontSize(7.5);doc.text(a,c2,y);doc.text(b,c3,y);y+=h;});
-    foot('Diretrizes gerenciais');
-
-    y=head('Quadro 6.5 — Interpretacao Cruzada de VD e VA','Matriz qualitativa de apoio; nao constitui novo indice e nao utiliza cortes numericos automaticos.');
-    const mx=[['','VA Baixa','VA Media','VA Alta'],['VD Baixa','Sistema estavel, porem com limitada capacidade adaptativa. Manter monitoramento.','Sistema estavel com adaptacao moderada.','Sistema robusto, com baixa degradacao e elevada capacidade adaptativa.'],['VD Media','Atencao: fatores degradadores podem superar a capacidade adaptativa. Avaliar funcoes criticas.','Situacao intermediaria, exigindo acompanhamento continuo.','A adaptacao tende a compensar parte das pressoes degradadoras, mas requer monitoramento.'],['VD Alta','Condicao critica. Elevada degradacao com baixa adaptacao. Priorizar intervencoes.','Alta degradacao parcialmente compensada por adaptacao. Identificar origem das perturbacoes.','Sistema submetido a elevada pressao, mas com forte capacidade adaptativa. Avaliar a sustentabilidade dessas adaptacoes.']];
-    const col=[MG,48,127,206],cw=[35,75,75,79];
-    mx.forEach((r,ri)=>{let hs=8;const cells=r.map((q,i)=>doc.splitTextToSize(clean(q),cw[i]-4));hs=Math.max(...cells.map(x=>x.length))*4+5;if(y+hs>190){foot('Quadro 6.5');y=head('Quadro 6.5 — continuacao');}cells.forEach((lines,i)=>{doc.rect(col[i],y-4,cw[i],hs);doc.setFont('helvetica',ri===0||i===0?'bold':'normal');doc.setFontSize(7);doc.text(lines,col[i]+2,y);});y+=hs;});
-    y+=4;const note=doc.splitTextToSize(clean('MR nao altera a classificacao da matriz. Deve ser interpretado como dimensao organizacional complementar, indicando o grau de desenvolvimento dos mecanismos sistemicos que sustentam a resiliencia.'),W-2*MG);doc.setFontSize(8);doc.text(note,MG,y);foot('Quadro 6.5 e MR sistemico');
+      y=head('Interpretacao Cruzada VD x VA','Sintese integrada da relacao observada entre pressao degradadora e capacidade adaptativa.');
+      let cross='';
+      if(idata.relation==='degradadora') cross='Os resultados apontam maior pressao degradadora do que capacidade adaptativa. A prioridade analitica e identificar as funcoes e os componentes VDE/VDX que mais contribuem para a diferenca e verificar se VAE/VAX sao suficientes e sustentaveis.';
+      else if(idata.relation==='adaptativa') cross='Os resultados apontam capacidade adaptativa superior a pressao degradadora. A analise deve verificar se essa vantagem esta distribuida entre as funcoes ou se depende de adaptacoes concentradas, informais ou de dificil sustentacao.';
+      else cross='Os resultados apontam equilibrio relativo entre VD e VA. Pequenas alteracoes nas variabilidades podem modificar essa relacao, tornando especialmente relevante observar dispersao, percentis e diferencas entre funcoes.';
+      pdfParaResultado('Resultado observado',`VD medio = ${pct(idata.vd)}; VA medio = ${pct(idata.va)}; P(VD > VA) = ${pct(idata.prob)}.`);
+      pdfParaResultado('Leitura cruzada',cross);
+      pdfParaResultado('Complemento sistemico',`MR sistemico = ${pct(idata.mr)}. O MR nao altera a posicao relativa de VD e VA; complementa a interpretacao ao indicar mecanismos organizacionais que podem sustentar a resposta do sistema ao longo do tempo.`);
+      foot('Interpretacao Cruzada VD x VA');
+    }
     doc.save('dgr-fram-relatorio-capitulo-6.pdf');
   };
 
