@@ -50,19 +50,6 @@ O DGR-FRAM Analyze utiliza distribuição Beta-PERT para representar a incerteza
 
 São analisados dois cenários comparativos:
 
-### Cenário MR
-
-Aplicação do índice sistêmico e determinístico de Mecanismos de Resiliência (MR) como redutor da Variabilidade Degradadora:
-
-VFRR_MR = VD × (1 − MR)
-
-### Cenário VAE + VAX
-
-Aplicação da capacidade adaptativa como redutor da Variabilidade Degradadora:
-
-VFR = VD × [1 − min(1, VAE + VAX)]
-
-VAE e VAX são amostradas separadamente durante a Simulação de Monte Carlo.
 
 ## Indicadores
 
